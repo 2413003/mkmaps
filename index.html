@@ -339,6 +339,9 @@
     .near-me-btn{position:absolute;bottom:80px;right:20px;z-index:200;background:var(--panel);border:1px solid var(--border);color:var(--text);width:42px;height:42px;border-radius:50%;font-size:18px;cursor:pointer;box-shadow:0 3px 12px rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
     .near-me-btn:hover{border-color:var(--blue);color:var(--blue);}
     .near-me-btn.active{background:var(--blue);border-color:var(--blue);color:white;}
+    .user-dot{width:14px;height:14px;border-radius:50%;background:#1a73e8;position:relative;box-shadow:0 0 0 2px #fff,0 6px 14px rgba(26,115,232,0.35);}
+    .user-dot::after{content:'';position:absolute;left:50%;top:50%;width:38px;height:38px;border-radius:50%;background:rgba(26,115,232,0.2);transform:translate(-50%,-50%);animation:userPulse 2.4s ease-out infinite;}
+    @keyframes userPulse{0%{transform:translate(-50%,-50%) scale(0.2);opacity:0.8;}100%{transform:translate(-50%,-50%) scale(1);opacity:0;}}
 
     /* ROUTE BTN in header */
     .route-header-btn{display:flex;align-items:center;gap:5px;padding:5px 10px;background:var(--panel);border:1px solid var(--border);border-radius:6px;font-size:11px;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all 0.15s;font-family:'DM Mono',monospace;}
@@ -612,8 +615,10 @@ const map = new mapboxgl.Map({
   center:[-0.7594,52.0406], zoom:13, attributionControl:false
 });
 map.addControl(new mapboxgl.NavigationControl(),'bottom-right');
-map.addControl(new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true}),'bottom-right');
+const geoControl = new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
+map.addControl(geoControl,'bottom-right');
 map.addControl(new mapboxgl.AttributionControl({compact:true}),'bottom-right');
+geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords.longitude); }catch(err){} });
 
 // State
 let activeLayer = 'issues';
@@ -623,6 +628,7 @@ let pendingMarker = null, pendingLat = null, pendingLng = null;
 let redwaysVisible = false;
 let selectedRating = 0;
 let userLat = null, userLng = null;
+let userMarker = null;
 let nearMeActive = false;
 let activeSort = 'recent';
 let activeFilters = {};
@@ -713,6 +719,8 @@ function clearActiveLayer(){
   document.getElementById('mapHint').style.opacity='0';
   clearMarkersExcept('none');
   document.getElementById('fab').style.display='none';
+  if(transportTimer) { clearTimeout(transportTimer); transportTimer = null; }
+  closeDetail();
   const sb = document.getElementById('sidebar');
   document.getElementById('sidebarTitle').textContent='Choose a layer';
   document.getElementById('sidebarCount').textContent='—';
@@ -723,6 +731,8 @@ function clearActiveLayer(){
 function setLayer(layer, btn, opts={}) {
   if(layer==='none') return clearActiveLayer();
   if(!opts.force && activeLayer===layer) return clearActiveLayer();
+  if(activeLayer !== layer) closeDetail();
+  if(activeLayer==='transport' && layer!=='transport' && transportTimer){ clearTimeout(transportTimer); transportTimer=null; }
   activeLayer = layer;
   saveLayer(layer);
   document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
@@ -2598,22 +2608,33 @@ function wmoDesc(c) {
 }
 
 // ── NEAR ME / GEOLOCATION ────────────────────────────────────────
+function setUserMarker(lat,lng){
+  userLat = lat;
+  userLng = lng;
+  if(!map) return;
+  if(!userMarker){
+    const el = document.createElement('div');
+    el.className = 'user-dot';
+    userMarker = new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
+  } else {
+    userMarker.setLngLat([lng,lat]);
+  }
+}
+
 function toggleNearMe() {
   if(!userLat) {
     navigator.geolocation.getCurrentPosition(pos => {
-      userLat = pos.coords.latitude;
-      userLng = pos.coords.longitude;
+      setUserMarker(pos.coords.latitude, pos.coords.longitude);
       nearMeActive = true;
-      document.getElementById('nearMeBtn').classList.add('active');
-      document.getElementById('nearMeBtn').title = 'Near Me: ON';
+      document.querySelectorAll('.near-me-btn').forEach(b=>{b.classList.add('active'); b.title='Near Me: ON';});
       setSort('near');
       map.flyTo({center:[userLng,userLat],zoom:14,duration:800});
       renderLocalIntel();
       if(transportView==='near') { renderTransportSidebar(); renderTransportMarkers(); }
-    }, () => { toast('Location access denied — enable it in browser settings.','warn'); nearMeActive=false; document.getElementById('nearMeBtn').classList.remove('active'); });
+    }, () => { toast('Location access denied — enable it in browser settings.','warn'); nearMeActive=false; document.querySelectorAll('.near-me-btn').forEach(b=>b.classList.remove('active')); });
   } else {
     nearMeActive = !nearMeActive;
-    document.getElementById('nearMeBtn').classList.toggle('active', nearMeActive);
+    document.querySelectorAll('.near-me-btn').forEach(b=>b.classList.toggle('active', nearMeActive));
     if(nearMeActive) { setSort('near'); map.flyTo({center:[userLng,userLat],zoom:14,duration:800}); }
     else setSort('recent');
     renderLocalIntel();
@@ -2693,7 +2714,7 @@ async function getDirections() {
     let fromCoords;
     if(!from || from.toLowerCase().includes('your location') || from.toLowerCase().includes('me')) {
       if(!userLat) {
-        await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>{userLat=p.coords.latitude;userLng=p.coords.longitude;res();},rej));
+        await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>{setUserMarker(p.coords.latitude,p.coords.longitude);res();},rej));
       }
       fromCoords = [userLng, userLat];
     } else {
@@ -2761,7 +2782,7 @@ function openNearby() {
   const panel = document.getElementById('nearbyPanel');
   if(panel.classList.toggle('open') && !userLat) {
     navigator.geolocation.getCurrentPosition(pos => {
-      userLat=pos.coords.latitude; userLng=pos.coords.longitude;
+      setUserMarker(pos.coords.latitude, pos.coords.longitude);
       renderNearby();
     }, () => {
       document.getElementById('nearbyContent').innerHTML='<div style="font-size:11px;color:var(--red)">Location access denied.</div>';
@@ -2872,19 +2893,28 @@ window.toggleTheme=toggleTheme;
 window.onFabClick=onFabClick;
 window.closeModal=closeModal;
 window.closeDetail=closeDetail;
+window.toggleDetailPeek=toggleDetailPeek;
 window.submitIssue=submitIssue;
 window.submitEvent=submitEvent;
+window.submitParking=submitParking;
+window.submitParkingZone=submitParkingZone;
+window.startParkingReport=startParkingReport;
+window.startParkingDigitize=startParkingDigitize;
+window.cancelDigitize=cancelDigitize;
 window.upvoteIssue=upvoteIssue;
 window.showPlaceDetail=showPlaceDetail;
 window.showIssueDetail=showIssueDetail;
 window.showEventDetail=showEventDetail;
 window.showTransportDetail=showTransportDetail;
+window.showParkingDetailByIndex=showParkingDetailByIndex;
+window.verifyParkingReport=verifyParkingReport;
 window.setRating=setRating;
 window.submitReview=submitReview;
 window.flyTo=flyTo;
 window.sharePlace=sharePlace;
 window.shareEvent=shareEvent;
 window.toggleNearMe=toggleNearMe;
+window.setBusView=setBusView;
 window.setSort=setSort;
 window.setFilter=setFilter;
 window.toggleRoutePanel=toggleRoutePanel;
@@ -2913,9 +2943,8 @@ map.on('load',()=>{
   // Silent geolocation on startup
   if(navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos=>{
-      userLat=pos.coords.latitude;
-      userLng=pos.coords.longitude;
-      const nb = byId('nearMeBtn'); if(nb) nb.title='Near Me';
+      setUserMarker(pos.coords.latitude, pos.coords.longitude);
+      document.querySelectorAll('.near-me-btn').forEach(b=>b.title='Near Me');
     },()=>{});
   }
 
@@ -3001,6 +3030,7 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
 
 
 
