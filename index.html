@@ -537,9 +537,22 @@
 
 <script>
 function initApp() {
+function showFatal(msg){
+  const wrap = document.querySelector('.map-wrap') || document.body;
+  const el = document.createElement('div');
+  el.style.cssText='position:absolute;inset:80px 16px auto 16px;background:#111827;color:#fff;padding:14px 16px;border-radius:12px;font-family:monospace;font-size:12px;z-index:5000;box-shadow:0 10px 30px rgba(0,0,0,0.35);';
+  el.textContent = 'MK Maps error: ' + msg;
+  wrap.appendChild(el);
+}
+
 window.addEventListener('error', (e)=>{
-  try{ toast('App error: '+(e?.message||'Unknown error'), 'error', 6000);}catch(err){}
+  try{ showFatal(e?.message||'Unknown error'); }catch(err){}
 });
+
+if(!window.mapboxgl){
+  showFatal('Mapbox failed to load.');
+  return;
+}
 
 // ── CONFIG ───────────────────────────────────────────────────────
 mapboxgl.accessToken = 'pk.eyJ1IjoibWtjaGVzcyIsImEiOiJjbWt5YjM0ejMwNmt6M2RzNm9sZmdoZGM4In0.FBGsSGKuCtYzLoDNbZx51Q';
@@ -2192,9 +2205,9 @@ map.on('load',()=>{
   // Restore last layer
   const savedLayer = getSavedLayer();
   const savedBtn = document.getElementById('btn-'+savedLayer);
-  setLayer(savedLayer, savedBtn);
+  try{ setLayer(savedLayer, savedBtn); }catch(e){ showFatal(e.message||'Layer init failed'); }
 
-  initTheme();
+  try{ initTheme(); }catch(e){ showFatal(e.message||'Theme init failed'); }
   document.getElementById('sidebar').classList.add('collapsed');
   loadWeather();
 
@@ -2244,17 +2257,19 @@ map.on('load',()=>{
 });
 
 map.on('style.load',()=>{
-  if(redwaysVisible) loadRedways();
-  if(lastRouteGeo) {
-    if(map.getSource('route')) map.getSource('route').setData(lastRouteGeo);
-    else {
-      map.addSource('route',{type:'geojson',data:lastRouteGeo});
-      map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}});
+  try{
+    if(redwaysVisible) loadRedways();
+    if(lastRouteGeo) {
+      if(map.getSource('route')) map.getSource('route').setData(lastRouteGeo);
+      else {
+        map.addSource('route',{type:'geojson',data:lastRouteGeo});
+        map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}});
+      }
     }
-  }
-  if(lastTransportGeo) {
-    if(map.getSource('transport')) map.getSource('transport').setData(lastTransportGeo);
-  }
+    if(lastTransportGeo) {
+      if(map.getSource('transport')) map.getSource('transport').setData(lastTransportGeo);
+    }
+  }catch(e){ showFatal(e.message||'Style load failed'); }
 });
 
 function toggleTheme() {
