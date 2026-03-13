@@ -37,6 +37,18 @@
     .search-input:focus{border-color:var(--red);}
     .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
     .search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;z-index:9999;display:none;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
+    .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:14px;cursor:pointer;}
+    .search-wrap.has-text .search-clear{display:flex;}
+    .search-pin{width:30px;height:30px;background:#e11d48;border-radius:50% 50% 50% 0;transform:rotate(-45deg);position:relative;box-shadow:0 6px 16px rgba(225,29,72,0.4);border:2px solid rgba(255,255,255,0.9);}
+    .search-pin::after{content:'';position:absolute;width:12px;height:12px;background:white;border-radius:50%;top:8px;left:8px;box-shadow:0 0 0 2px rgba(225,29,72,0.2);}
+    .detail-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin:4px 0;}
+    .detail-sub{color:var(--muted);font-size:12px;margin-bottom:10px;}
+    .detail-actions{display:flex;gap:8px;margin:10px 0 6px;}
+    .contribute-row{display:flex;gap:8px;margin-top:10px;}
+    .btn-secondary{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:11px;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:opacity 0.15s;}
+    .btn-secondary:hover{opacity:0.85;}
+    .pending-card{border:1px dashed var(--border);background:var(--panel2);padding:10px;border-radius:10px;margin-top:8px;}
+    .pending-actions{display:flex;gap:8px;margin-top:8px;}
     .sr{padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
     .sr:last-child{border-bottom:none;}
     .sr:hover{background:var(--panel2);}
@@ -370,6 +382,7 @@
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
     <input class="search-input" id="searchInput" placeholder="Search places, streets, events in MK..." autocomplete="off"/>
+    <button class="search-clear" id="searchClear" title="Clear search">×</button>
     <div class="search-results" id="searchResults"></div>
   </div>
   <div class="header-right">
@@ -536,6 +549,28 @@
   </div>
 </div>
 
+<!-- PARKING MODAL -->
+<div class="modal-overlay" id="parkingModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Add Free Parking</div>
+      <button class="modal-x" onclick="closeModal('parkingModal')">×</button>
+    </div>
+    <div class="modal-body" id="parkingBody"></div>
+  </div>
+</div>
+
+<!-- PARKING ZONE MODAL -->
+<div class="modal-overlay" id="parkingZoneModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">Digitize Parking Zone</div>
+      <button class="modal-x" onclick="closeModal('parkingZoneModal')">×</button>
+    </div>
+    <div class="modal-body" id="parkingZoneBody"></div>
+  </div>
+</div>
+
 <script>
 function initApp() {
 function showFatal(msg){
@@ -598,6 +633,15 @@ let transportTimer = null;
 let transportView = 'all';
 let transportRouteQuery = '';
 let lastRouteGeo = null;
+let communityParkingPending = [];
+let parkingZones = [];
+let parkingReportMode = false;
+let pendingParkingLat = null;
+let pendingParkingLng = null;
+let digitizeMode = false;
+let digitizeCoords = [];
+let parkingZoneDraft = null;
+let parkingZonesBound = false;
 const quickTrips = [
   {name:'CMK Station', lat:52.0341, lng:-0.7717, icon:'🚂'},
   {name:'Stadium MK', lat:51.9975, lng:-0.7349, icon:'🏟️'},
@@ -610,6 +654,20 @@ const quickTrips = [
 // Map click
 map.on('click', e => {
   if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.closest('.mapboxgl-marker')) return;
+  if(digitizeMode){
+    const {lat,lng} = e.lngLat;
+    digitizeCoords.push([lng,lat]);
+    updateDigitizePreview();
+    return;
+  }
+  if(parkingReportMode && activeLayer==='parking'){
+    const {lat,lng} = e.lngLat;
+    pendingParkingLat = lat;
+    pendingParkingLng = lng;
+    parkingReportMode = false;
+    openParkingModal(lat,lng);
+    return;
+  }
   if (activeLayer === 'issues' || activeLayer === 'events') {
     const {lat,lng} = e.lngLat;
     pendingLat=lat; pendingLng=lng;
@@ -618,6 +676,12 @@ map.on('click', e => {
     if(activeLayer === 'issues') openReportModal(lat,lng);
     else openEventModal(lat,lng);
   }
+});
+
+map.on('dblclick', e => {
+  if(!digitizeMode) return;
+  e.preventDefault();
+  finishDigitize();
 });
 
 function setPendingMarker(lat,lng,color) {
@@ -1202,52 +1266,249 @@ function loadPlaces() {
 }
 
 // ── FREE PARKING ─────────────────────────────────────────────────
+const PARKING_MAP_URL = 'https://www.milton-keynes.gov.uk/sites/default/files/2025-10/Milton-Keynes-Parking-Map-%2801.10.2025%29.pdf';
+const PARKING_INFO_URL = 'https://www.milton-keynes.gov.uk/parking/where-park';
 async function loadParking() {
   showSkeletons(3);
   const osm = await fetchFreeParkingOSM();
-  data.parking = osm.length ? osm : getFreeParking();
+  const council = getCouncilFreeParking();
+  const community = await fetchCommunityParking();
+  const zones = await fetchParkingZones();
+  communityParkingPending = community.pending || [];
+  parkingZones = zones || [];
+  const merged = [].concat(osm || [], community.verified || []);
+  council.forEach(p=>{
+    const exists = merged.some(o=>distKm(o.lat,o.lng,p.lat,p.lng) < 0.15);
+    if(!exists) merged.push(p);
+  });
+  data.parking = merged;
   renderParkingSidebar();
   renderParkingMarkers();
+  renderParkingZones();
   document.getElementById('sidebarTitle').textContent='Free Parking';
   document.getElementById('sidebarCount').textContent=data.parking.length;
   document.getElementById('s1').textContent=data.parking.length;
   document.getElementById('s2').textContent=data.parking.filter(p=>p.type==='On-street').length+' on-street';
   document.getElementById('s3').textContent=data.parking.filter(p=>p.freeAfter).length+' after 6pm';
 }
+function parkingNowStatus() {
+  const now = new Date();
+  const h = now.getHours() + (now.getMinutes()/60);
+  return !(h >= 7 && h < 18);
+}
 
+function parseConditionalFree(tag) {
+  if(!tag) return {freeAfter:'', freeNow:false, cond:''};
+  const lower = String(tag).toLowerCase();
+  if(lower.indexOf('no') === -1) return {freeAfter:'', freeNow:false, cond:''};
+  const m = lower.match(/no\s*@\s*\(([^\)]+)\)/);
+  const cond = m ? m[1] : '';
+  let freeAfter = 'Conditional';
+  let freeNow = false;
+  const timeMatch = cond.match(/(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/);
+  if(timeMatch){
+    const sh = parseInt(timeMatch[1],10) + parseInt(timeMatch[2],10)/60;
+    const eh = parseInt(timeMatch[3],10) + parseInt(timeMatch[4],10)/60;
+    freeAfter = 'After ' + timeMatch[1] + ':' + timeMatch[2];
+    const now = new Date();
+    const h = now.getHours() + (now.getMinutes()/60);
+    if(sh > eh) {
+      freeNow = h >= sh || h < eh;
+    } else {
+      freeNow = h >= sh && h < eh;
+    }
+  }
+  return {freeAfter, freeNow, cond};
+}
+function getCouncilFreeParking() {
+  return [
+    {id:'council_coachway',name:'MK Coachway Park & Ride',type:'Park & Ride',limit:'All day',notes:'Council Park & Ride (free parking)',freeNow:true,freeAfter:'',source:'council',lat:52.0553,lng:-0.69908}
+  ];
+}
+
+function loadLocalParkingReports(){
+  try{ return JSON.parse(localStorage.getItem('mkmaps_parking_reports')||'[]'); }catch(e){ return []; }
+}
+function saveLocalParkingReport(r){
+  try{
+    const rows = loadLocalParkingReports();
+    rows.unshift(r);
+    localStorage.setItem('mkmaps_parking_reports', JSON.stringify(rows.slice(0,200)));
+  }catch(e){}
+}
+function loadLocalParkingZones(){
+  try{ return JSON.parse(localStorage.getItem('mkmaps_parking_zones')||'[]'); }catch(e){ return []; }
+}
+function saveLocalParkingZone(z){
+  try{
+    const rows = loadLocalParkingZones();
+    rows.unshift(z);
+    localStorage.setItem('mkmaps_parking_zones', JSON.stringify(rows.slice(0,200)));
+  }catch(e){}
+}
+
+async function fetchCommunityParking() {
+  try {
+    let rows = await db.get('parking_reports');
+    if(!Array.isArray(rows)) rows = loadLocalParkingReports();
+    const verified = [];
+    const pending = [];
+    rows.forEach(r=>{
+      const lat = r.latitude || r.lat;
+      const lng = r.longitude || r.lng;
+      if(!lat || !lng) return;
+      const entry = {
+        id: 'community_'+(r.id||Math.random()),
+        sourceId: r.id,
+        name: r.name || r.title || 'Free parking',
+        type: r.type || 'Parking',
+        limit: r.limit || r.rules || '',
+        notes: r.notes || r.description || 'Community submission',
+        freeAfter: r.free_after || '',
+        freeNow: r.free_now === true || r.always_free === true,
+        lat, lng,
+        source: 'community',
+        votes: r.votes || 0,
+        status: r.status || ''
+      };
+      const isVerified = r.verified === true || entry.votes >= 3 || entry.status === 'verified';
+      if(isVerified) verified.push(entry);
+      else pending.push(entry);
+    });
+    return {verified, pending};
+  } catch(e) {
+    return {verified:[], pending:[]};
+  }
+}
+
+async function fetchParkingZones() {
+  try {
+    let rows = await db.get('parking_zones');
+    if(!Array.isArray(rows)) rows = loadLocalParkingZones();
+    return rows.map(r=>{
+      let geom = r.geojson || r.geometry || r.geom;
+      if(typeof geom === 'string') {
+        try{ geom = JSON.parse(geom); }catch(e){ geom = null; }
+      }
+      if(!geom || !geom.type) return null;
+      return {
+        id: r.id,
+        name: r.name || 'Parking zone',
+        freeAfter: r.free_after || '',
+        freeNow: r.free_now === true || r.always_free === true,
+        notes: r.notes || '',
+        votes: r.votes || 0,
+        status: r.status || 'pending',
+        geometry: geom
+      };
+    }).filter(Boolean);
+  } catch(e) {
+    return [];
+  }
+}
+
+function renderParkingZones() {
+  if(!map) return;
+  if(!parkingZones || !parkingZones.length) {
+    if(map.getLayer('parking-zones-fill')) map.removeLayer('parking-zones-fill');
+    if(map.getLayer('parking-zones-line')) map.removeLayer('parking-zones-line');
+    if(map.getSource('parking-zones')) map.removeSource('parking-zones');
+    return;
+  }
+  const fc = {type:'FeatureCollection',features:parkingZones.map(z=>({
+    type:'Feature',
+    properties:{id:z.id,name:z.name,freeAfter:z.freeAfter,freeNow:!!z.freeNow,notes:z.notes,votes:z.votes||0,status:z.status||'pending'},
+    geometry:z.geometry
+  }))};
+  if(map.getSource('parking-zones')) map.getSource('parking-zones').setData(fc);
+  else {
+    map.addSource('parking-zones',{type:'geojson',data:fc});
+    map.addLayer({
+      id:'parking-zones-fill',
+      type:'fill',
+      source:'parking-zones',
+      paint:{
+        'fill-color':[
+          'case',
+          ['==',['get','status'],'pending'],'rgba(245,158,11,0.25)',
+          ['==',['get','freeNow'],true],'rgba(16,185,129,0.25)',
+          'rgba(59,130,246,0.18)'
+        ],
+        'fill-outline-color':'rgba(255,255,255,0.2)'
+      }
+    });
+    map.addLayer({
+      id:'parking-zones-line',
+      type:'line',
+      source:'parking-zones',
+      paint:{'line-color':'rgba(255,255,255,0.4)','line-width':1.5}
+    });
+  }
+  if(!parkingZonesBound){
+    parkingZonesBound = true;
+    map.on('click','parking-zones-fill', (e)=>{
+      const f = e.features && e.features[0];
+      if(!f) return;
+      showParkingZoneDetail(f.properties, e.lngLat);
+    });
+    map.on('mouseenter','parking-zones-fill', ()=>{ map.getCanvas().style.cursor='pointer'; });
+    map.on('mouseleave','parking-zones-fill', ()=>{ map.getCanvas().style.cursor=''; });
+  }
+}
+
+function showParkingZoneDetail(props, lngLat){
+  const name = props.name || 'Parking zone';
+  const free = props.freeNow ? 'Free now' : (props.freeAfter || 'Conditional');
+  const status = props.status === 'pending' ? 'Pending review' : 'Verified';
+  const lat = lngLat ? lngLat.lat : 52.0406;
+  const lng = lngLat ? lngLat.lng : -0.7594;
+  document.getElementById('detailScroll').innerHTML=
+    '<div class=\"detail-title\">'+escHtml(name)+'</div>'+
+    '<div class=\"detail-sub\">'+escHtml(status)+' · '+escHtml(free)+'</div>'+
+    '<div class=\"detail-actions\">'+
+      '<button class=\"action-btn\" onclick=\"routeTo(\\''+escJs(name)+'\\','+lat+','+lng+')\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
+      '<button class=\"action-btn\" onclick=\"verifyParkingZone(\\''+escJs(String(props.id||''))+'\\')\"><span class=\"action-btn-icon\">✅</span><span class=\"action-btn-label\">Verify</span></button>'+
+    '</div>'+
+    '<div class=\"detail-section\"><div class=\"detail-section-title\">Notes</div><div style=\"font-size:12px;color:var(--muted)\">'+escHtml(props.notes||'Community digitized zone')+'</div></div>';
+  openDetail();
+}
 async function fetchFreeParkingOSM() {
   try {
     const bbox='-0.95,51.90,-0.55,52.15';
-    const query=`[out:json][timeout:25];
-      (
-        node["amenity"="parking"]["fee"="no"](${bbox});
-        way["amenity"="parking"]["fee"="no"](${bbox});
-        relation["amenity"="parking"]["fee"="no"](${bbox});
-        node["amenity"="parking_space"]["fee"="no"](${bbox});
-        way["amenity"="parking_space"]["fee"="no"](${bbox});
-        node["amenity"="parking"]["fee:conditional"~"no"](${bbox});
-        way["amenity"="parking"]["fee:conditional"~"no"](${bbox});
-        relation["amenity"="parking"]["fee:conditional"~"no"](${bbox});
-      );
-      out center;`;
+    const query='[out:json][timeout:25];('+
+      'node["amenity"="parking"]["fee"="no"]('+bbox+');'+
+      'way["amenity"="parking"]["fee"="no"]('+bbox+');'+
+      'relation["amenity"="parking"]["fee"="no"]('+bbox+');'+
+      'node["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
+      'way["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
+      'node["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+      'way["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+      'relation["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+    ');out center;';
     const r = await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(query)});
     const d = await r.json();
     return (d.elements||[]).map((e,i)=>{
-      const lat = e.lat || e.center?.lat;
-      const lng = e.lon || e.center?.lon;
+      const lat = e.lat || (e.center && e.center.lat);
+      const lng = e.lon || (e.center && e.center.lon);
       if(!lat || !lng) return null;
-      const name = e.tags?.name || 'Free parking';
-      const maxstay = e.tags?.maxstay || e.tags?.maxstay2 || 'No limit';
-      const access = e.tags?.access || 'public';
-      const feeConditional = e.tags?.['fee:conditional'] || '';
-      const freeAfter = /no/i.test(feeConditional) ? (feeConditional.includes('18:00') ? 'After 6pm' : 'Conditional') : '';
+      const name = (e.tags && e.tags.name) || 'Free parking';
+      const maxstay = (e.tags && (e.tags.maxstay || e.tags.maxstay2)) || 'No limit';
+      const access = (e.tags && e.tags.access) || 'public';
+      const feeConditional = e.tags ? e.tags['fee:conditional'] : '';
+      const parsed = parseConditionalFree(feeConditional);
+      const alwaysFree = (e.tags && e.tags.fee === 'no');
+      const freeAfter = alwaysFree ? '' : parsed.freeAfter;
+      const freeNow = alwaysFree ? true : parsed.freeNow;
+      const type = (e.tags && e.tags.parking) || 'Parking';
       return {
         id: 'osm_'+(e.id||i),
         name,
-        type: e.tags?.parking || 'Parking',
+        type,
         limit: maxstay,
-        notes: `OSM · ${access}${freeAfter ? ' · '+freeAfter : ''}`,
+        notes: 'OSM - ' + access + (feeConditional ? ' - ' + feeConditional : ''),
         freeAfter,
+        freeNow,
+        source: 'osm',
         lat, lng
       };
     }).filter(Boolean);
@@ -1256,29 +1517,20 @@ async function fetchFreeParkingOSM() {
   }
 }
 
-function getFreeParking() {
-  // Sample data — replace with official MK free parking dataset when available
-  return [
-    {id:1,name:'CMK: Midsummer Blvd (West) bays',type:'On-street',limit:'2h',notes:'Free after 6pm',lat:52.0418,lng:-0.7702},
-    {id:2,name:'CMK: Avebury Blvd bays',type:'On-street',limit:'2h',notes:'Free after 6pm',lat:52.0410,lng:-0.7664},
-    {id:3,name:'Wolverton: Stratford Rd bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0632,lng:-0.8117},
-    {id:4,name:'Stony Stratford: High St bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0565,lng:-0.8469},
-    {id:5,name:'Bletchley: Queensway bays',type:'On-street',limit:'3h',notes:'Free after 6pm',lat:51.9925,lng:-0.7311},
-    {id:6,name:'Newport Pagnell: High St bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0876,lng:-0.7228},
-    {id:7,name:'Olney: Market Place bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.1532,lng:-0.7028}
-  ];
-}
-
 function renderParkingSidebar() {
   const body = document.getElementById('sidebarBody');
-  const note = '<div class="empty"><div class="ei">P</div><p>Free parking locations are pulled from OpenStreetMap. Please check signs.</p></div>';
-  const freeNow = data.parking.filter(p=>!p.freeAfter);
-  const freeLater = data.parking.filter(p=>p.freeAfter);
+  const statusNote = parkingNowStatus() ? 'CMK paid bays are usually free now (outside 7am-6pm). Always check signage.' : 'CMK paid bays are in paid hours (7am-6pm). Always check signage.';
+  const note = '<div class="empty"><div class="ei">P</div><p><strong>Sources:</strong> OpenStreetMap free/conditional tags and the official CMK Parking Guide map.</p>'+
+    '<p><a href="'+PARKING_MAP_URL+'" target="_blank" rel="noopener">Open CMK parking map (PDF)</a><br/>'+
+    '<a href="'+PARKING_INFO_URL+'" target="_blank" rel="noopener">Council parking info</a></p>'+
+    '<p style="color:var(--muted)">'+statusNote+'</p></div>';
+  const freeNow = data.parking.filter(p=>p.freeNow);
+  const freeLater = data.parking.filter(p=>!p.freeNow && p.freeAfter);
   const card = (p) => (
     '<div class="card" onclick="flyTo(' + p.lng + ',' + p.lat + ')">' +
       '<div class="card-top">' +
         '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
-        '<span class="card-time">' + (p.freeAfter || p.limit || '') + '</span>' +
+        '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
       '</div>' +
       '<div class="card-title">' + (p.name||'Parking') + '</div>' +
       '<div class="card-sub">' + (p.notes||'') + '</div>' +
@@ -1286,19 +1538,68 @@ function renderParkingSidebar() {
     '</div>'
   );
   const section = (title, list) => list.length ? '<div class="detail-section-title">' + title + '</div>' + list.map(card).join('') : '';
-  body.innerHTML = note + section('Free Now', freeNow) + section('Free After 6pm', freeLater);
+
+  const contribute = '<div class="detail-section-title">Contribute</div>'+
+    '<div class="pending-card">Help digitize the official CMK map and report missing free parking. Submissions are reviewed like Google Maps edits.</div>'+
+    '<div class="contribute-row">'+
+      '<button class="btn-primary" onclick="startParkingReport()">Add free parking</button>'+
+      '<button class="btn-secondary" onclick="startParkingDigitize()">Digitize zone</button>'+
+    '</div>'+
+    (digitizeMode ? '<div class="contribute-row"><button class="btn-secondary" onclick="cancelDigitize()">Cancel digitize</button></div>' : '');
+
+  const pending = (communityParkingPending||[]).slice(0,6);
+  const pendingList = pending.length ? pending.map(p=>
+    '<div class="pending-card">'+
+      '<div style="font-weight:600">'+escHtml(p.name||'Free parking')+'</div>'+
+      '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+escHtml(p.notes||'Community submission')+'</div>'+
+      '<div class="pending-actions">'+
+        '<button class="btn-secondary" onclick="verifyParkingReport(\''+escJs(String(p.sourceId||p.id||''))+'\')">Verify ('+(p.votes||0)+')</button>'+
+        '<button class="btn-secondary" onclick="flyTo('+p.lng+','+p.lat+')">View</button>'+
+      '</div>'+
+    '</div>'
+  ).join('') : '<div class="pending-card">No pending community submissions right now.</div>';
+
+  body.innerHTML = note + contribute + section('Free Now', freeNow) + section('Free After', freeLater) + '<div class="detail-section-title">Community submissions</div>' + pendingList;
 }
 
 function renderParkingMarkers() {
   markers.parking.forEach(m=>m.remove()); markers.parking=[];
   data.parking.forEach(p=>{
     const el=document.createElement('div');
-    const color = p.freeAfter ? '#f59e0b' : '#10b981';
-    el.style.cssText=`width:30px;height:30px;border-radius:10px;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;color:white;cursor:pointer;box-shadow:0 6px 14px ${p.freeAfter?'rgba(245,158,11,0.35)':'rgba(16,185,129,0.35)'};border:2px solid rgba(255,255,255,0.5);`;
-    el.textContent='🅿️';
+    const isFreeNow = !!p.freeNow;
+    const color = isFreeNow ? '#10b981' : (p.freeAfter ? '#f59e0b' : '#6b7280');
+    const shadow = isFreeNow ? 'rgba(16,185,129,0.35)' : (p.freeAfter ? 'rgba(245,158,11,0.35)' : 'rgba(107,114,128,0.35)');
+    el.style.cssText='width:30px;height:30px;border-radius:10px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:14px;color:white;cursor:pointer;box-shadow:0 6px 14px '+shadow+';border:2px solid rgba(255,255,255,0.5);';
+    el.textContent='P';
     el.onclick=()=>flyTo(p.lng,p.lat);
     markers.parking.push(new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map));
   });
+}
+
+async function verifyParkingReport(id){
+  if(!id) return;
+  const row = communityParkingPending.find(p=>String(p.sourceId)===String(id));
+  const votes = (row && row.votes) ? row.votes + 1 : 1;
+  try{
+    await db.patch('parking_reports', id, {votes});
+    toast('Thanks! Verification submitted.','success');
+    loadParking();
+  }catch(e){
+    toast('Could not verify. Try again later.','warn');
+  }
+}
+
+async function verifyParkingZone(id){
+  if(!id) return;
+  const row = parkingZones.find(p=>String(p.id)===String(id));
+  const votes = (row && row.votes) ? row.votes + 1 : 1;
+  try{
+    await db.patch('parking_zones', id, {votes});
+    toast('Zone verified. Thank you.','success');
+    loadParking();
+  }catch(e){
+    toast('Could not verify zone.','warn');
+  }
 }
 
 function getMKPlaces() {
@@ -1503,8 +1804,14 @@ async function loadRedways() {
 // ── SEARCH ───────────────────────────────────────────────────────
 const searchInput = document.getElementById('searchInput');
 const searchResults = document.getElementById('searchResults');
+const searchClear = document.getElementById('searchClear');
 const routeFilterInput = document.getElementById('routeFilterInput');
 const byId = (id)=>document.getElementById(id);
+let searchMarker = null;
+let activeSearchItems = [];
+let recentSearches = [];
+let savedPlaces = [];
+let lastSearchFeature = null;
 
 routeFilterInput.addEventListener('input', () => {
   transportRouteQuery = routeFilterInput.value.trim();
@@ -1514,7 +1821,116 @@ routeFilterInput.addEventListener('input', () => {
   }
 });
 
+function loadRecentSearches(){
+  try{ return JSON.parse(localStorage.getItem('mkmaps_recent')||'[]'); }catch(e){ return []; }
+}
+function saveRecentSearch(f){
+  if(!f || !f.center) return;
+  const item = {id:f.id||('recent_'+Date.now()), text:f.text||f.place_name||'Search', place_name:f.place_name||f.text||'', center:f.center};
+  recentSearches = recentSearches.filter(r=>r.place_name!==item.place_name);
+  recentSearches.unshift(item);
+  recentSearches = recentSearches.slice(0,6);
+  try{ localStorage.setItem('mkmaps_recent', JSON.stringify(recentSearches)); }catch(e){}
+}
+function loadSavedPlaces(){
+  try{ return JSON.parse(localStorage.getItem('mkmaps_saved')||'[]'); }catch(e){ return []; }
+}
+function saveSavedPlaces(){
+  try{ localStorage.setItem('mkmaps_saved', JSON.stringify(savedPlaces)); }catch(e){}
+}
+function isSavedPlace(id){
+  return savedPlaces.some(p=>p.id===id);
+}
+function toggleSavePlace(id, name, placeName, center){
+  const idx = savedPlaces.findIndex(p=>p.id===id);
+  if(idx>=0){
+    savedPlaces.splice(idx,1);
+    toast('Removed from saved.','info');
+  } else {
+    savedPlaces.unshift({id,name,place_name:placeName,center});
+    toast('Saved place.','success');
+  }
+  savedPlaces = savedPlaces.slice(0,50);
+  saveSavedPlaces();
+  if(lastSearchFeature) showSearchDetail(lastSearchFeature);
+}
+function escHtml(s){
+  return String(s||'').replace(/[&<>"']/g,function(m){
+    if(m==='&') return '&amp;';
+    if(m==='<') return '&lt;';
+    if(m==='>') return '&gt;';
+    if(m==='"') return '&quot;';
+    return '&#39;';
+  });
+}
+function escJs(s){
+  return String(s||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+}
+function setSearchMarker(lng,lat){
+  if(searchMarker) searchMarker.remove();
+  const el=document.createElement('div');
+  el.className='search-pin';
+  searchMarker=new mapboxgl.Marker({element:el}).setLngLat([lng,lat]).addTo(map);
+}
+function clearSearchMarker(){
+  if(searchMarker){ searchMarker.remove(); searchMarker=null; }
+}
+function showSearchDetail(f){
+  if(!f || !f.center) return;
+  lastSearchFeature = f;
+  const name = f.text || f.place_name || 'Search result';
+  const placeName = f.place_name || name;
+  const lat = f.center[1];
+  const lng = f.center[0];
+  const id = f.id || (name+'_'+lng.toFixed(5)+'_'+lat.toFixed(5));
+  const saved = isSavedPlace(id);
+  const label = saved ? 'Saved' : 'Save';
+  document.getElementById('detailScroll').innerHTML=
+    '<div class=\"detail-title\">'+escHtml(name)+'</div>'+
+    '<div class=\"detail-sub\">'+escHtml(placeName)+'</div>'+
+    '<div class=\"detail-actions\">'+
+      '<button class=\"action-btn\" onclick=\"routeTo(\\''+escJs(name)+'\\','+lat+','+lng+')\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
+      '<button class=\"action-btn\" onclick=\"copySearch(\\''+escJs(placeName)+'\\')\"><span class=\"action-btn-icon\">📋</span><span class=\"action-btn-label\">Copy</span></button>'+
+      '<button class=\"action-btn\" onclick=\"toggleSavePlace(\\''+escJs(id)+'\\',\\''+escJs(name)+'\\',\\''+escJs(placeName)+'\\',['+lng+','+lat+'])\"><span class=\"action-btn-icon\">'+(saved?'★':'☆')+'</span><span class=\"action-btn-label\">'+label+'</span></button>'+
+    '</div>'+
+    '<div class=\"detail-section\"><div class=\"detail-section-title\">Location</div>'+
+      '<div style=\"font-size:12px;color:var(--muted)\">'+escHtml(placeName)+'</div>'+
+      '<div style=\"margin-top:6px;font-size:11px\">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div>'+
+    '</div>';
+  openDetail();
+}
+function copySearch(text){
+  if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard.','success')).catch(()=>toast('Copy failed.','warn'));
+  else toast(text,'info',5000);
+}
+function selectGeocodeResult(f){
+  if(!f || !f.center) return;
+  map.flyTo({center:f.center,zoom:16,duration:800});
+  setSearchMarker(f.center[0], f.center[1]);
+  showSearchDetail(f);
+  saveRecentSearch(f);
+  searchInput.value = f.place_name || f.text || '';
+  searchResults.style.display='none';
+  updateSearchClear();
+}
+function renderSearchResults(list){
+  activeSearchItems = list;
+  if(!list.length){ searchResults.style.display='none'; return; }
+  searchResults.innerHTML=list.map((_,i)=>'<div class=\"sr\" id=\"sr'+i+'\"><span class=\"sr-icon\">'+_.icon+'</span><div><div class=\"sr-name\">'+_.name+'</div><div class=\"sr-sub\">'+_.sub+'</div></div></div>').join('');
+  list.forEach((_,i)=>{document.getElementById('sr'+i).addEventListener('click',()=>{_.onClick();searchResults.style.display='none';});});
+  searchResults.style.display='block';
+}
+function updateSearchClear(){
+  const wrap = searchInput.closest('.search-wrap');
+  if(searchInput.value.trim()) wrap.classList.add('has-text');
+  else wrap.classList.remove('has-text');
+}
+
+recentSearches = loadRecentSearches();
+savedPlaces = loadSavedPlaces();
+
 searchInput.addEventListener('input', async () => {
+  updateSearchClear();
   const q = searchInput.value.trim().toLowerCase();
   if(!q) { searchResults.style.display='none'; return; }
   if(!data.places.length) data.places=getMKPlaces();
@@ -1535,18 +1951,43 @@ searchInput.addEventListener('input', async () => {
       const r=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?proximity=-0.7594,52.0406&bbox=-1.05,51.85,-0.55,52.2&country=gb&limit=4&access_token=${mapboxgl.accessToken}`);
       const d=await r.json();
       geoResults=(d.features||[]).map(f=>({
-        icon:'📍',name:f.text||f.place_name,
-        sub:f.place_name.replace(f.text+', ','').substring(0,60),
-        onClick:()=>{map.flyTo({center:f.center,zoom:16,duration:800});searchResults.style.display='none';searchInput.value='';}
+        icon:'📍',
+        name:f.text||f.place_name,
+        sub:(f.place_name||'').replace((f.text||'')+', ','').substring(0,60),
+        onClick:()=>selectGeocodeResult(f)
       }));
     }catch(e){}
   }
 
   const all=[...local,...geoResults].slice(0,8);
-  if(!all.length){searchResults.style.display='none';return;}
-  searchResults.innerHTML=all.map((_,i)=>`<div class="sr" id="sr${i}"><span class="sr-icon">${_.icon}</span><div><div class="sr-name">${_.name}</div><div class="sr-sub">${_.sub}</div></div></div>`).join('');
-  all.forEach((_,i)=>{document.getElementById('sr'+i).addEventListener('click',()=>{_.onClick();searchInput.value='';searchResults.style.display='none';});});
-  searchResults.style.display='block';
+  renderSearchResults(all);
+});
+
+searchInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' && activeSearchItems.length){
+    e.preventDefault();
+    activeSearchItems[0].onClick();
+  }
+});
+
+searchInput.addEventListener('focus', ()=>{
+  if(searchInput.value.trim()) return;
+  if(!recentSearches.length) return;
+  const recents = recentSearches.map(r=>({
+    icon:'⏱',
+    name:r.text||r.place_name,
+    sub:r.place_name||'Recent search',
+    onClick:()=>selectGeocodeResult(r)
+  }));
+  renderSearchResults(recents);
+});
+
+searchClear.addEventListener('click', ()=>{
+  searchInput.value='';
+  updateSearchClear();
+  searchResults.style.display='none';
+  clearSearchMarker();
+  closeDetail();
 });
 document.addEventListener('click',e=>{if(!e.target.closest('.search-wrap')) searchResults.style.display='none';});
 
@@ -1621,10 +2062,171 @@ function openEventModal(lat,lng) {
   document.getElementById('eventModal').classList.add('open');
 }
 
+function startParkingReport(){
+  parkingReportMode = true;
+  toast('Click the map to place a free parking spot.','info',4500);
+}
+
+function openParkingModal(lat,lng){
+  const latVal = (lat!==undefined && lat!==null) ? lat : pendingParkingLat;
+  const lngVal = (lng!==undefined && lng!==null) ? lng : pendingParkingLng;
+  document.getElementById('parkingBody').innerHTML=`
+    <p class="form-hint">Add a missing free parking spot. Submissions are reviewed by locals.</p>
+    <div class="form-group"><label>Name *</label><input id="p-name" placeholder="e.g. Avebury Blvd bays"/></div>
+    <div class="form-group"><label>Type</label>
+      <select id="p-type">
+        <option value="On-street">On-street</option>
+        <option value="Car park">Car park</option>
+        <option value="Park & Ride">Park & Ride</option>
+        <option value="Other">Other</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Free rules</label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px;">
+        <input type="checkbox" id="p-always"/> Always free
+      </label>
+      <input id="p-free-after" placeholder="Free after (e.g. 18:00 or 'after 6pm')"/>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="p-notes" placeholder="Any restrictions, max stay, signage details..."></textarea></div>
+    <div class="form-group"><label>Location — Lat / Lng *</label>
+      <div class="row2">
+        <input type="number" id="p-lat" placeholder="52.0406" step="0.00001" value="${latVal?latVal.toFixed(5):''}"/>
+        <input type="number" id="p-lng" placeholder="-0.7594" step="0.00001" value="${lngVal?lngVal.toFixed(5):''}"/>
+      </div>
+      <div style="font-size:10px;color:var(--muted);margin-top:5px">Tip: click the map to set location.</div>
+    </div>
+    <button class="btn-primary" onclick="submitParking()">Submit Free Parking →</button>`;
+  document.getElementById('parkingModal').classList.add('open');
+}
+
+async function submitParking(){
+  const name = document.getElementById('p-name').value.trim();
+  const type = document.getElementById('p-type').value;
+  const always = document.getElementById('p-always').checked;
+  const freeAfter = document.getElementById('p-free-after').value.trim();
+  const notes = document.getElementById('p-notes').value.trim();
+  const lat = parseFloat(document.getElementById('p-lat').value);
+  const lng = parseFloat(document.getElementById('p-lng').value);
+  if(!name || !lat || !lng){ toast('Please fill in name and location.','warn'); return; }
+  const btn = document.querySelector('#parkingBody .btn-primary');
+  btn.disabled=true; btn.textContent='Submitting...';
+  const payload = {name,type,free_after:freeAfter,free_now:always,notes,latitude:lat,longitude:lng,status:'pending',votes:0};
+  try{
+    await db.post('parking_reports', payload);
+    toast('Thanks! Added for review.','success');
+    closeModal('parkingModal');
+    pendingParkingLat=null; pendingParkingLng=null;
+    loadParking();
+  }catch(e){
+    saveLocalParkingReport(payload);
+    toast('Saved locally (not public yet). Enable community submissions to sync.','warn',5000);
+    closeModal('parkingModal');
+    btn.disabled=false; btn.textContent='Submit Free Parking →';
+    loadParking();
+  }
+}
+
+function startParkingDigitize(){
+  digitizeMode = true;
+  digitizeCoords = [];
+  parkingZoneDraft = null;
+  updateDigitizePreview();
+  map.getCanvas().style.cursor='crosshair';
+  toast('Digitize mode: click to add points, double-click to finish.','info',6000);
+}
+
+function cancelDigitize(){
+  digitizeMode = false;
+  digitizeCoords = [];
+  parkingZoneDraft = null;
+  clearDigitizePreview();
+  map.getCanvas().style.cursor='';
+  toast('Digitize cancelled.','info',2000);
+}
+
+function updateDigitizePreview(){
+  if(!map) return;
+  const lineFc = {type:'FeatureCollection',features:digitizeCoords.length ? [{type:'Feature',geometry:{type:'LineString',coordinates:digitizeCoords}}] : []};
+  const polyFc = {type:'FeatureCollection',features:digitizeCoords.length>=3 ? [{type:'Feature',geometry:{type:'Polygon',coordinates:[digitizeCoords.concat([digitizeCoords[0]])]}}] : []};
+  if(map.getSource('parking-digitize-line')) map.getSource('parking-digitize-line').setData(lineFc);
+  else {
+    map.addSource('parking-digitize-line',{type:'geojson',data:lineFc});
+    map.addLayer({id:'parking-digitize-line',type:'line',source:'parking-digitize-line',paint:{'line-color':'#f59e0b','line-width':2}});
+  }
+  if(map.getSource('parking-digitize-fill')) map.getSource('parking-digitize-fill').setData(polyFc);
+  else {
+    map.addSource('parking-digitize-fill',{type:'geojson',data:polyFc});
+    map.addLayer({id:'parking-digitize-fill',type:'fill',source:'parking-digitize-fill',paint:{'fill-color':'rgba(245,158,11,0.15)','fill-outline-color':'rgba(245,158,11,0.6)'}});
+  }
+}
+
+function clearDigitizePreview(){
+  if(map.getLayer('parking-digitize-fill')) map.removeLayer('parking-digitize-fill');
+  if(map.getLayer('parking-digitize-line')) map.removeLayer('parking-digitize-line');
+  if(map.getSource('parking-digitize-fill')) map.removeSource('parking-digitize-fill');
+  if(map.getSource('parking-digitize-line')) map.removeSource('parking-digitize-line');
+}
+
+function finishDigitize(){
+  if(digitizeCoords.length < 3){ toast('Add at least 3 points to make a zone.','warn'); return; }
+  const coords = digitizeCoords.concat([digitizeCoords[0]]);
+  parkingZoneDraft = {type:'Polygon',coordinates:[coords]};
+  digitizeMode = false;
+  map.getCanvas().style.cursor='';
+  openParkingZoneModal();
+}
+
+function openParkingZoneModal(){
+  if(!parkingZoneDraft){ toast('No polygon to save.','warn'); return; }
+  document.getElementById('parkingZoneBody').innerHTML=`
+    <p class="form-hint">Digitize a free parking zone from the official CMK map.</p>
+    <div class="form-group"><label>Name *</label><input id="z-name" placeholder="e.g. CMK Free After 6pm Zone"/></div>
+    <div class="form-group"><label>Free rules</label>
+      <label style="display:flex;gap:8px;align-items:center;font-size:11px;color:var(--muted);margin-bottom:6px;">
+        <input type="checkbox" id="z-always"/> Always free
+      </label>
+      <input id="z-free-after" placeholder="Free after (e.g. 18:00 or 'after 6pm')"/>
+    </div>
+    <div class="form-group"><label>Notes</label><textarea id="z-notes" placeholder="Source: CMK parking map. Add any restrictions..."></textarea></div>
+    <button class="btn-primary" onclick="submitParkingZone()">Submit Zone →</button>`;
+  document.getElementById('parkingZoneModal').classList.add('open');
+}
+
+async function submitParkingZone(){
+  const name = document.getElementById('z-name').value.trim();
+  const always = document.getElementById('z-always').checked;
+  const freeAfter = document.getElementById('z-free-after').value.trim();
+  const notes = document.getElementById('z-notes').value.trim();
+  if(!name || !parkingZoneDraft){ toast('Please name the zone.','warn'); return; }
+  const btn = document.querySelector('#parkingZoneBody .btn-primary');
+  btn.disabled=true; btn.textContent='Submitting...';
+  const payload = {name,free_after:freeAfter,free_now:always,notes,geojson:parkingZoneDraft,status:'pending',votes:0};
+  try{
+    await db.post('parking_zones', payload);
+    toast('Zone submitted for review.','success');
+    closeModal('parkingZoneModal');
+    parkingZoneDraft = null;
+    digitizeCoords = [];
+    clearDigitizePreview();
+    loadParking();
+  }catch(e){
+    saveLocalParkingZone(payload);
+    toast('Saved locally (not public yet). Enable community submissions to sync.','warn',5000);
+    closeModal('parkingZoneModal');
+    parkingZoneDraft = null;
+    digitizeCoords = [];
+    clearDigitizePreview();
+    btn.disabled=false; btn.textContent='Submit Zone →';
+    loadParking();
+  }
+}
+
 function closeModal(id) {
   document.getElementById(id).classList.remove('open');
   if(pendingMarker){pendingMarker.remove();pendingMarker=null;}
   pendingLat=null;pendingLng=null;
+  if(id==='parkingModal'){ pendingParkingLat=null; pendingParkingLng=null; }
+  if(id==='parkingZoneModal'){ parkingZoneDraft=null; digitizeCoords=[]; clearDigitizePreview(); }
 }
 
 // ── SUBMIT ───────────────────────────────────────────────────────
@@ -2177,6 +2779,13 @@ map.on('style.load',()=>{
         map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}});
       }
     }
+    if(parkingZones && parkingZones.length) {
+      parkingZonesBound = false;
+      renderParkingZones();
+    }
+    if(digitizeCoords && digitizeCoords.length) {
+      updateDigitizePreview();
+    }
   }catch(e){ showFatal(e.message||'Style load failed'); }
 });
 
@@ -2206,6 +2815,22 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
