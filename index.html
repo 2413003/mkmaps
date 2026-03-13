@@ -705,6 +705,7 @@ function clearActiveLayer(){
   activeLayer = 'none';
   saveLayer('none');
   document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('transportControls').style.display = 'none';
   document.getElementById('sortRow').style.display = 'none';
@@ -1511,13 +1512,13 @@ function showParkingZoneDetail(props, lngLat){
   const base = 'pz_' + (props.id || Math.random().toString(36).slice(2));
   const detail = document.getElementById('detailScroll');
   detail.innerHTML =
-    '<div class=\"detail-title\">'+escHtml(name)+'</div>'+
-    '<div class=\"detail-sub\">'+escHtml(status)+' · '+escHtml(free)+'</div>'+
-    '<div class=\"detail-actions\">'+
-      '<button class=\"action-btn\" id=\"'+base+'_dir\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
-      '<button class=\"action-btn\" id=\"'+base+'_verify\"><span class=\"action-btn-icon\">✅</span><span class=\"action-btn-label\">Verify</span></button>'+
+    '<div class="detail-title">'+escHtml(name)+'</div>'+
+    '<div class="detail-sub">'+escHtml(status)+' - '+escHtml(free)+'</div>'+
+    '<div class="detail-actions">'+
+      '<button class="action-btn" id="'+base+'_dir"><span class="action-btn-icon">GO</span><span class="action-btn-label">Directions</span></button>'+
+      '<button class="action-btn" id="'+base+'_verify"><span class="action-btn-icon">OK</span><span class="action-btn-label">Verify</span></button>'+
     '</div>'+
-    '<div class=\"detail-section\"><div class=\"detail-section-title\">Notes</div><div style=\"font-size:12px;color:var(--muted)\">'+escHtml(props.notes||'Community digitized zone')+'</div></div>';
+    '<div class="detail-section"><div class="detail-section-title">Notes</div><div style="font-size:12px;color:var(--muted)">'+escHtml(props.notes||'Community digitized zone')+'</div></div>';
   openDetail();
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
@@ -1525,48 +1526,60 @@ function showParkingZoneDetail(props, lngLat){
   if(verifyBtn) verifyBtn.onclick = ()=>verifyParkingZone(String(props.id||''));
 }
 async function fetchFreeParkingOSM() {
-  try {
-    const bbox='-0.95,51.90,-0.55,52.15';
-    const query='[out:json][timeout:25];('+
-      'node["amenity"="parking"]["fee"="no"]('+bbox+');'+
-      'way["amenity"="parking"]["fee"="no"]('+bbox+');'+
-      'relation["amenity"="parking"]["fee"="no"]('+bbox+');'+
-      'node["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
-      'way["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
-      'node["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
-      'way["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
-      'relation["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
-    ');out center;';
-    const r = await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(query)});
-    const d = await r.json();
-    return (d.elements||[]).map((e,i)=>{
-      const lat = e.lat || (e.center && e.center.lat);
-      const lng = e.lon || (e.center && e.center.lon);
-      if(!lat || !lng) return null;
-      const name = (e.tags && e.tags.name) || 'Free parking';
-      const maxstay = (e.tags && (e.tags.maxstay || e.tags.maxstay2)) || 'No limit';
-      const access = (e.tags && e.tags.access) || 'public';
-      const feeConditional = e.tags ? e.tags['fee:conditional'] : '';
-      const parsed = parseConditionalFree(feeConditional);
-      const alwaysFree = (e.tags && e.tags.fee === 'no');
-      const freeAfter = alwaysFree ? '' : parsed.freeAfter;
-      const freeNow = alwaysFree ? true : parsed.freeNow;
-      const type = (e.tags && e.tags.parking) || 'Parking';
-      return {
-        id: 'osm_'+(e.id||i),
-        name,
-        type,
-        limit: maxstay,
-        notes: 'OSM - ' + access + (feeConditional ? ' - ' + feeConditional : ''),
-        freeAfter,
-        freeNow,
-        source: 'osm',
-        lat, lng
-      };
-    }).filter(Boolean);
-  } catch(e) {
-    return [];
+  const bbox='-0.95,51.90,-0.55,52.15';
+  const query='[out:json][timeout:25];('+
+    'node["amenity"="parking"]["fee"="no"]('+bbox+');'+
+    'way["amenity"="parking"]["fee"="no"]('+bbox+');'+
+    'relation["amenity"="parking"]["fee"="no"]('+bbox+');'+
+    'node["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
+    'way["amenity"="parking_space"]["fee"="no"]('+bbox+');'+
+    'node["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+    'way["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+    'relation["amenity"="parking"]["fee:conditional"~"no"]('+bbox+');'+
+  ');out center;';
+  const endpoints = [
+    'https://overpass-api.de/api/interpreter',
+    'https://overpass.kumi.systems/api/interpreter',
+    'https://overpass.nchc.org.tw/api/interpreter'
+  ];
+  const mapRows = (d) => (d.elements||[]).map((e,i)=>{
+    const lat = e.lat || (e.center && e.center.lat);
+    const lng = e.lon || (e.center && e.center.lon);
+    if(!lat || !lng) return null;
+    const name = (e.tags && e.tags.name) || 'Free parking';
+    const maxstay = (e.tags && (e.tags.maxstay || e.tags.maxstay2)) || 'No limit';
+    const access = (e.tags && e.tags.access) || 'public';
+    const feeConditional = e.tags ? e.tags['fee:conditional'] : '';
+    const parsed = parseConditionalFree(feeConditional);
+    const alwaysFree = (e.tags && e.tags.fee === 'no');
+    const freeAfter = alwaysFree ? '' : parsed.freeAfter;
+    const freeNow = alwaysFree ? true : parsed.freeNow;
+    const type = (e.tags && e.tags.parking) || 'Parking';
+    return {
+      id: 'osm_'+(e.id||i),
+      name,
+      type,
+      limit: maxstay,
+      notes: 'OSM - ' + access + (feeConditional ? ' - ' + feeConditional : ''),
+      freeAfter,
+      freeNow,
+      source: 'osm',
+      lat, lng
+    };
+  }).filter(Boolean);
+  for(const url of endpoints){
+    try {
+      const r = await fetch(url, {
+        method: 'POST',
+        headers: {'Content-Type':'application/x-www-form-urlencoded'},
+        body: 'data='+encodeURIComponent(query)
+      });
+      if(!r.ok) continue;
+      const d = await r.json();
+      if(d && Array.isArray(d.elements)) return mapRows(d);
+    } catch(e) {}
   }
+  return [];
 }
 
 function renderParkingSidebar() {
@@ -1576,30 +1589,23 @@ function renderParkingSidebar() {
     '<p><a href="'+PARKING_MAP_URL+'" target="_blank" rel="noopener">Open CMK parking map (PDF)</a><br/>'+
     '<a href="'+PARKING_INFO_URL+'" target="_blank" rel="noopener">Council parking info</a></p>'+
     '<p style="color:var(--muted)">'+statusNote+'</p></div>';
-    const freeNow = data.parking.filter(p=>p.freeNow);
+  const freeNow = data.parking.filter(p=>p.freeNow);
   const freeLater = data.parking.filter(p=>!p.freeNow && p.freeAfter);
   const emptyMsg = (!data.parking || !data.parking.length) ? '<div class="pending-card">No free parking data loaded yet. Try again, zoom in, or use the CMK map link above to digitize zones.</div>' : '';
   const card = (p) => {
-  const idx = data.parking.indexOf(p);
-  return (
-    '<div class="card" onclick="showParkingDetailByIndex(' + idx + ')">' +
-      '<div class="card-top">' +
-        '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
-        '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
-      '</div>' +
-      '<div class="card-title">' + (p.name||'Parking') + '</div>' +
-      '<div class="card-sub">' + (p.notes||'') + '</div>' +
-      '<div class="card-footer"><span class="card-meta">' + Number(p.lat).toFixed(3) + ', ' + Number(p.lng).toFixed(3) + '</span></div>' +
-    '</div>'
-  );
-};color:#10b981">P ' + (p.type||'Parking') + '</span>' +
-        '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
-      '</div>' +
-      '<div class="card-title">' + (p.name||'Parking') + '</div>' +
-      '<div class="card-sub">' + (p.notes||'') + '</div>' +
-      '<div class="card-footer"><span class="card-meta">' + Number(p.lat).toFixed(3) + ', ' + Number(p.lng).toFixed(3) + '</span></div>' +
-    '</div>'
-  );
+    const idx = data.parking.indexOf(p);
+    return (
+      '<div class="card" onclick="showParkingDetailByIndex(' + idx + ')">' +
+        '<div class="card-top">' +
+          '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
+          '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
+        '</div>' +
+        '<div class="card-title">' + (p.name||'Parking') + '</div>' +
+        '<div class="card-sub">' + (p.notes||'') + '</div>' +
+        '<div class="card-footer"><span class="card-meta">' + Number(p.lat).toFixed(3) + ', ' + Number(p.lng).toFixed(3) + '</span></div>' +
+      '</div>'
+    );
+  };
   const section = (title, list) => list.length ? '<div class="detail-section-title">' + title + '</div>' + list.map(card).join('') : '';
 
   const contribute = '<div class="detail-section-title">Contribute</div>'+
@@ -1641,11 +1647,11 @@ function showParkingDetail(p){
   const detail = document.getElementById('detailScroll');
   detail.innerHTML =
     '<div class="detail-title">'+escHtml(name)+'</div>'+
-    '<div class="detail-sub">'+escHtml(source)+' � '+escHtml(freeLabel)+'</div>'+
+    '<div class="detail-sub">'+escHtml(source)+' - '+escHtml(freeLabel)+'</div>'+
     '<div class="detail-actions">'+
-      '<button class="action-btn" id="'+base+'_dir"><span class="action-btn-icon">???</span><span class="action-btn-label">Directions</span></button>'+
-      '<button class="action-btn" id="'+base+'_copy"><span class="action-btn-icon">??</span><span class="action-btn-label">Copy</span></button>'+
-      (p.source==='community' ? '<button class="action-btn" id="'+base+'_verify"><span class="action-btn-icon">?</span><span class="action-btn-label">Verify</span></button>' : '')+
+      '<button class="action-btn" id="'+base+'_dir"><span class="action-btn-icon">GO</span><span class="action-btn-label">Directions</span></button>'+
+      '<button class="action-btn" id="'+base+'_copy"><span class="action-btn-icon">COPY</span><span class="action-btn-label">Copy</span></button>'+
+      (p.source==='community' ? '<button class="action-btn" id="'+base+'_verify"><span class="action-btn-icon">OK</span><span class="action-btn-label">Verify</span></button>' : '')+
     '</div>'+
     '<div class="detail-section"><div class="detail-section-title">Rules</div><div style="font-size:12px;color:var(--muted)">'+escHtml(p.notes||p.limit||'Check signage')+'</div></div>'+
     '<div class="detail-section"><div class="detail-section-title">Location</div><div style="font-size:11px">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div></div>';
@@ -1653,12 +1659,14 @@ function showParkingDetail(p){
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
   const copyBtn = document.getElementById(base+'_copy');
-  if(copyBtn) copyBtn.onclick = ()=>copySearch(name+' � '+lat.toFixed(5)+', '+lng.toFixed(5));
+  if(copyBtn) copyBtn.onclick = ()=>copySearch(name+' - '+lat.toFixed(5)+', '+lng.toFixed(5));
   if(p.source==='community'){
     const verifyBtn = document.getElementById(base+'_verify');
     if(verifyBtn) verifyBtn.onclick = ()=>verifyParkingReport(String(p.sourceId||p.id||''));
   }
-}function renderParkingMarkers() {
+}
+
+function renderParkingMarkers() {
   markers.parking.forEach(m=>m.remove()); markers.parking=[];
   data.parking.forEach(p=>{
     const el=document.createElement('div');
@@ -2499,15 +2507,22 @@ function toast(msg, type='info', duration=3500) {
 
 // ── MOBILE SHEET ─────────────────────────────────────────────────
 function mobileTab(layer, btn) {
+  const isActive = activeLayer === layer;
   document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));
+  if(isActive){
+    clearActiveLayer();
+    const ml=document.getElementById('mobileList');
+    if(ml) ml.innerHTML='<span class="mobile-sheet-handle"></span><div class="empty"><div class="ei">MK</div><p>Select a layer to explore Milton Keynes.</p></div>';
+    return;
+  }
   btn.classList.add('active');
-  setLayer(layer, document.getElementById('btn-'+layer));
+  setLayer(layer, document.getElementById('btn-'+layer), {force:true});
   // Mirror sidebar content into mobile list
   setTimeout(()=>{
     const ml=document.getElementById('mobileList');
     const sb=document.getElementById('sidebarBody');
-    ml.innerHTML='<span class="mobile-sheet-handle"></span>'+sb.innerHTML;
-    // Re-bind click events — clone nodes lose them, so we use event delegation via onclick attrs (already inline)
+    if(ml && sb) ml.innerHTML='<span class="mobile-sheet-handle"></span>'+sb.innerHTML;
+    // Re-bind click events - clone nodes lose them, so we use event delegation via onclick attrs (already inline)
   },50);
 }
 
@@ -2986,6 +3001,12 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
+
+
+
+
+
 
 
 
