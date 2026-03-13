@@ -326,8 +326,14 @@
     .route-mode.active{background:var(--blue);border-color:var(--blue);}
     .route-btn{width:100%;background:var(--blue);color:white;border:none;padding:9px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;}
     .route-btn:hover{opacity:0.85;}
-    .route-result{margin-top:8px;padding:8px;background:var(--panel2);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.6;display:none;}
+    .route-result{margin-top:8px;background:var(--panel2);border-radius:6px;font-size:11px;color:var(--muted);line-height:1.6;display:none;max-height:300px;overflow-y:auto;}
     .route-result.show{display:block;}
+    .route-summary{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;}
+    .route-steps{list-style:none;margin:0;padding:0;}
+    .route-step{display:flex;align-items:flex-start;gap:8px;padding:6px 10px;border-bottom:1px solid var(--border);font-size:10px;color:var(--text);line-height:1.4;}
+    .route-step:last-child{border-bottom:none;}
+    .route-step-icon{flex-shrink:0;font-size:13px;width:18px;text-align:center;margin-top:1px;}
+    .route-step-dist{flex-shrink:0;color:var(--muted);font-size:9px;text-align:right;min-width:36px;margin-top:2px;}
 
     /* SORT ROW */
     .sort-row{display:flex;align-items:center;gap:8px;padding:6px 12px;border-bottom:1px solid var(--border);flex-shrink:0;background:var(--mid);}
@@ -991,24 +997,45 @@ async function loadTransport() {
 }
 
 async function fetchLiveTransport() {
+  // MK bounding box
+  const MK = {minLat:51.96, maxLat:52.12, minLng:-0.90, maxLng:-0.65};
   try {
-    const r = await fetch('/.netlify/functions/mk-buses');
+    const BODS_KEY = '23a0a48937d24953f3ac5a063df660c6d2229598';
+    const url = `https://data.bus-data.dft.gov.uk/api/v1/datafeed/?api_key=${BODS_KEY}&boundingBox=${MK.minLng},${MK.minLat},${MK.maxLng},${MK.maxLat}`;
+    const r = await fetch(url);
     if(!r.ok) return null;
-    const d = await r.json();
-    if(!d || !Array.isArray(d.vehicles) || !d.vehicles.length) return null;
-    return d.vehicles.map((v,i)=>({
-      id: v.vehicleId || v.id || i+1,
-      number: v.routeId || '🚌',
-      name: v.routeId ? `Route ${v.routeId}` : 'Live Bus',
-      stop: v.vehicleId ? `Vehicle ${v.vehicleId}` : 'Live vehicle',
-      lat: v.lat,
-      lng: v.lng,
-      departures: [],
-      color: '#4a9eff',
-      operator: v.operator || 'Live',
-      live: true,
-      updated: v.timestamp
-    })).filter(x=>x.lat && x.lng);
+    const xml = await r.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, 'application/xml');
+    const activities = doc.querySelectorAll('VehicleActivity');
+    if(!activities.length) return null;
+    const vehicles = [];
+    activities.forEach((a, i) => {
+      const get = tag => a.querySelector(tag)?.textContent?.trim() || '';
+      const lat = parseFloat(get('Latitude'));
+      const lng = parseFloat(get('Longitude'));
+      if(!lat || !lng) return;
+      if(lat < MK.minLat || lat > MK.maxLat || lng < MK.minLng || lng > MK.maxLng) return;
+      const line = get('PublishedLineName') || get('LineRef') || '🚌';
+      const dest = get('DestinationName') || get('DirectionRef') || '';
+      const op = get('OperatorRef') || '';
+      const vref = get('VehicleRef') || String(i+1);
+      const bearing = parseFloat(get('Bearing')) || 0;
+      const recorded = get('RecordedAtTime') || get('ValidUntilTime') || '';
+      vehicles.push({
+        id: vref,
+        number: line,
+        name: dest ? `${line} → ${dest}` : `Route ${line}`,
+        stop: `Vehicle ${vref}`,
+        lat, lng, bearing,
+        departures: [],
+        color: '#4a9eff',
+        operator: op,
+        live: true,
+        updated: recorded
+      });
+    });
+    return vehicles.length ? vehicles : null;
   } catch(e) {
     return null;
   }
@@ -2709,7 +2736,7 @@ async function getDirections() {
   if(!to){toast('Please enter a destination.','warn');return;}
 
   result.className='route-result show';
-  result.textContent='Finding route…';
+  result.innerHTML='<div class="route-summary">Finding route…</div>';
 
   try {
     let fromCoords;
@@ -2722,18 +2749,43 @@ async function getDirections() {
       fromCoords = await geocodeMK(from);
     }
     const toCoords = await geocodeMK(to);
-    if(!fromCoords||!toCoords){result.textContent='Could not find one of the locations.';return;}
+    if(!fromCoords||!toCoords){result.innerHTML='<div class="route-summary">Could not find one of the locations.</div>';return;}
 
     const profile = routeMode==='cycling'?'mapbox/cycling':routeMode==='walking'?'mapbox/walking':'mapbox/driving';
-    const r = await fetch(`https://api.mapbox.com/directions/v5/${profile}/${fromCoords.join(',')};${toCoords.join(',')}?steps=false&geometries=geojson&access_token=${mapboxgl.accessToken}`);
+    const r = await fetch(`https://api.mapbox.com/directions/v5/${profile}/${fromCoords.join(',')};${toCoords.join(',')}?steps=true&geometries=geojson&banner_instructions=true&access_token=${mapboxgl.accessToken}`);
     const d = await r.json();
-    if(!d.routes||!d.routes.length){result.textContent='No route found.';return;}
+    if(!d.routes||!d.routes.length){result.innerHTML='<div class="route-summary">No route found.</div>';return;}
 
     const route = d.routes[0];
     const mins = Math.round(route.duration/60);
     const km = (route.distance/1000).toFixed(1);
     const modeEmoji = routeMode==='cycling'?'🚴':routeMode==='walking'?'🚶':'🚗';
-    result.innerHTML = `${modeEmoji} <strong>${mins} min</strong> · ${km} km<br/><span style="color:var(--muted);font-size:10px">${routeMode.charAt(0).toUpperCase()+routeMode.slice(1)} route</span>`;
+
+    // Build turn-by-turn steps from all legs
+    const steps = route.legs.flatMap(leg => leg.steps);
+    const maneuverIcon = type => {
+      const icons = {
+        'turn': '↪', 'depart': '•', 'arrive': '🎯',
+        'merge': '↗', 'on ramp': '↗', 'off ramp': '↘',
+        'fork': '⑂', 'end of road': '↵', 'continue': '↑',
+        'roundabout': '↺', 'rotary': '↺', 'roundabout turn': '↺',
+        'notification': 'ℹ', 'exit roundabout': '↗', 'exit rotary': '↗'
+      };
+      return icons[type] || '→';
+    };
+    const fmtStepDist = m => m >= 1000 ? (m/1000).toFixed(1)+'km' : Math.round(m)+'m';
+
+    const stepsHtml = steps.map(s => {
+      const instr = s.maneuver.instruction || s.name || '';
+      const icon = maneuverIcon(s.maneuver.type);
+      const dist = fmtStepDist(s.distance);
+      return `<li class="route-step"><span class="route-step-icon">${icon}</span><span style="flex:1">${instr}</span><span class="route-step-dist">${dist}</span></li>`;
+    }).join('');
+
+    result.innerHTML = `
+      <div class="route-summary">${modeEmoji} <strong>${mins} min</strong> · ${km} km <span style="color:var(--muted);font-size:10px;margin-left:4px">${routeMode}</span></div>
+      <ul class="route-steps">${stepsHtml}</ul>
+    `;
 
     // Draw route on map
     const routeGeo = {type:'Feature',properties:{},geometry:route.geometry};
@@ -2750,7 +2802,7 @@ async function getDirections() {
     map.fitBounds(bounds,{padding:80});
 
   } catch(e) {
-    result.textContent = 'Error: ' + e.message;
+    result.innerHTML = `<div class="route-summary">Error: ${e.message}</div>`;
   }
 }
 
