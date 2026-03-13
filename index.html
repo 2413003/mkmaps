@@ -12,6 +12,7 @@
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E83A2F'/><text y='.9em' font-size='80'>📍</text></svg>"/>
   <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;MK Maps&quot;,&quot;short_name&quot;:&quot;MK Maps&quot;,&quot;start_url&quot;:&quot;/&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230a0a0a&quot;,&quot;theme_color&quot;:&quot;%230a0a0a&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E83A2F'/><text y='.9em' font-size='80'>📍</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}"/>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
   <style>
     :root {
@@ -452,6 +453,28 @@
     .saved-empty p{font-size:11px;line-height:1.6;}
     .header-btn.saved-active{color:var(--amber);border-color:var(--amber);}
     @media(max-width:700px){.saved-panel{right:8px;left:8px;width:auto;top:72px;}}
+    /* STREET VIEW OVERLAY */
+    .sv-overlay{position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;}
+    .sv-overlay.open{display:flex;}
+    .sv-header{position:absolute;top:0;left:0;right:0;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(rgba(0,0,0,0.7),transparent);pointer-events:none;}
+    .sv-title{color:#fff;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,0.8);}
+    .sv-close{pointer-events:all;background:rgba(0,0,0,0.55);border:1px solid rgba(255,255,255,0.2);color:#fff;width:36px;height:36px;border-radius:50%;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.15s;}
+    .sv-close:hover{background:rgba(0,0,0,0.8);}
+    .sv-loading{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:12px;z-index:5;}
+    .sv-spinner{width:36px;height:36px;border:3px solid rgba(255,255,255,0.2);border-top-color:#fff;border-radius:50%;animation:sv-spin 0.8s linear infinite;}
+    @keyframes sv-spin{to{transform:rotate(360deg)}}
+    .sv-loading-text{font-size:12px;color:rgba(255,255,255,0.7);}
+    .sv-error{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;color:#fff;gap:10px;z-index:5;text-align:center;padding:24px;}
+    .sv-error.show{display:flex;}
+    .sv-error-icon{font-size:36px;}
+    .sv-error-msg{font-size:12px;color:rgba(255,255,255,0.7);line-height:1.6;}
+    .sv-error-sub{font-size:11px;color:rgba(255,255,255,0.4);}
+    #sv-viewer{width:100%;height:100%;}
+    /* Street view button in action rows */
+    .sv-btn{background:var(--panel);border:1px solid var(--border);border-radius:8px;padding:10px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text);transition:border-color 0.15s;flex:1;}
+    .sv-btn:hover{border-color:var(--blue);}
+    .sv-btn-icon{font-size:18px;}
+    .sv-btn-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
     /* MOBILE BOTTOM SHEET */
     .mobile-sheet{display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;flex-direction:column;pointer-events:none;}
     .mobile-tab-bar{display:flex;padding:8px 12px 0;gap:6px;pointer-events:all;background:linear-gradient(transparent,rgba(10,10,10,0.95) 40%);}
@@ -2228,7 +2251,8 @@ function showPlaceDetail(id) {
       ${p.phone?`<a class="action-btn" href="tel:${p.phone}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
       ${p.website?`<a class="action-btn" href="${p.website}" target="_blank"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
       <button class="action-btn" onclick="routeTo('${p.name.replace(/'/g,"\\'")}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route here</span></button>
-      <button class="action-btn" onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
+      <button class="action-btn" onclick="openStreetView(${p.lat},${p.lng},'${p.name.replace(/'/g,&quot;\\'&quot;)}')"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
+      onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
     </div>
 
     <div class="detail-section">
@@ -2410,6 +2434,7 @@ function showSearchDetail(f){
     '<div class=\"detail-sub\">'+escHtml(placeName)+'</div>'+
     '<div class=\"detail-actions\">'+
       '<button class=\"action-btn\" id=\"'+base+'_dir\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_sv\"><span class=\"action-btn-icon\">👁️</span><span class=\"action-btn-label\">Street view</span></button>'+
       '<button class=\"action-btn\" id=\"'+base+'_copy\"><span class=\"action-btn-icon\">📋</span><span class=\"action-btn-label\">Copy</span></button>'+
       '<button class=\"action-btn\" id=\"'+base+'_save\"><span class=\"action-btn-icon\">'+(saved?'★':'☆')+'</span><span class=\"action-btn-label\">'+label+'</span></button>'+
     '</div>'+
@@ -2424,6 +2449,8 @@ function showSearchDetail(f){
   if(copyBtn) copyBtn.onclick = ()=>copySearch(placeName);
   const saveBtn = document.getElementById(base+'_save');
   if(saveBtn) saveBtn.onclick = ()=>toggleSavePlace(id, name, placeName, [lng,lat]);
+  const svBtn = document.getElementById(base+'_sv');
+  if(svBtn) svBtn.onclick = ()=>openStreetView(lat, lng, name);
 }
 function copySearch(text){
   if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard.','success')).catch(()=>toast('Copy failed.','warn'));
@@ -2437,16 +2464,8 @@ function clearAreaHighlight() {
   } catch(e){}
 }
 
-function showAreaHighlight(bbox) {
+function applyAreaHighlight(geojson) {
   clearAreaHighlight();
-  const [w, s, e, n] = bbox;
-  const geojson = {
-    type: 'Feature',
-    geometry: {
-      type: 'Polygon',
-      coordinates: [[[w,s],[e,s],[e,n],[w,n],[w,s]]]
-    }
-  };
   map.addSource('area-highlight', {type:'geojson', data:geojson});
   map.addLayer({
     id: 'area-highlight-fill',
@@ -2458,8 +2477,90 @@ function showAreaHighlight(bbox) {
     id: 'area-highlight-line',
     type: 'line',
     source: 'area-highlight',
-    paint: {'line-color':'#4a9eff','line-width':2,'line-opacity':0.7,'line-dasharray':[3,2]}
+    paint: {'line-color':'#4a9eff','line-width':2.5,'line-opacity':0.75}
   });
+}
+
+async function showAreaHighlight(name, bbox) {
+  // Try to fetch the real OSM boundary polygon for this area name
+  try {
+    // Search within a generous bounding box around the result
+    const [w, s, e, n] = bbox;
+    // Expand bbox slightly for the Overpass search
+    const pad = 0.05;
+    const bb = `${s-pad},${w-pad},${n+pad},${e+pad}`;
+    const query = `[out:json][timeout:10];(relation["name"="${name}"]["boundary"="administrative"](${bb});relation["name"="${name}"]["place"](${bb});way["name"="${name}"]["place"](${bb}););out geom;`;
+    const r = await fetch('https://overpass-api.de/api/interpreter', {
+      method:'POST', body:'data='+encodeURIComponent(query)
+    });
+    if(!r.ok) throw new Error('Overpass error');
+    const d = await r.json();
+
+    const features = [];
+    for(const el of (d.elements||[])) {
+      if(el.type === 'relation' && el.members) {
+        // Collect outer rings from relation members
+        const outerWays = el.members.filter(m => m.type==='way' && m.role==='outer' && m.geometry);
+        if(!outerWays.length) continue;
+        // Stitch ways into rings
+        const rings = stitchWays(outerWays.map(w => w.geometry.map(p => [p.lon, p.lat])));
+        if(rings.length) {
+          features.push({type:'Feature', geometry:{type:'MultiPolygon', coordinates: rings.map(r=>[r])}});
+        }
+      } else if(el.type === 'way' && el.geometry && el.geometry.length > 3) {
+        const coords = el.geometry.map(p => [p.lon, p.lat]);
+        features.push({type:'Feature', geometry:{type:'Polygon', coordinates:[coords]}});
+      }
+    }
+
+    if(features.length) {
+      applyAreaHighlight({type:'FeatureCollection', features});
+      return;
+    }
+  } catch(e) {
+    // Fall through to bbox rectangle
+  }
+
+  // Fallback: draw the bbox as a rectangle
+  const [w, s, e, n] = bbox;
+  applyAreaHighlight({
+    type: 'Feature',
+    geometry: {type:'Polygon', coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}
+  });
+}
+
+function stitchWays(ways) {
+  // Join an array of coordinate arrays (each way) into closed rings
+  if(!ways.length) return [];
+  const remaining = ways.map(w => [...w]);
+  const rings = [];
+  while(remaining.length) {
+    let ring = remaining.shift();
+    let changed = true;
+    while(changed) {
+      changed = false;
+      for(let i=0; i<remaining.length; i++) {
+        const w = remaining[i];
+        const rEnd = ring[ring.length-1];
+        const wStart = w[0];
+        const wEnd = w[w.length-1];
+        const tol = 0.00001;
+        const close = (a,b) => Math.abs(a[0]-b[0])<tol && Math.abs(a[1]-b[1])<tol;
+        if(close(rEnd, wStart)) {
+          ring = ring.concat(w.slice(1));
+          remaining.splice(i,1); changed=true; break;
+        } else if(close(rEnd, wEnd)) {
+          ring = ring.concat([...w].reverse().slice(1));
+          remaining.splice(i,1); changed=true; break;
+        }
+      }
+    }
+    // Close the ring
+    if(!close(ring[0], ring[ring.length-1])) ring.push(ring[0]);
+    if(ring.length >= 4) rings.push(ring);
+  }
+  function close(a,b){return Math.abs(a[0]-b[0])<0.00001&&Math.abs(a[1]-b[1])<0.00001;}
+  return rings;
 }
 
 function selectGeocodeResult(f){
@@ -2474,9 +2575,9 @@ function selectGeocodeResult(f){
     // Fit the map to the bbox of the area
     const [w,s,e,n] = f.bbox;
     map.fitBounds([[w,s],[e,n]], {padding:60, duration:800, maxZoom:15});
-    // Draw a subtle highlight polygon
-    // Wait for map to settle before adding layer
-    setTimeout(() => showAreaHighlight(f.bbox), 850);
+    // Fetch real OSM boundary and draw it
+    // Small delay lets fitBounds animate first
+    setTimeout(() => showAreaHighlight(f.text || f.place_name || '', f.bbox), 500);
     // No pin for areas — clear any existing one
     clearSearchMarker();
   } else {
@@ -3523,6 +3624,88 @@ function toggleSavePlace(id, name, placeName, center) {
   else if(btn) btn.textContent = '★ Saved';
 }
 
+// ── STREET VIEW ──────────────────────────────────────────────────
+const MAPILLARY_TOKEN = 'MLY|25831279493221175|c27eb2eef2ca5ec6194a0740821b3a8e';
+let svViewer = null;
+let svOpen = false;
+
+async function openStreetView(lat, lng, locationName) {
+  const overlay = document.getElementById('svOverlay');
+  const loading = document.getElementById('svLoading');
+  const error = document.getElementById('svError');
+  const title = document.getElementById('svTitle');
+
+  overlay.classList.add('open');
+  loading.style.display = 'flex';
+  error.classList.remove('show');
+  title.textContent = locationName ? `Street View · ${locationName}` : 'Street View';
+  svOpen = true;
+
+  try {
+    // Find closest Mapillary image to this lat/lng
+    const radius = 100; // metres
+    const url = `https://graph.mapillary.com/images?access_token=${MAPILLARY_TOKEN}`
+      + `&fields=id,thumb_2048_url,computed_geometry`
+      + `&bbox=${lng-0.001},${lat-0.001},${lng+0.001},${lat+0.001}`
+      + `&limit=5`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error('Mapillary API error: ' + r.status);
+    const d = await r.json();
+
+    if(!d.data || !d.data.length) {
+      loading.style.display = 'none';
+      error.classList.add('show');
+      return;
+    }
+
+    // Pick the closest image
+    const closest = d.data.reduce((best, img) => {
+      if(!img.computed_geometry) return best;
+      const [iLng, iLat] = img.computed_geometry.coordinates;
+      const dist = Math.hypot(iLat - lat, iLng - lng);
+      return (!best || dist < best.dist) ? {img, dist} : best;
+    }, null);
+
+    if(!closest) {
+      loading.style.display = 'none';
+      error.classList.add('show');
+      return;
+    }
+
+    loading.style.display = 'none';
+
+    // Init or reuse Mapillary viewer
+    if(!svViewer) {
+      svViewer = new mapillary.Viewer({
+        accessToken: MAPILLARY_TOKEN,
+        container: 'sv-viewer',
+        imageId: closest.img.id,
+        component: {
+          cover: false,
+          sequence: true,
+        },
+      });
+    } else {
+      svViewer.moveTo(closest.img.id).catch(()=>{});
+    }
+
+  } catch(e) {
+    console.error('Street view error:', e);
+    loading.style.display = 'none';
+    error.classList.add('show');
+  }
+}
+
+function closeStreetView() {
+  document.getElementById('svOverlay').classList.remove('open');
+  svOpen = false;
+}
+
+// Close on Escape
+document.addEventListener('keydown', e => {
+  if(e.key === 'Escape' && svOpen) { closeStreetView(); e.stopPropagation(); }
+});
+
 // ── EXPOSE GLOBALS ───────────────────────────────────────────────
 window.setLayer=setLayer;
 window.toggleRedways=toggleRedways;
@@ -3568,6 +3751,8 @@ window.closeNearby=closeNearby;
 window.toast=toast;
 window.toggleSavedPanel=toggleSavedPanel;
 window.clearAreaHighlight=clearAreaHighlight;
+window.openStreetView=openStreetView;
+window.closeStreetView=closeStreetView;
 window.savedItemClick=savedItemClick;
 window.removeSaved=removeSaved;
 
@@ -3674,7 +3859,27 @@ function initTheme() {
 } // end initApp
 
 </script>
+<!-- STREET VIEW OVERLAY -->
+<div class="sv-overlay" id="svOverlay">
+  <div class="sv-header">
+    <div class="sv-title" id="svTitle">Street View</div>
+    <button class="sv-close" onclick="closeStreetView()" title="Close">×</button>
+  </div>
+  <div class="sv-loading" id="svLoading">
+    <div class="sv-spinner"></div>
+    <div class="sv-loading-text">Finding street-level imagery…</div>
+  </div>
+  <div class="sv-error" id="svError">
+    <div class="sv-error-icon">📷</div>
+    <div class="sv-error-msg">No street-level imagery found near this location.</div>
+    <div class="sv-error-sub">Mapillary coverage may not include this area yet.</div>
+    <button class="action-btn" style="margin-top:12px;width:auto;padding:8px 16px" onclick="closeStreetView()">Close</button>
+  </div>
+  <div id="sv-viewer"></div>
+</div>
+
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
+<script src="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.js"></script>
 </body>
 </html>
 
