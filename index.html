@@ -2251,7 +2251,7 @@ function showPlaceDetail(id) {
       ${p.phone?`<a class="action-btn" href="tel:${p.phone}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
       ${p.website?`<a class="action-btn" href="${p.website}" target="_blank"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
       <button class="action-btn" onclick="routeTo('${p.name.replace(/'/g,"\\'")}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route here</span></button>
-      <button class="action-btn" onclick="openStreetView(${p.lat},${p.lng},'${p.name.replace(/'/g,&quot;\\'&quot;)}')"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
+      <button class="action-btn sv-place-btn" data-lat="${p.lat}" data-lng="${p.lng}" data-name="${p.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
       onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
     </div>
 
@@ -2292,6 +2292,11 @@ function showPlaceDetail(id) {
       </div>
     </div>`;
   openDetail();
+  // Wire street view button (data-attribute approach avoids escaping issues)
+  const svPlaceBtn = document.querySelector('.sv-place-btn');
+  if(svPlaceBtn) svPlaceBtn.addEventListener('click', () => {
+    openStreetView(parseFloat(svPlaceBtn.dataset.lat), parseFloat(svPlaceBtn.dataset.lng), svPlaceBtn.dataset.name);
+  });
 }
 
 // ── REVIEWS ──────────────────────────────────────────────────────
