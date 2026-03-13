@@ -372,7 +372,8 @@
   </div>
   <div class="header-right">
     <button class="header-btn" onclick="toggleSidebar()" title="Toggle list">List</button>
-    <button class="header-btn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
+    <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
+    <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Route</button>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">🌙 Night</button>
   </div>
 </header>
@@ -395,7 +396,7 @@
 </div>
 
 <div class="main">
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar collapsed" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-title" id="sidebarTitle">Live Issues</div>
       <span class="sidebar-count" id="sidebarCount">0</span>
@@ -573,6 +574,11 @@ const quickTrips = [
   {name:'MK Hospital', lat:52.0118, lng:-0.7565, icon:'🏥'},
   {name:'Xscape', lat:52.0377, lng:-0.7619, icon:'⛸️'}
 ];
+
+// Start with a layer so the sidebar has content even before map fully loads
+const startupLayer = getSavedLayer();
+const startupBtn = document.getElementById('btn-'+startupLayer);
+setLayer(startupLayer, startupBtn);
 
 // Map click
 map.on('click', e => {
@@ -1425,6 +1431,13 @@ function toggleLayerMenu(forceClose=false) {
   menu.classList.toggle('open');
 }
 
+document.addEventListener('click', e => {
+  const menu = document.getElementById('layerMenu');
+  if(menu && menu.classList.contains('open') && !e.target.closest('#layerMenu') && !e.target.closest('#layerMenuBtn')) {
+    menu.classList.remove('open');
+  }
+});
+
 // ── MODALS ───────────────────────────────────────────────────────
 function openReportModal(lat,lng) {
   const latVal = (lat!==undefined && lat!==null) ? lat : pendingLat;
@@ -1936,6 +1949,9 @@ document.getElementById('installBtn').addEventListener('click', async () => {
 // ── EXPOSE GLOBALS ───────────────────────────────────────────────
 window.setLayer=setLayer;
 window.toggleRedways=toggleRedways;
+window.toggleSidebar=toggleSidebar;
+window.toggleLayerMenu=toggleLayerMenu;
+window.toggleTheme=toggleTheme;
 window.onFabClick=onFabClick;
 window.closeModal=closeModal;
 window.closeDetail=closeDetail;
