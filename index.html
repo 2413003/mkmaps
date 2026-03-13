@@ -1462,15 +1462,21 @@ function showParkingZoneDetail(props, lngLat){
   const status = props.status === 'pending' ? 'Pending review' : 'Verified';
   const lat = lngLat ? lngLat.lat : 52.0406;
   const lng = lngLat ? lngLat.lng : -0.7594;
-  document.getElementById('detailScroll').innerHTML=
+  const base = 'pz_' + (props.id || Math.random().toString(36).slice(2));
+  const detail = document.getElementById('detailScroll');
+  detail.innerHTML =
     '<div class=\"detail-title\">'+escHtml(name)+'</div>'+
     '<div class=\"detail-sub\">'+escHtml(status)+' · '+escHtml(free)+'</div>'+
     '<div class=\"detail-actions\">'+
-      '<button class=\"action-btn\" onclick=\"routeTo(\\''+escJs(name)+'\\','+lat+','+lng+')\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
-      '<button class=\"action-btn\" onclick=\"verifyParkingZone(\\''+escJs(String(props.id||''))+'\\')\"><span class=\"action-btn-icon\">✅</span><span class=\"action-btn-label\">Verify</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_dir\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_verify\"><span class=\"action-btn-icon\">✅</span><span class=\"action-btn-label\">Verify</span></button>'+
     '</div>'+
     '<div class=\"detail-section\"><div class=\"detail-section-title\">Notes</div><div style=\"font-size:12px;color:var(--muted)\">'+escHtml(props.notes||'Community digitized zone')+'</div></div>';
   openDetail();
+  const dirBtn = document.getElementById(base+'_dir');
+  if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
+  const verifyBtn = document.getElementById(base+'_verify');
+  if(verifyBtn) verifyBtn.onclick = ()=>verifyParkingZone(String(props.id||''));
 }
 async function fetchFreeParkingOSM() {
   try {
