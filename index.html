@@ -504,6 +504,11 @@
     <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
     <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Route</button>
     <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
+    <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
+      <span id="weatherIcon">🌤️</span>
+      <span class="weather-temp" id="weatherTemp">—°C</span>
+      <span class="weather-label" id="weatherDesc"></span>
+    </div>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">🌙 Night</button>
   </div>
 </header>
@@ -528,11 +533,6 @@
 
 <!-- Legacy elements kept for JS compatibility -->
 <div class="legacy-hidden">
-  <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
-    <span id="weatherIcon">🌤️</span>
-    <span class="weather-temp" id="weatherTemp">—°C</span>
-    <span class="weather-label" id="weatherDesc"></span>
-  </div>
   <button class="route-header-btn" id="nearbyHeaderBtn" onclick="openNearby()">Near</button>
   <button class="route-header-btn" id="routeHeaderBtn" onclick="toggleRoutePanel()">Route</button>
   <button class="near-me-btn" id="nearMeBtn" onclick="toggleNearMe()">Near Me</button>
@@ -2486,8 +2486,14 @@ function applyAreaHighlight(geojson) {
 
 async function showAreaHighlight(name, bbox) {
   clearAreaHighlight();
-  if(!name || !bbox) return;
+  if(!bbox) return;
 
+  // Always draw bbox rectangle immediately as placeholder
+  const [w0, s0, e0, n0] = bbox;
+  applyAreaHighlight({type:'Feature', geometry:{type:'Polygon', coordinates:[[[w0,s0],[e0,s0],[e0,n0],[w0,n0],[w0,s0]]]}});
+
+  // Then try to replace with real OSM polygon
+  if(!name) return;
   try {
     const [w, s, e, n] = bbox;
     // Use a generous search area — MK estates are small so pad well
@@ -2533,9 +2539,7 @@ out geom;`;
     console.warn('Area highlight OSM fetch failed:', e);
   }
 
-  // Fallback: bbox rectangle
-  const [w, s, e, n] = bbox;
-  applyAreaHighlight({type:'Feature', geometry:{type:'Polygon', coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}});
+  // OSM returned nothing — bbox rectangle already shown above
 }
 
 function stitchWays(ways) {
@@ -2577,10 +2581,12 @@ function selectGeocodeResult(f){
   clearAreaHighlight();
 
   const placeType = (f.place_type||[])[0] || '';
-  const areaTypes = ['neighborhood','locality','place','district','region'];
+  const areaTypes = ['neighborhood','locality','place','district','region','locality'];
   const isAreaType = areaTypes.includes(placeType);
   const isPostcodeResult = placeType === 'postcode';
-  const isArea = isAreaType || (isPostcodeResult && f.bbox);
+  // Treat anything with a bbox as an area — Mapbox sometimes returns
+  // MK estates as 'poi' or 'locality' but still provides a bbox
+  const isArea = f.bbox ? !isPostcodeResult : isAreaType;
 
   if(isArea) {
     if(f.bbox) {
