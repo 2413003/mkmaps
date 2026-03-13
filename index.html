@@ -1325,16 +1325,219 @@ function showEventDetail(id) {
 function evEmoji(c){return{Sports:'⚽',Arts:'🎨',Music:'🎵',Market:'🛍️',Food:'🍕',Community:'👥',Leisure:'🎿'}[c]||'📅';}
 
 // ── PLACES ───────────────────────────────────────────────────────
-function loadPlaces() {
-  data.places=getMKPlaces();
+async function loadPlaces() {
+  document.getElementById('sidebarTitle').textContent='Places & Businesses';
+  document.getElementById('sidebarCount').textContent='Loading…';
+  showSkeletons(4);
+
+  try {
+    const osm = await fetchOSMPlaces();
+    if(osm && osm.length > 5) {
+      data.places = osm;
+    } else {
+      data.places = getMKPlaces();
+    }
+  } catch(e) {
+    data.places = getMKPlaces();
+  }
+
   renderPlacesSidebar();
   renderPlaceMarkers();
   renderLocalIntel();
-  document.getElementById('sidebarTitle').textContent='Places & Businesses';
+  const open = data.places.filter(p=>p.open).length;
   document.getElementById('sidebarCount').textContent=data.places.length;
   document.getElementById('s1').textContent=data.places.length;
-  document.getElementById('s2').textContent=data.places.filter(p=>p.open).length+' open';
-  document.getElementById('s3').textContent=(data.places.reduce((s,p)=>s+p.rating,0)/data.places.length).toFixed(1)+' avg';
+  document.getElementById('s2').textContent=open+' open now';
+  document.getElementById('s3').textContent='OSM live';
+}
+
+// OSM category mapping
+const OSM_CATS = {
+  // amenity tags
+  pub:           {cat:'Pub & Bar',      emoji:'🍺'},
+  bar:           {cat:'Pub & Bar',      emoji:'🍸'},
+  cafe:          {cat:'Café',           emoji:'☕'},
+  restaurant:    {cat:'Restaurant',     emoji:'🍽️'},
+  fast_food:     {cat:'Fast Food',      emoji:'🍔'},
+  food_court:    {cat:'Restaurant',     emoji:'🍽️'},
+  pharmacy:      {cat:'Health',         emoji:'💊'},
+  hospital:      {cat:'Health',         emoji:'🏥'},
+  clinic:        {cat:'Health',         emoji:'🩺'},
+  doctors:       {cat:'Health',         emoji:'🩺'},
+  dentist:       {cat:'Health',         emoji:'🦷'},
+  gym:           {cat:'Leisure',        emoji:'💪'},
+  sports_centre: {cat:'Leisure',        emoji:'🏊'},
+  swimming_pool: {cat:'Leisure',        emoji:'🏊'},
+  cinema:        {cat:'Leisure',        emoji:'🎬'},
+  theatre:       {cat:'Arts & Culture', emoji:'🎭'},
+  library:       {cat:'Community',      emoji:'📚'},
+  bank:          {cat:'Finance',        emoji:'🏦'},
+  atm:           {cat:'Finance',        emoji:'💳'},
+  post_office:   {cat:'Community',      emoji:'📮'},
+  fuel:          {cat:'Transport',      emoji:'⛽'},
+  parking:       {cat:'Transport',      emoji:'🅿️'},
+  bus_station:   {cat:'Transport',      emoji:'🚌'},
+  supermarket:   {cat:'Shopping',       emoji:'🛒'},
+  convenience:   {cat:'Shopping',       emoji:'🏪'},
+  clothes:       {cat:'Shopping',       emoji:'👗'},
+  hairdresser:   {cat:'Beauty',         emoji:'✂️'},
+  beauty:        {cat:'Beauty',         emoji:'💅'},
+  hotel:         {cat:'Hotel',          emoji:'🏨'},
+  guest_house:   {cat:'Hotel',          emoji:'🏨'},
+  place_of_worship:{cat:'Community',    emoji:'🕌'},
+  school:        {cat:'Education',      emoji:'🏫'},
+  college:       {cat:'Education',      emoji:'🎓'},
+  university:    {cat:'Education',      emoji:'🎓'},
+  nightclub:     {cat:'Music & Nightlife',emoji:'🎵'},
+  museum:        {cat:'Arts & Culture', emoji:'🏛️'},
+  art_gallery:   {cat:'Arts & Culture', emoji:'🎨'},
+  park:          {cat:'Parks & Nature', emoji:'🌳'},
+  // shop tags
+  bakery:        {cat:'Café',           emoji:'🥐'},
+  butcher:       {cat:'Shopping',       emoji:'🥩'},
+  florist:       {cat:'Shopping',       emoji:'💐'},
+  electronics:   {cat:'Shopping',       emoji:'📱'},
+  hardware:      {cat:'Shopping',       emoji:'🔧'},
+  sports:        {cat:'Leisure',        emoji:'⚽'},
+  // leisure tags
+  fitness_centre:{cat:'Leisure',        emoji:'💪'},
+  pitch:         {cat:'Leisure',        emoji:'⚽'},
+  golf_course:   {cat:'Leisure',        emoji:'⛳'},
+  ice_rink:      {cat:'Leisure',        emoji:'⛸️'},
+  // tourism
+  attraction:    {cat:'Arts & Culture', emoji:'🏛️'},
+  viewpoint:     {cat:'Parks & Nature', emoji:'👁️'},
+};
+
+function osmTagToMeta(tags) {
+  const keys = ['amenity','shop','leisure','tourism','office'];
+  for(const k of keys) {
+    if(tags[k] && OSM_CATS[tags[k]]) return OSM_CATS[tags[k]];
+  }
+  // Fallback guesses
+  if(tags.amenity) return {cat:'Place', emoji:'📌'};
+  if(tags.shop)    return {cat:'Shopping', emoji:'🛍️'};
+  if(tags.leisure) return {cat:'Leisure', emoji:'🎯'};
+  if(tags.tourism) return {cat:'Arts & Culture', emoji:'🏛️'};
+  return {cat:'Place', emoji:'📌'};
+}
+
+function osmIsOpen(tags) {
+  const oh = tags.opening_hours;
+  if(!oh) return null; // unknown
+  try {
+    // Very lightweight check: if "24/7" treat as open
+    if(oh.trim() === '24/7') return true;
+    const now = new Date();
+    const day = ['Su','Mo','Tu','We','Th','Fr','Sa'][now.getDay()];
+    const mins = now.getHours()*60 + now.getMinutes();
+    // Match patterns like "Mo-Fr 08:00-18:00" or "Mo-Sa 09:00-21:00; Su 11:00-17:00"
+    const parts = oh.split(';').map(s=>s.trim());
+    for(const part of parts) {
+      const m = part.match(/^([A-Za-z,\-]+)\s+(\d{2}):(\d{2})-(\d{2}):(\d{2})/);
+      if(!m) continue;
+      const dayStr = m[1];
+      const open = parseInt(m[2])*60+parseInt(m[3]);
+      const close = parseInt(m[4])*60+parseInt(m[5]);
+      // Check if today's day abbreviation is in the day string
+      const days = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+      const dayIdx = days.indexOf(day);
+      // Expand ranges like Mo-Fr
+      let covered = false;
+      if(dayStr.includes('-')) {
+        const parts2 = dayStr.split('-');
+        const from = days.indexOf(parts2[0].trim().substring(0,2));
+        const to   = days.indexOf(parts2[parts2.length-1].trim().substring(0,2));
+        if(from !== -1 && to !== -1) {
+          covered = (from <= to) ? (dayIdx>=from && dayIdx<=to) : (dayIdx>=from || dayIdx<=to);
+        }
+      } else {
+        covered = dayStr.split(',').map(s=>s.trim().substring(0,2)).includes(day);
+      }
+      if(covered) return (mins >= open && mins < close);
+    }
+    return null;
+  } catch(e) { return null; }
+}
+
+let osmPlacesCache = null;
+let osmPlacesCacheTime = 0;
+const OSM_CACHE_TTL = 10 * 60 * 1000; // 10 min
+
+async function fetchOSMPlaces() {
+  // Return cache if fresh
+  if(osmPlacesCache && (Date.now() - osmPlacesCacheTime) < OSM_CACHE_TTL) {
+    return osmPlacesCache;
+  }
+
+  // MK bounding box: south,west,north,east
+  const BB = '51.90,-0.95,52.15,-0.55';
+
+  // Fetch nodes with useful amenity/shop/leisure/tourism tags
+  const query = `[out:json][timeout:30];
+(
+  node["amenity"~"pub|bar|cafe|restaurant|fast_food|pharmacy|hospital|clinic|doctors|dentist|cinema|theatre|library|bank|atm|post_office|fuel|bus_station|nightclub|museum|place_of_worship|school|college|university"](${BB});
+  node["shop"~"supermarket|convenience|bakery|clothes|electronics|hardware|sports|butcher|florist|hairdresser|beauty"](${BB});
+  node["leisure"~"gym|fitness_centre|sports_centre|swimming_pool|golf_course|ice_rink|pitch"](${BB});
+  node["tourism"~"hotel|guest_house|attraction|museum|viewpoint"](${BB});
+);
+out body 300;`;
+
+  const r = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: 'data=' + encodeURIComponent(query)
+  });
+  if(!r.ok) return null;
+  const d = await r.json();
+  if(!d.elements || !d.elements.length) return null;
+
+  let idCounter = 100000;
+  const places = d.elements
+    .filter(e => e.lat && e.lon && (e.tags.name || e.tags.brand))
+    .map(e => {
+      const tags = e.tags || {};
+      const meta = osmTagToMeta(tags);
+      const openStatus = osmIsOpen(tags);
+      const name = tags.name || tags.brand || tags['name:en'] || 'Unnamed';
+      const addr = [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode']]
+                    .filter(Boolean).join(' ') || tags['addr:full'] || '';
+      const phone = tags.phone || tags['contact:phone'] || null;
+      const website = tags.website || tags['contact:website'] || tags['url'] || null;
+      const desc = tags.description || tags['description:en'] || 
+                   [tags.cuisine && ('Cuisine: '+tags.cuisine), 
+                    tags.brand && tags.brand !== name && ('Part of '+tags.brand),
+                    tags.operator && ('Operated by '+tags.operator)]
+                   .filter(Boolean).join('. ') || meta.cat + ' in Milton Keynes.';
+      return {
+        id: idCounter++,
+        name,
+        category: meta.cat,
+        emoji: meta.emoji,
+        description: desc,
+        lat: e.lat,
+        lng: e.lon,
+        rating: null,   // OSM has no ratings
+        reviews: 0,
+        open: openStatus,
+        phone,
+        website,
+        hours: tags.opening_hours ? {'Hours': tags.opening_hours} : {},
+        address: addr,
+        osm_id: e.id,
+        osm_type: tags.amenity || tags.shop || tags.leisure || tags.tourism || ''
+      };
+    });
+
+  // Deduplicate by proximity (50m) — OSM sometimes has duplicate nodes
+  const deduped = [];
+  for(const p of places) {
+    const dup = deduped.some(q => distKm(p.lat,p.lng,q.lat,q.lng) < 0.05 && q.name === p.name);
+    if(!dup) deduped.push(p);
+  }
+
+  osmPlacesCache = deduped;
+  osmPlacesCacheTime = Date.now();
+  return deduped;
 }
 
 // ── FREE PARKING ─────────────────────────────────────────────────
@@ -1800,19 +2003,22 @@ function renderPlacesSidebar() {
     places=places.map(p=>({...p,_dist:distKm(userLat,userLng,p.lat,p.lng)})).sort((a,b)=>a._dist-b._dist);
   }
 
-  body.innerHTML=places.map(p=>`
+  body.innerHTML=places.map(p=>{
+    const openLabel = p.open===true?'Open':p.open===false?'Closed':'Hours unknown';
+    const openColor = p.open===true?'var(--green)':p.open===false?'var(--red)':'var(--muted)';
+    const ratingHtml = p.rating ? `<span class="stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span><span class="card-meta">${p.rating} · ${p.reviews.toLocaleString()} reviews</span>` : `<span class="card-meta" style="color:var(--muted);font-size:10px">Community data · OSM</span>`;
+    const distHtml = p._dist!==undefined ? `<span class="card-dist" style="color:var(--blue)">📍${fmtDist(p._dist)}</span>` : '';
+    return `
     <div class="card" onclick="showPlaceDetail(${p.id})">
       <div class="card-top">
         <span class="card-tag" style="background:rgba(76,175,125,0.12);color:var(--green)">${p.emoji} ${p.category}</span>
-        <span class="card-time" style="color:${p.open?'var(--green)':'var(--red)'}">${p.open?'Open':'Closed'}</span>
+        <span class="card-time" style="color:${openColor}">${openLabel}</span>
       </div>
       <div class="card-title">${p.name}</div>
-      <div class="card-sub">${p.description.substring(0,80)}...</div>
-      <div class="card-footer">
-        <span class="stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span>
-        <span class="card-meta">${p.rating} · ${p.reviews.toLocaleString()} reviews ${p._dist!==undefined?`· <span class="card-dist" style="color:var(--blue)">📍${fmtDist(p._dist)}</span>`:''}</span>
-      </div>
-    </div>`).join('');
+      <div class="card-sub">${(p.description||'').substring(0,80)}${p.description&&p.description.length>80?'...':''}</div>
+      <div class="card-footer">${ratingHtml}${distHtml}</div>
+    </div>`;
+  }).join('');
 }
 
 function renderPlaceMarkers() {
@@ -1841,10 +2047,8 @@ function showPlaceDetail(id) {
         <div class="place-name">${p.name}</div>
         <div class="place-cat">${p.category} · ${p.address}</div>
         <div class="place-rating-row">
-          <span class="place-stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span>
-          <span class="place-rating-num">${p.rating}</span>
-          <span class="place-review-count">(${p.reviews.toLocaleString()} reviews)</span>
-          <span class="open-badge ${p.open?'open':'closed'} "style="margin-left:4px">${p.open?'● Open now':'● Closed'}</span>
+          ${p.rating ? `<span class='place-stars'>${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span><span class='place-rating-num'>${p.rating}</span><span class='place-review-count'>(${p.reviews.toLocaleString()} reviews)</span>` : `<span style='font-size:10px;color:var(--muted)'>Community data · OpenStreetMap</span>`}
+          <span class="open-badge ${p.open===true?'open':p.open===false?'closed':''}" style="margin-left:4px">${p.open===true?'● Open now':p.open===false?'● Closed':'● Hours unknown'}</span>
         </div>
       </div>
     </div>
@@ -1861,14 +2065,15 @@ function showPlaceDetail(id) {
       <div style="font-size:12px;color:var(--muted);line-height:1.7">${p.description}</div>
     </div>
 
-    <div class="detail-section">
-      <div class="detail-section-title">Opening Hours</div>
+    ${Object.keys(p.hours||{}).length ? `
+    <div class='detail-section'>
+      <div class='detail-section-title'>Opening Hours</div>
       ${Object.entries(p.hours).map(([day,hrs])=>`
-        <div class="hours-row ${day===today?'today':''}">
-          <span class="hours-day">${day}</span>
-          <span class="hours-time">${hrs}</span>
+        <div class='hours-row ${day===today?'today':''}'>
+          <span class='hours-day'>${day}</span>
+          <span class='hours-time'>${hrs}</span>
         </div>`).join('')}
-    </div>
+    </div>` : ''}
 
     <div class="detail-section" id="reviewsSection">
       <div class="detail-section-title">Community Reviews (${reviews.length})</div>
