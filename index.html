@@ -58,6 +58,7 @@
     .layer-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;color:var(--text);}
     .layer-item:hover{background:var(--panel2);}
     .layer-item.active{background:rgba(232,58,47,0.12);border:1px solid var(--border);}
+    .legacy-hidden{display:none!important;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
     /* LAYER BAR */
@@ -387,6 +388,18 @@
   <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('btn-redways'))">🛤️ Redways</div>
 </div>
 
+<!-- Legacy elements kept for JS compatibility -->
+<div class="legacy-hidden">
+  <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
+    <span id="weatherIcon">🌤️</span>
+    <span class="weather-temp" id="weatherTemp">—°C</span>
+    <span class="weather-label" id="weatherDesc"></span>
+  </div>
+  <button class="route-header-btn" id="nearbyHeaderBtn" onclick="openNearby()">Near</button>
+  <button class="route-header-btn" id="routeHeaderBtn" onclick="toggleRoutePanel()">Route</button>
+  <button class="near-me-btn" id="nearMeBtn" onclick="toggleNearMe()">Near Me</button>
+</div>
+
 <div class="layer-bar">
   <button class="layer-btn issues active" id="btn-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
   <button class="layer-btn transport" id="btn-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
@@ -524,6 +537,9 @@
 
 <script>
 function initApp() {
+window.addEventListener('error', (e)=>{
+  try{ toast('App error: '+(e?.message||'Unknown error'), 'error', 6000);}catch(err){}
+});
 
 // ── CONFIG ───────────────────────────────────────────────────────
 mapboxgl.accessToken = 'pk.eyJ1IjoibWtjaGVzcyIsImEiOiJjbWt5YjM0ejMwNmt6M2RzNm9sZmdoZGM4In0.FBGsSGKuCtYzLoDNbZx51Q';
