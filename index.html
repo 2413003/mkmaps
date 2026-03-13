@@ -383,6 +383,7 @@
   <div class="layer-item" id="menu-transport" onclick="setLayer('transport',document.getElementById('btn-transport'));toggleLayerMenu(true)">🚌 Transport</div>
   <div class="layer-item" id="menu-events" onclick="setLayer('events',document.getElementById('btn-events'));toggleLayerMenu(true)">📅 What's On</div>
   <div class="layer-item" id="menu-places" onclick="setLayer('places',document.getElementById('btn-places'));toggleLayerMenu(true)">📍 Places</div>
+  <div class="layer-item" id="menu-parking" onclick="setLayer('parking',document.getElementById('btn-parking'));toggleLayerMenu(true)">🅿️ Free Parking</div>
   <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('btn-redways'))">🛤️ Redways</div>
 </div>
 
@@ -391,6 +392,7 @@
   <button class="layer-btn transport" id="btn-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
   <button class="layer-btn events" id="btn-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
   <button class="layer-btn places" id="btn-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
+  <button class="layer-btn places" id="btn-parking" onclick="setLayer('parking',this)"><span class="layer-dot"></span>Free Parking</button>
   <div class="layer-divider"></div>
   <button class="layer-btn redways" id="btn-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
 </div>
@@ -550,8 +552,8 @@ map.addControl(new mapboxgl.AttributionControl({compact:true}),'bottom-right');
 
 // State
 let activeLayer = 'issues';
-let data = {issues:[],transport:[],events:[],places:[]};
-let markers = {issues:[],transport:[],events:[],places:[]};
+let data = {issues:[],transport:[],events:[],places:[],parking:[]};
+let markers = {issues:[],transport:[],events:[],places:[],parking:[]};
 let pendingMarker = null, pendingLat = null, pendingLng = null;
 let redwaysVisible = false;
 let selectedRating = 0;
@@ -566,6 +568,7 @@ let transportTimer = null;
 let transportView = 'all';
 let transportRouteQuery = '';
 let lastRouteGeo = null;
+let lastTransportGeo = null;
 const quickTrips = [
   {name:'CMK Station', lat:52.0341, lng:-0.7717, icon:'🚂'},
   {name:'Stadium MK', lat:51.9975, lng:-0.7349, icon:'🏟️'},
@@ -611,8 +614,8 @@ function setLayer(layer, btn) {
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
   const mi = document.getElementById('menu-'+layer);
   if(mi) mi.classList.add('active');
-  const titles={issues:'Live Issues',transport:'Public Transport',events:"What's On",places:'Places & Businesses'};
-  const hints={issues:'Click map to report an issue',transport:'Live bus & train info',events:'Click map to add an event',places:'Click a place for full details'};
+  const titles={issues:'Live Issues',transport:'Public Transport',events:"What's On",places:'Places & Businesses',parking:'Free Parking'};
+  const hints={issues:'Click map to report an issue',transport:'Live bus & train info',events:'Click map to add an event',places:'Click a place for full details',parking:'Free parking spaces and lots'};
   document.getElementById('sidebarTitle').textContent=titles[layer];
   document.getElementById('mapHint').textContent=hints[layer];
   document.getElementById('mapHint').style.opacity='1';
@@ -622,6 +625,9 @@ function setLayer(layer, btn) {
   else if(layer==='transport') {loadTransport(); document.getElementById('fab').style.display='none';}
   else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='flex';}
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
+  else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
+  const transportLayers=['transport-clusters','transport-cluster-count','transport-unclustered','transport-unclustered-label'];
+  transportLayers.forEach(l=>{ if(map.getLayer(l)) map.setLayoutProperty(l,'visibility',layer==='transport'?'visible':'none'); });
   if(layer!=='issues') document.getElementById('fab').style.display = layer==='events'?'flex':'none';
   else document.getElementById('fab').style.display='flex';
 }
@@ -942,14 +948,97 @@ function renderTransportSidebar() {
 function renderTransportMarkers() {
   markers.transport.forEach(m=>m.remove()); markers.transport=[];
   const filtered = filterTransport(data.transport||[]);
-  filtered.forEach(r=>{
-    const el=document.createElement('div');
-    const isRail=r.number==='🚂';
-    el.style.cssText=`width:34px;height:34px;border-radius:${isRail?'6px':'50%'};background:${r.color};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:${isRail?'16px':'12px'};font-weight:900;color:white;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.2);`;
-    el.textContent=r.number;
-    el.onclick=()=>showTransportDetail(r.id);
-    markers.transport.push(new mapboxgl.Marker({element:el}).setLngLat([r.lng,r.lat]).addTo(map));
-  });
+  const features = filtered.map(r=>({
+    type:'Feature',
+    geometry:{type:'Point',coordinates:[r.lng,r.lat]},
+    properties:{
+      id:r.id,
+      number:r.number,
+      color:r.color || '#4a9eff',
+      live:!!r.live
+    }
+  }));
+  const geo = {type:'FeatureCollection',features};
+  lastTransportGeo = geo;
+
+  if(map.getSource('transport')) {
+    map.getSource('transport').setData(geo);
+  } else {
+    map.addSource('transport',{
+      type:'geojson',
+      data:geo,
+      cluster:true,
+      clusterRadius:40,
+      clusterMaxZoom:14
+    });
+    map.addLayer({
+      id:'transport-clusters',
+      type:'circle',
+      source:'transport',
+      filter:['has','point_count'],
+      paint:{
+        'circle-color':'#4a9eff',
+        'circle-radius':['step',['get','point_count'],16,10,20,30,26],
+        'circle-opacity':0.85
+      }
+    });
+    map.addLayer({
+      id:'transport-cluster-count',
+      type:'symbol',
+      source:'transport',
+      filter:['has','point_count'],
+      layout:{
+        'text-field':['get','point_count_abbreviated'],
+        'text-font':['Open Sans Bold','Arial Unicode MS Bold'],
+        'text-size':12
+      },
+      paint:{'text-color':'#ffffff'}
+    });
+    map.addLayer({
+      id:'transport-unclustered',
+      type:'circle',
+      source:'transport',
+      filter:['!has','point_count'],
+      paint:{
+        'circle-color':['get','color'],
+        'circle-radius':10,
+        'circle-stroke-color':'#ffffff',
+        'circle-stroke-width':2
+      }
+    });
+    map.addLayer({
+      id:'transport-unclustered-label',
+      type:'symbol',
+      source:'transport',
+      filter:['!has','point_count'],
+      layout:{
+        'text-field':['get','number'],
+        'text-font':['Open Sans Bold','Arial Unicode MS Bold'],
+        'text-size':10,
+        'text-offset':[0,0.1]
+      },
+      paint:{'text-color':'#ffffff'}
+    });
+    map.on('click','transport-unclustered', e=>{
+      const id = e.features?.[0]?.properties?.id;
+      if(id) showTransportDetail(String(id));
+    });
+    map.on('click','transport-clusters', e=>{
+      const features = map.queryRenderedFeatures(e.point,{layers:['transport-clusters']});
+      const clusterId = features[0]?.properties?.cluster_id;
+      const source = map.getSource('transport');
+      if(source && clusterId!=null) {
+        source.getClusterExpansionZoom(clusterId,(err,zoom)=>{
+          if(err) return;
+          map.easeTo({center:features[0].geometry.coordinates, zoom});
+        });
+      }
+    });
+    map.on('mouseenter','transport-clusters',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','transport-clusters',()=>map.getCanvas().style.cursor='');
+    map.on('mouseenter','transport-unclustered',()=>map.getCanvas().style.cursor='pointer');
+    map.on('mouseleave','transport-unclustered',()=>map.getCanvas().style.cursor='');
+  }
 }
 
 function filterTransport(list) {
@@ -982,7 +1071,7 @@ function setBusView(mode) {
 }
 
 function showTransportDetail(id) {
-  const r=data.transport.find(x=>x.id===id);
+  const r=data.transport.find(x=>String(x.id)===String(id));
   if(!r) return;
   flyTo(r.lng,r.lat);
   document.getElementById('detailScroll').innerHTML=r.live?`
@@ -1171,6 +1260,109 @@ function loadPlaces() {
   document.getElementById('s1').textContent=data.places.length;
   document.getElementById('s2').textContent=data.places.filter(p=>p.open).length+' open';
   document.getElementById('s3').textContent=(data.places.reduce((s,p)=>s+p.rating,0)/data.places.length).toFixed(1)+' avg';
+}
+
+// ── FREE PARKING ─────────────────────────────────────────────────
+async function loadParking() {
+  showSkeletons(3);
+  const osm = await fetchFreeParkingOSM();
+  data.parking = osm.length ? osm : getFreeParking();
+  renderParkingSidebar();
+  renderParkingMarkers();
+  document.getElementById('sidebarTitle').textContent='Free Parking';
+  document.getElementById('sidebarCount').textContent=data.parking.length;
+  document.getElementById('s1').textContent=data.parking.length;
+  document.getElementById('s2').textContent=data.parking.filter(p=>p.type==='On-street').length+' on-street';
+  document.getElementById('s3').textContent=data.parking.filter(p=>p.freeAfter).length+' after 6pm';
+}
+
+async function fetchFreeParkingOSM() {
+  try {
+    const bbox='-0.95,51.90,-0.55,52.15';
+    const query=`[out:json][timeout:25];
+      (
+        node["amenity"="parking"]["fee"="no"](${bbox});
+        way["amenity"="parking"]["fee"="no"](${bbox});
+        relation["amenity"="parking"]["fee"="no"](${bbox});
+        node["amenity"="parking_space"]["fee"="no"](${bbox});
+        way["amenity"="parking_space"]["fee"="no"](${bbox});
+        node["amenity"="parking"]["fee:conditional"~"no"](${bbox});
+        way["amenity"="parking"]["fee:conditional"~"no"](${bbox});
+        relation["amenity"="parking"]["fee:conditional"~"no"](${bbox});
+      );
+      out center;`;
+    const r = await fetch('https://overpass-api.de/api/interpreter',{method:'POST',body:'data='+encodeURIComponent(query)});
+    const d = await r.json();
+    return (d.elements||[]).map((e,i)=>{
+      const lat = e.lat || e.center?.lat;
+      const lng = e.lon || e.center?.lon;
+      if(!lat || !lng) return null;
+      const name = e.tags?.name || 'Free parking';
+      const maxstay = e.tags?.maxstay || e.tags?.maxstay2 || 'No limit';
+      const access = e.tags?.access || 'public';
+      const feeConditional = e.tags?.['fee:conditional'] || '';
+      const freeAfter = /no/i.test(feeConditional) ? (feeConditional.includes('18:00') ? 'After 6pm' : 'Conditional') : '';
+      return {
+        id: 'osm_'+(e.id||i),
+        name,
+        type: e.tags?.parking || 'Parking',
+        limit: maxstay,
+        notes: `OSM · ${access}${freeAfter ? ' · '+freeAfter : ''}`,
+        freeAfter,
+        lat, lng
+      };
+    }).filter(Boolean);
+  } catch(e) {
+    return [];
+  }
+}
+
+function getFreeParking() {
+  // Sample data — replace with official MK free parking dataset when available
+  return [
+    {id:1,name:'CMK: Midsummer Blvd (West) bays',type:'On-street',limit:'2h',notes:'Free after 6pm',lat:52.0418,lng:-0.7702},
+    {id:2,name:'CMK: Avebury Blvd bays',type:'On-street',limit:'2h',notes:'Free after 6pm',lat:52.0410,lng:-0.7664},
+    {id:3,name:'Wolverton: Stratford Rd bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0632,lng:-0.8117},
+    {id:4,name:'Stony Stratford: High St bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0565,lng:-0.8469},
+    {id:5,name:'Bletchley: Queensway bays',type:'On-street',limit:'3h',notes:'Free after 6pm',lat:51.9925,lng:-0.7311},
+    {id:6,name:'Newport Pagnell: High St bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.0876,lng:-0.7228},
+    {id:7,name:'Olney: Market Place bays',type:'On-street',limit:'No limit',notes:'All day free',lat:52.1532,lng:-0.7028}
+  ];
+}
+
+function renderParkingSidebar() {
+  const body=document.getElementById('sidebarBody');
+  const note = `<div class="card" style="border-style:dashed">
+    <div class="card-title">Free parking (live)</div>
+    <div class="card-sub">Showing free parking and “free after 6pm” tagged in OpenStreetMap. Always check local signage for time limits.</div>
+  </div>`;
+  const freeNow = data.parking.filter(p=>!p.freeAfter);
+  const freeLater = data.parking.filter(p=>p.freeAfter);
+  const section = (title, list)=> list.length ? `<div class="detail-section-title">${title}</div>`+list.map(p=>`
+    <div class="card" onclick="flyTo(${p.lng},${p.lat})">
+      <div class="card-top">
+        <span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">🅿️ ${p.type}</span>
+        <span class="card-time">${p.freeAfter || p.limit}</span>
+      </div>
+      <div class="card-title">${p.name}</div>
+      <div class="card-sub">${p.notes}</div>
+      <div class="card-footer">
+        <span class="card-meta">${p.lat.toFixed(3)}, ${p.lng.toFixed(3)}</span>
+      </div>
+    </div>`).join('');
+  body.innerHTML= note + section('Free Now', freeNow) + section('Free After 6pm', freeLater);
+}
+
+function renderParkingMarkers() {
+  markers.parking.forEach(m=>m.remove()); markers.parking=[];
+  data.parking.forEach(p=>{
+    const el=document.createElement('div');
+    const color = p.freeAfter ? '#f59e0b' : '#10b981';
+    el.style.cssText=`width:30px;height:30px;border-radius:10px;background:${color};display:flex;align-items:center;justify-content:center;font-size:14px;color:white;cursor:pointer;box-shadow:0 6px 14px ${p.freeAfter?'rgba(245,158,11,0.35)':'rgba(16,185,129,0.35)'};border:2px solid rgba(255,255,255,0.5);`;
+    el.textContent='🅿️';
+    el.onclick=()=>flyTo(p.lng,p.lat);
+    markers.parking.push(new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map));
+  });
 }
 
 function getMKPlaces() {
@@ -1397,6 +1589,7 @@ searchInput.addEventListener('input', async () => {
     ...data.events.map(e=>({icon:evEmoji(e.category),name:e.title,sub:`Event · ${e.venue}`,onClick:()=>showEventDetail(e.id)})),
     ...data.places.map(p=>({icon:p.emoji,name:p.name,sub:`${p.category} · ${p.open?'Open':'Closed'}`,onClick:()=>showPlaceDetail(p.id)})),
     ...data.transport.map(t=>({icon:'🚌',name:`Bus ${t.number}: ${t.name}`,sub:`${t.operator} · ${t.stop}`,onClick:()=>showTransportDetail(t.id)})),
+    ...data.parking.map(p=>({icon:'🅿️',name:p.name,sub:`Free parking · ${p.limit}`,onClick:()=>flyTo(p.lng,p.lat)})),
   ].filter(r=>r.name.toLowerCase().includes(q)).slice(0,5);
 
   // Also geocode via Mapbox for addresses/streets
@@ -2046,6 +2239,9 @@ map.on('style.load',()=>{
       map.addSource('route',{type:'geojson',data:lastRouteGeo});
       map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}});
     }
+  }
+  if(lastTransportGeo) {
+    if(map.getSource('transport')) map.getSource('transport').setData(lastTransportGeo);
   }
 });
 
