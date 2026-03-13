@@ -537,6 +537,182 @@
     .mobile-list{background:var(--mid);border-top:1px solid var(--border);max-height:45vh;overflow-y:auto;pointer-events:all;padding:8px;}
     .mobile-list::-webkit-scrollbar{display:none;}
     .mobile-sheet-handle{width:36px;height:3px;background:var(--border);border-radius:2px;margin:8px auto 4px;display:block;}
+
+    /* ── DARK MODE OVERRIDES ─────────────────────────────────────────── */
+    body:not(.theme-day) header{
+      background:rgba(20,20,20,0.96);
+      border-bottom-color:#2e2e2e;
+      box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    }
+    body:not(.theme-day) .logo-text{color:#f0ede8;}
+    body:not(.theme-day) .search-input{
+      background:#242424;
+      border-color:#333;
+      color:#f0ede8;
+    }
+    body:not(.theme-day) .search-input::placeholder{color:#666;}
+    body:not(.theme-day) .search-results{background:#1c1c1c;border-color:#333;}
+    body:not(.theme-day) .sr-name{color:#f0ede8;}
+    body:not(.theme-day) .sr:hover{background:#2a2a2a;}
+    body:not(.theme-day) .header-btn{
+      background:#242424;
+      border-color:#3a3a3a;
+      color:#c0bdb8;
+    }
+    body:not(.theme-day) .header-btn:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .header-btn.saved-active{color:var(--amber);border-color:var(--amber);}
+    body:not(.theme-day) .theme-toggle{
+      background:#242424;
+      border-color:#3a3a3a;
+      color:#c0bdb8;
+    }
+    body:not(.theme-day) .theme-toggle:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .weather-chip{
+      background:#242424;
+      border-color:#3a3a3a;
+      color:#f0ede8;
+    }
+    body:not(.theme-day) #buildBadge{
+      background:#242424;
+      border-color:#3a3a3a;
+      color:#888;
+    }
+    body:not(.theme-day) .layer-bar{
+      background:rgba(28,28,28,0.97);
+      border-color:#333;
+      box-shadow:0 8px 24px rgba(0,0,0,0.6);
+    }
+    body:not(.theme-day) .layer-btn{
+      color:#aaa;
+      border-color:#333;
+    }
+    body:not(.theme-day) .layer-btn:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .layer-divider{background:#333;}
+    body:not(.theme-day) .sidebar{
+      background:rgba(20,20,20,0.97);
+      border-color:#2e2e2e;
+      box-shadow:0 18px 50px rgba(0,0,0,0.7);
+    }
+    body:not(.theme-day) .sidebar-header{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .sidebar-title{color:#f0ede8;}
+    body:not(.theme-day) .sidebar-count{background:#242424;color:#888;}
+    body:not(.theme-day) .stats-row{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .stat-item{border-right-color:#2e2e2e;}
+    body:not(.theme-day) .stat-num{color:#f0ede8;}
+    body:not(.theme-day) .stat-label{color:#666;}
+    body:not(.theme-day) .filter-bar{background:#141414;border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .filter-chip{color:#aaa;border-color:#333;}
+    body:not(.theme-day) .filter-chip:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .filter-chip.active{background:#2a2a2a;color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .sort-row{background:#141414;border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .sort-btn{color:#888;border-color:#333;}
+    body:not(.theme-day) .sort-btn.active{background:#2a2a2a;color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .card{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .card:hover{border-color:#444;}
+    body:not(.theme-day) .card-title{color:#f0ede8;}
+    body:not(.theme-day) .card-sub{color:#888;}
+    body:not(.theme-day) .card-meta{color:#888;}
+    body:not(.theme-day) .card-time{color:#aaa;}
+    body:not(.theme-day) .card-tag{opacity:0.9;}
+    body:not(.theme-day) .detail-panel{
+      background:rgba(18,18,18,0.98);
+      border-color:#2e2e2e;
+      box-shadow:0 18px 50px rgba(0,0,0,0.8);
+    }
+    body:not(.theme-day) .detail-close{
+      background:#2a2a2a;
+      border-color:#3a3a3a;
+      color:#aaa;
+    }
+    body:not(.theme-day) .detail-close:hover{background:#333;color:#f0ede8;}
+    body:not(.theme-day) .detail-section-title{color:#888;border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .place-name{color:#f0ede8;}
+    body:not(.theme-day) .place-cat{color:#888;}
+    body:not(.theme-day) .place-review-count{color:#888;}
+    body:not(.theme-day) .hours-row{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .hours-day{color:#888;}
+    body:not(.theme-day) .hours-time{color:#d0cdc8;}
+    body:not(.theme-day) .action-btn{background:#242424;border-color:#333;color:#f0ede8;}
+    body:not(.theme-day) .action-btn:hover{border-color:#555;}
+    body:not(.theme-day) .action-btn-label{color:#888;}
+    body:not(.theme-day) .detail-title{color:#f0ede8;}
+    body:not(.theme-day) .detail-sub{color:#888;}
+    body:not(.theme-day) .route-panel{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .route-input{background:#242424;border-color:#333;color:#f0ede8;}
+    body:not(.theme-day) .route-input::placeholder{color:#666;}
+    body:not(.theme-day) .route-result{background:#242424;}
+    body:not(.theme-day) .route-panel-title{color:#f0ede8;}
+    body:not(.theme-day) .route-step{color:#d0cdc8;border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .route-summary{border-bottom-color:#2e2e2e;color:#f0ede8;}
+    body:not(.theme-day) .route-step-dist{color:#888;}
+    body:not(.theme-day) .nearby-panel{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .nearby-title{color:#f0ede8;}
+    body:not(.theme-day) .nearby-section-label{color:#666;border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .nearby-item{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .nearby-name{color:#d0cdc8;}
+    body:not(.theme-day) .saved-panel{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .saved-panel-title{color:#f0ede8;}
+    body:not(.theme-day) .saved-item{background:#242424;}
+    body:not(.theme-day) .saved-item:hover{background:#2e2e2e;}
+    body:not(.theme-day) .saved-item-name{color:#f0ede8;}
+    body:not(.theme-day) .saved-item-sub{color:#888;}
+    body:not(.theme-day) .saved-item-remove{color:#555;}
+    body:not(.theme-day) .rr-panel{
+      background:rgba(18,18,18,0.98);
+      border-color:#2e2e2e;
+      box-shadow:0 18px 50px rgba(0,0,0,0.8);
+    }
+    body:not(.theme-day) .rr-header{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .rr-title{color:#f0ede8;}
+    body:not(.theme-day) .rr-close{color:#888;}
+    body:not(.theme-day) .rr-close:hover{color:#f0ede8;}
+    body:not(.theme-day) .rr-build-hint{background:rgba(204,34,0,0.12);color:#d0cdc8;}
+    body:not(.theme-day) .rr-stat{background:#242424;}
+    body:not(.theme-day) .rr-stat-label{color:#888;}
+    body:not(.theme-day) .rr-wp{background:#242424;}
+    body:not(.theme-day) .rr-wp-label{color:#d0cdc8;}
+    body:not(.theme-day) .rr-tab{color:#888;border-color:#333;}
+    body:not(.theme-day) .rr-tab:hover:not(.active){color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .rr-btn{color:#aaa;border-color:#333;}
+    body:not(.theme-day) .rr-btn:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .rr-name-input{background:#242424;border-color:#333;color:#f0ede8;}
+    body:not(.theme-day) .rr-name-input::placeholder{color:#666;}
+    body:not(.theme-day) .rr-name-input:focus{border-color:var(--redway);}
+    body:not(.theme-day) .rr-saved-item{background:#242424;border-color:#2e2e2e;}
+    body:not(.theme-day) .rr-saved-item:hover{border-color:var(--redway);}
+    body:not(.theme-day) .rr-saved-item-name{color:#f0ede8;}
+    body:not(.theme-day) .rr-saved-item-meta{color:#888;}
+    body:not(.theme-day) .rr-saved-item-btn{color:#aaa;border-color:#333;}
+    body:not(.theme-day) .rr-saved-item-btn:hover{color:#f0ede8;border-color:#555;}
+    body:not(.theme-day) .transport-card{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .bus-name{color:#f0ede8;}
+    body:not(.theme-day) .bus-dest{color:#888;}
+    body:not(.theme-day) .dep-stop{color:#888;}
+    body:not(.theme-day) .review{background:#242424;border-color:#2e2e2e;}
+    body:not(.theme-day) .review-author{color:#f0ede8;}
+    body:not(.theme-day) .review-text{color:#aaa;}
+    body:not(.theme-day) .review-form{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .review-form-title{color:#888;}
+    body:not(.theme-day) input:not([type=number]),
+    body:not(.theme-day) textarea,
+    body:not(.theme-day) select{
+      background:#242424 !important;
+      border-color:#3a3a3a !important;
+      color:#f0ede8 !important;
+    }
+    body:not(.theme-day) input::placeholder,
+    body:not(.theme-day) textarea::placeholder{color:#555 !important;}
+    body:not(.theme-day) .modal{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .modal-header{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .modal-title{color:#f0ede8;}
+    body:not(.theme-day) .modal-x{color:#888;}
+    body:not(.theme-day) label{color:#888;}
+    body:not(.theme-day) .weather-detail{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .weather-detail-title{color:#f0ede8;}
+    body:not(.theme-day) .weather-row{border-bottom-color:#2e2e2e;color:#d0cdc8;}
+    body:not(.theme-day) .weather-row-label{color:#888;}
+    body:not(.theme-day) .toast{background:#242424;border-color:#3a3a3a;color:#f0ede8;}
+
   </style>
 </head>
 <body>
@@ -554,7 +730,6 @@
     <div class="search-results" id="searchResults"></div>
   </div>
   <div class="header-right">
-    <button class="header-btn" onclick="toggleSidebar()" title="Toggle list">List</button>
     <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
     <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Directions</button>
     <button class="header-btn" id="rrBtn" onclick="rrToggle()" title="Redway Routes">🛤️ Routes</button>
