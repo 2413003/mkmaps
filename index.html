@@ -1891,19 +1891,27 @@ function showSearchDetail(f){
   const id = f.id || (name+'_'+lng.toFixed(5)+'_'+lat.toFixed(5));
   const saved = isSavedPlace(id);
   const label = saved ? 'Saved' : 'Save';
-  document.getElementById('detailScroll').innerHTML=
+  const base = 'sd_' + (id || Math.random().toString(36).slice(2));
+  const detail = document.getElementById('detailScroll');
+  detail.innerHTML=
     '<div class=\"detail-title\">'+escHtml(name)+'</div>'+
     '<div class=\"detail-sub\">'+escHtml(placeName)+'</div>'+
     '<div class=\"detail-actions\">'+
-      '<button class=\"action-btn\" onclick=\"routeTo(\\''+escJs(name)+'\\','+lat+','+lng+')\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
-      '<button class=\"action-btn\" onclick=\"copySearch(\\''+escJs(placeName)+'\\')\"><span class=\"action-btn-icon\">📋</span><span class=\"action-btn-label\">Copy</span></button>'+
-      '<button class=\"action-btn\" onclick=\"toggleSavePlace(\\''+escJs(id)+'\\',\\''+escJs(name)+'\\',\\''+escJs(placeName)+'\\',['+lng+','+lat+'])\"><span class=\"action-btn-icon\">'+(saved?'★':'☆')+'</span><span class=\"action-btn-label\">'+label+'</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_dir\"><span class=\"action-btn-icon\">🗺️</span><span class=\"action-btn-label\">Directions</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_copy\"><span class=\"action-btn-icon\">📋</span><span class=\"action-btn-label\">Copy</span></button>'+
+      '<button class=\"action-btn\" id=\"'+base+'_save\"><span class=\"action-btn-icon\">'+(saved?'★':'☆')+'</span><span class=\"action-btn-label\">'+label+'</span></button>'+
     '</div>'+
     '<div class=\"detail-section\"><div class=\"detail-section-title\">Location</div>'+
       '<div style=\"font-size:12px;color:var(--muted)\">'+escHtml(placeName)+'</div>'+
       '<div style=\"margin-top:6px;font-size:11px\">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div>'+
     '</div>';
   openDetail();
+  const dirBtn = document.getElementById(base+'_dir');
+  if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
+  const copyBtn = document.getElementById(base+'_copy');
+  if(copyBtn) copyBtn.onclick = ()=>copySearch(placeName);
+  const saveBtn = document.getElementById(base+'_save');
+  if(saveBtn) saveBtn.onclick = ()=>toggleSavePlace(id, name, placeName, [lng,lat]);
 }
 function copySearch(text){
   if(navigator.clipboard) navigator.clipboard.writeText(text).then(()=>toast('Copied to clipboard.','success')).catch(()=>toast('Copy failed.','warn'));
