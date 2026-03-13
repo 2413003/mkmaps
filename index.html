@@ -597,7 +597,6 @@ let transportTimer = null;
 let transportView = 'all';
 let transportRouteQuery = '';
 let lastRouteGeo = null;
-let lastTransportGeo = null;
 const quickTrips = [
   {name:'CMK Station', lat:52.0341, lng:-0.7717, icon:'🚂'},
   {name:'Stadium MK', lat:51.9975, lng:-0.7349, icon:'🏟️'},
@@ -650,8 +649,6 @@ function setLayer(layer, btn) {
   else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='flex';}
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
   else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
-  const transportLayers=['transport-clusters','transport-cluster-count','transport-unclustered','transport-unclustered-label'];
-  transportLayers.forEach(l=>{ if(map.getLayer(l)) map.setLayoutProperty(l,'visibility',layer==='transport'?'visible':'none'); });
   if(layer!=='issues') document.getElementById('fab').style.display = layer==='events'?'flex':'none';
   else document.getElementById('fab').style.display='flex';
 }
@@ -971,99 +968,15 @@ function renderTransportSidebar() {
 
 function renderTransportMarkers() {
   markers.transport.forEach(m=>m.remove()); markers.transport=[];
-  if(!map || !map.isStyleLoaded()) return;
   const filtered = filterTransport(data.transport||[]);
-  const features = filtered.map(r=>({
-    type:'Feature',
-    geometry:{type:'Point',coordinates:[r.lng,r.lat]},
-    properties:{
-      id:r.id,
-      number:r.number,
-      color:r.color || '#4a9eff',
-      live:!!r.live
-    }
-  }));
-  const geo = {type:'FeatureCollection',features};
-  lastTransportGeo = geo;
-
-  if(map.getSource('transport')) {
-    map.getSource('transport').setData(geo);
-  } else {
-    map.addSource('transport',{
-      type:'geojson',
-      data:geo,
-      cluster:true,
-      clusterRadius:40,
-      clusterMaxZoom:14
-    });
-    map.addLayer({
-      id:'transport-clusters',
-      type:'circle',
-      source:'transport',
-      filter:['has','point_count'],
-      paint:{
-        'circle-color':'#4a9eff',
-        'circle-radius':['step',['get','point_count'],16,10,20,30,26],
-        'circle-opacity':0.85
-      }
-    });
-    map.addLayer({
-      id:'transport-cluster-count',
-      type:'symbol',
-      source:'transport',
-      filter:['has','point_count'],
-      layout:{
-        'text-field':['get','point_count_abbreviated'],
-        'text-font':['Open Sans Bold','Arial Unicode MS Bold'],
-        'text-size':12
-      },
-      paint:{'text-color':'#ffffff'}
-    });
-    map.addLayer({
-      id:'transport-unclustered',
-      type:'circle',
-      source:'transport',
-      filter:['!has','point_count'],
-      paint:{
-        'circle-color':['get','color'],
-        'circle-radius':10,
-        'circle-stroke-color':'#ffffff',
-        'circle-stroke-width':2
-      }
-    });
-    map.addLayer({
-      id:'transport-unclustered-label',
-      type:'symbol',
-      source:'transport',
-      filter:['!has','point_count'],
-      layout:{
-        'text-field':['get','number'],
-        'text-font':['Open Sans Bold','Arial Unicode MS Bold'],
-        'text-size':10,
-        'text-offset':[0,0.1]
-      },
-      paint:{'text-color':'#ffffff'}
-    });
-    map.on('click','transport-unclustered', e=>{
-      const id = e.features?.[0]?.properties?.id;
-      if(id) showTransportDetail(String(id));
-    });
-    map.on('click','transport-clusters', e=>{
-      const features = map.queryRenderedFeatures(e.point,{layers:['transport-clusters']});
-      const clusterId = features[0]?.properties?.cluster_id;
-      const source = map.getSource('transport');
-      if(source && clusterId!=null) {
-        source.getClusterExpansionZoom(clusterId,(err,zoom)=>{
-          if(err) return;
-          map.easeTo({center:features[0].geometry.coordinates, zoom});
-        });
-      }
-    });
-    map.on('mouseenter','transport-clusters',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','transport-clusters',()=>map.getCanvas().style.cursor='');
-    map.on('mouseenter','transport-unclustered',()=>map.getCanvas().style.cursor='pointer');
-    map.on('mouseleave','transport-unclustered',()=>map.getCanvas().style.cursor='');
-  }
+  filtered.forEach(r=>{
+    const el=document.createElement('div');
+    const isRail=r.number==='🚂';
+    el.style.cssText=`width:34px;height:34px;border-radius:${isRail?'6px':'50%'};background:${r.color};display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:${isRail?'16px':'12px'};font-weight:900;color:white;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,0.4);border:2px solid rgba(255,255,255,0.2);`;
+    el.textContent=r.number;
+    el.onclick=()=>showTransportDetail(r.id);
+    markers.transport.push(new mapboxgl.Marker({element:el}).setLngLat([r.lng,r.lat]).addTo(map));
+  });
 }
 
 function filterTransport(list) {
@@ -2265,9 +2178,6 @@ map.on('style.load',()=>{
         map.addSource('route',{type:'geojson',data:lastRouteGeo});
         map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}});
       }
-    }
-    if(lastTransportGeo) {
-      if(map.getSource('transport')) map.getSource('transport').setData(lastTransportGeo);
     }
   }catch(e){ showFatal(e.message||'Style load failed'); }
 });
