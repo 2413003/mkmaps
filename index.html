@@ -155,9 +155,9 @@
     .fab:hover{transform:scale(1.08);}
 
     /* DETAIL PANEL - slides up from bottom */
-    .detail-panel{position:absolute;bottom:0;left:0;right:0;background:var(--mid);border-top:1px solid var(--border);border-radius:16px 16px 0 0;z-index:400;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:75vh;display:flex;flex-direction:column;}
+    \.detail-panel{will-change:transform;position:absolute;bottom:0;left:0;right:0;background:var(--mid);border-top:1px solid var(--border);border-radius:16px 16px 0 0;z-index:400;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:75vh;display:flex;flex-direction:column;}
     .detail-panel.open{transform:translateY(0);}
-    .detail-drag{padding:10px;text-align:center;flex-shrink:0;cursor:pointer;}
+    \.detail-drag{touch-action:none;padding:10px;text-align:center;flex-shrink:0;cursor:pointer;}
     .detail-handle{width:36px;height:3px;background:var(--border);border-radius:2px;display:inline-block;}
     .detail-close{position:absolute;top:12px;right:16px;background:var(--panel);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
     .detail-close:hover{color:var(--text);}
@@ -486,7 +486,7 @@
 
     <!-- DETAIL PANEL -->
     <div class="detail-panel" id="detailPanel">
-      <div class="detail-drag" onclick="closeDetail()"><span class="detail-handle"></span></div>
+      <div class="detail-drag" id="detailDrag" onclick="toggleDetailPeek()"><span class="detail-handle"></span></div>
       <button class="detail-close" onclick="closeDetail()">×</button>
       <div class="detail-scroll" id="detailScroll"></div>
     </div>
@@ -701,15 +701,32 @@ function clearMarkersExcept(layer){
   });
 }
 
+function clearActiveLayer(){
+  activeLayer = 'none';
+  saveLayer('none');
+  document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('transportControls').style.display = 'none';
+  document.getElementById('sortRow').style.display = 'none';
+  document.getElementById('filterBar').style.display = 'none';
+  document.getElementById('mapHint').style.opacity='0';
+  clearMarkersExcept('none');
+  document.getElementById('fab').style.display='none';
+  const sb = document.getElementById('sidebar');
+  document.getElementById('sidebarTitle').textContent='Choose a layer';
+  document.getElementById('sidebarCount').textContent='—';
+  document.getElementById('sidebarBody').innerHTML='<div class="empty"><div class="ei">🗺️</div><p>Select a layer to explore MK.</p></div>';
+  sb.classList.add('collapsed');
+}
+
 function setLayer(layer, btn, opts={}) {
-  if(!opts.force && activeLayer===layer && layer!=='issues'){
-    const issuesBtn = document.getElementById('btn-issues');
-    return setLayer('issues', issuesBtn, {force:true});
-  }
+  if(layer==='none') return clearActiveLayer();
+  if(!opts.force && activeLayer===layer) return clearActiveLayer();
   activeLayer = layer;
   saveLayer(layer);
   document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  document.getElementById('sidebar').classList.remove('collapsed');
   document.getElementById('transportControls').style.display = layer==='transport' ? 'flex' : 'none';
   document.getElementById('sortRow').style.display = layer==='issues' ? 'flex' : 'none';
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
@@ -728,6 +745,8 @@ function setLayer(layer, btn, opts={}) {
   else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='flex';}
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
   else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
+  if(layer==='parking') setParkingZonesVisible(true);
+  else { setParkingZonesVisible(false); if(digitizeMode) cancelDigitize(); }
   if(layer!=='issues') document.getElementById('fab').style.display = layer==='events'?'flex':'none';
   else document.getElementById('fab').style.display='flex';
 }
@@ -1428,6 +1447,12 @@ async function fetchParkingZones() {
   }
 }
 
+function setParkingZonesVisible(on){
+  try{
+    if(map.getLayer('parking-zones-fill')) map.setLayoutProperty('parking-zones-fill','visibility', on?'visible':'none');
+    if(map.getLayer('parking-zones-line')) map.setLayoutProperty('parking-zones-line','visibility', on?'visible':'none');
+  }catch(e){}
+}
 function renderParkingZones() {
   if(!map) return;
   if(!parkingZones || !parkingZones.length) {
@@ -1554,10 +1579,20 @@ function renderParkingSidebar() {
     const freeNow = data.parking.filter(p=>p.freeNow);
   const freeLater = data.parking.filter(p=>!p.freeNow && p.freeAfter);
   const emptyMsg = (!data.parking || !data.parking.length) ? '<div class="pending-card">No free parking data loaded yet. Try again, zoom in, or use the CMK map link above to digitize zones.</div>' : '';
-  const card = (p) => (
-    '<div class="card" onclick="flyTo(' + p.lng + ',' + p.lat + ')">' +
+  const card = (p) => {
+  const idx = data.parking.indexOf(p);
+  return (
+    '<div class="card" onclick="showParkingDetailByIndex(' + idx + ')">' +
       '<div class="card-top">' +
         '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
+        '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
+      '</div>' +
+      '<div class="card-title">' + (p.name||'Parking') + '</div>' +
+      '<div class="card-sub">' + (p.notes||'') + '</div>' +
+      '<div class="card-footer"><span class="card-meta">' + Number(p.lat).toFixed(3) + ', ' + Number(p.lng).toFixed(3) + '</span></div>' +
+    '</div>'
+  );
+};color:#10b981">P ' + (p.type||'Parking') + '</span>' +
         '<span class="card-time">' + (p.freeNow ? 'Free now' : (p.freeAfter || p.limit || '')) + '</span>' +
       '</div>' +
       '<div class="card-title">' + (p.name||'Parking') + '</div>' +
@@ -1590,7 +1625,40 @@ function renderParkingSidebar() {
   body.innerHTML = note + contribute + emptyMsg + section('Free Now', freeNow) + section('Free After', freeLater) + '<div class="detail-section-title">Community submissions</div>' + pendingList;
 }
 
-function renderParkingMarkers() {
+function showParkingDetailByIndex(i){
+  const p = data.parking[i];
+  if(p) showParkingDetail(p);
+}
+
+function showParkingDetail(p){
+  if(!p) return;
+  const lat = p.lat, lng = p.lng;
+  map.flyTo({center:[lng,lat],zoom:16,duration:800});
+  const name = p.name || 'Free parking';
+  const freeLabel = p.freeNow ? 'Free now' : (p.freeAfter || p.limit || 'Conditional');
+  const source = p.source==='community' ? 'Community' : (p.source==='council' ? 'Council' : 'OSM');
+  const base = 'pk_' + (p.id || Math.random().toString(36).slice(2));
+  const detail = document.getElementById('detailScroll');
+  detail.innerHTML =
+    '<div class="detail-title">'+escHtml(name)+'</div>'+
+    '<div class="detail-sub">'+escHtml(source)+' � '+escHtml(freeLabel)+'</div>'+
+    '<div class="detail-actions">'+
+      '<button class="action-btn" id="'+base+'_dir"><span class="action-btn-icon">???</span><span class="action-btn-label">Directions</span></button>'+
+      '<button class="action-btn" id="'+base+'_copy"><span class="action-btn-icon">??</span><span class="action-btn-label">Copy</span></button>'+
+      (p.source==='community' ? '<button class="action-btn" id="'+base+'_verify"><span class="action-btn-icon">?</span><span class="action-btn-label">Verify</span></button>' : '')+
+    '</div>'+
+    '<div class="detail-section"><div class="detail-section-title">Rules</div><div style="font-size:12px;color:var(--muted)">'+escHtml(p.notes||p.limit||'Check signage')+'</div></div>'+
+    '<div class="detail-section"><div class="detail-section-title">Location</div><div style="font-size:11px">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div></div>';
+  openDetail();
+  const dirBtn = document.getElementById(base+'_dir');
+  if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
+  const copyBtn = document.getElementById(base+'_copy');
+  if(copyBtn) copyBtn.onclick = ()=>copySearch(name+' � '+lat.toFixed(5)+', '+lng.toFixed(5));
+  if(p.source==='community'){
+    const verifyBtn = document.getElementById(base+'_verify');
+    if(verifyBtn) verifyBtn.onclick = ()=>verifyParkingReport(String(p.sourceId||p.id||''));
+  }
+}function renderParkingMarkers() {
   markers.parking.forEach(m=>m.remove()); markers.parking=[];
   data.parking.forEach(p=>{
     const el=document.createElement('div');
@@ -1599,7 +1667,7 @@ function renderParkingMarkers() {
     const shadow = isFreeNow ? 'rgba(16,185,129,0.35)' : (p.freeAfter ? 'rgba(245,158,11,0.35)' : 'rgba(107,114,128,0.35)');
     el.style.cssText='width:30px;height:30px;border-radius:10px;background:'+color+';display:flex;align-items:center;justify-content:center;font-size:14px;color:white;cursor:pointer;box-shadow:0 6px 14px '+shadow+';border:2px solid rgba(255,255,255,0.5);';
     el.textContent='P';
-    el.onclick=()=>flyTo(p.lng,p.lat);
+    el.onclick=()=>showParkingDetail(p);
     markers.parking.push(new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map));
   });
 }
@@ -2317,8 +2385,75 @@ async function upvoteIssue(e,id) {
 }
 
 // ── DETAIL PANEL ─────────────────────────────────────────────────
-function openDetail(){ document.getElementById('detailPanel').classList.add('open'); }
-function closeDetail(){ document.getElementById('detailPanel').classList.remove('open'); }
+let detailDragActive = false;
+let detailDragStart = 0;
+let detailStartOffset = 0;
+
+function getDetailOffset(){
+  const panel = document.getElementById('detailPanel');
+  const m = panel.style.transform.match(/translateY\(([-\d.]+)px\)/);
+  if(m) return parseFloat(m[1]);
+  const h = panel.getBoundingClientRect().height || 0;
+  const state = panel.dataset.state || (panel.classList.contains('open') ? 'open' : 'closed');
+  if(state==='open') return 0;
+  if(state==='peek') return Math.max(0, h-220);
+  return h;
+}
+function setDetailState(state){
+  const panel = document.getElementById('detailPanel');
+  const h = panel.getBoundingClientRect().height || 0;
+  panel.dataset.state = state;
+  if(state==='open'){
+    panel.classList.add('open');
+    panel.style.transform = 'translateY(0px)';
+  } else if(state==='peek'){
+    panel.classList.add('open');
+    panel.style.transform = 'translateY(' + Math.max(0, h-220) + 'px)';
+  } else {
+    panel.classList.remove('open');
+    panel.style.transform = 'translateY(' + h + 'px)';
+  }
+}
+function toggleDetailPeek(){
+  const panel = document.getElementById('detailPanel');
+  const state = panel.dataset.state || (panel.classList.contains('open') ? 'open' : 'closed');
+  if(state==='open') setDetailState('peek');
+  else setDetailState('open');
+}
+function openDetail(){ setDetailState('open'); }
+function closeDetail(){ setDetailState('closed'); }
+
+const detailDragEl = document.getElementById('detailDrag');
+if(detailDragEl){
+  detailDragEl.addEventListener('pointerdown', (e)=>{
+    detailDragActive = true;
+    detailDragStart = e.clientY;
+    detailStartOffset = getDetailOffset();
+    detailDragEl.setPointerCapture && detailDragEl.setPointerCapture(e.pointerId);
+  });
+}
+
+document.addEventListener('pointermove', (e)=>{
+  if(!detailDragActive) return;
+  const panel = document.getElementById('detailPanel');
+  const h = panel.getBoundingClientRect().height || 0;
+  const delta = e.clientY - detailDragStart;
+  let offset = detailStartOffset + delta;
+  if(offset < 0) offset = 0;
+  if(offset > h) offset = h;
+  panel.style.transform = 'translateY(' + offset + 'px)';
+});
+
+document.addEventListener('pointerup', ()=>{
+  if(!detailDragActive) return;
+  detailDragActive = false;
+  const panel = document.getElementById('detailPanel');
+  const h = panel.getBoundingClientRect().height || 0;
+  const offset = getDetailOffset();
+  if(offset < h*0.25) setDetailState('open');
+  else if(offset < h*0.75) setDetailState('peek');
+  else setDetailState('closed');
+});
 
 // ── FAB ──────────────────────────────────────────────────────────
 function onFabClick() {
@@ -2851,6 +2986,9 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
+
+
 
 
 
