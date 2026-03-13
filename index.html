@@ -692,7 +692,20 @@ function setPendingMarker(lat,lng,color) {
 }
 
 // ── LAYER SYSTEM ─────────────────────────────────────────────────
-function setLayer(layer, btn) {
+function clearMarkersExcept(layer){
+  Object.keys(markers).forEach(k=>{
+    if(k!==layer){
+      markers[k].forEach(m=>m.remove());
+      markers[k]=[];
+    }
+  });
+}
+
+function setLayer(layer, btn, opts={}) {
+  if(!opts.force && activeLayer===layer && layer!=='issues'){
+    const issuesBtn = document.getElementById('btn-issues');
+    return setLayer('issues', issuesBtn, {force:true});
+  }
   activeLayer = layer;
   saveLayer(layer);
   document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
@@ -708,6 +721,7 @@ function setLayer(layer, btn) {
   document.getElementById('mapHint').textContent=hints[layer];
   document.getElementById('mapHint').style.opacity='1';
   setTimeout(()=>{document.getElementById('mapHint').style.opacity='0';},4000);
+  clearMarkersExcept(layer);
   showSkeletons(4);
   if(layer==='issues') loadIssues();
   else if(layer==='transport') {loadTransport(); document.getElementById('fab').style.display='none';}
@@ -1270,18 +1284,26 @@ const PARKING_MAP_URL = 'https://www.milton-keynes.gov.uk/sites/default/files/20
 const PARKING_INFO_URL = 'https://www.milton-keynes.gov.uk/parking/where-park';
 async function loadParking() {
   showSkeletons(3);
-  const osm = await fetchFreeParkingOSM();
-  const council = getCouncilFreeParking();
-  const community = await fetchCommunityParking();
-  const zones = await fetchParkingZones();
-  communityParkingPending = community.pending || [];
-  parkingZones = zones || [];
-  const merged = [].concat(osm || [], community.verified || []);
-  council.forEach(p=>{
-    const exists = merged.some(o=>distKm(o.lat,o.lng,p.lat,p.lng) < 0.15);
-    if(!exists) merged.push(p);
-  });
-  data.parking = merged;
+  try{
+    const osm = await fetchFreeParkingOSM();
+    const council = getCouncilFreeParking();
+    const community = await fetchCommunityParking();
+    const zones = await fetchParkingZones();
+    communityParkingPending = community.pending || [];
+    parkingZones = zones || [];
+    const merged = [].concat(osm || [], community.verified || []);
+    council.forEach(p=>{
+      const exists = merged.some(o=>distKm(o.lat,o.lng,p.lat,p.lng) < 0.15);
+      if(!exists) merged.push(p);
+    });
+    data.parking = merged;
+  }catch(e){
+    data.parking = [];
+    communityParkingPending = [];
+    parkingZones = [];
+    console.error('Parking load failed', e);
+    toast('Could not load parking data. Try again shortly.','warn');
+  }
   renderParkingSidebar();
   renderParkingMarkers();
   renderParkingZones();
@@ -1290,8 +1312,7 @@ async function loadParking() {
   document.getElementById('s1').textContent=data.parking.length;
   document.getElementById('s2').textContent=data.parking.filter(p=>p.type==='On-street').length+' on-street';
   document.getElementById('s3').textContent=data.parking.filter(p=>p.freeAfter).length+' after 6pm';
-}
-function parkingNowStatus() {
+}function parkingNowStatus() {
   const now = new Date();
   const h = now.getHours() + (now.getMinutes()/60);
   return !(h >= 7 && h < 18);
@@ -1530,8 +1551,9 @@ function renderParkingSidebar() {
     '<p><a href="'+PARKING_MAP_URL+'" target="_blank" rel="noopener">Open CMK parking map (PDF)</a><br/>'+
     '<a href="'+PARKING_INFO_URL+'" target="_blank" rel="noopener">Council parking info</a></p>'+
     '<p style="color:var(--muted)">'+statusNote+'</p></div>';
-  const freeNow = data.parking.filter(p=>p.freeNow);
+    const freeNow = data.parking.filter(p=>p.freeNow);
   const freeLater = data.parking.filter(p=>!p.freeNow && p.freeAfter);
+  const emptyMsg = (!data.parking || !data.parking.length) ? '<div class="pending-card">No free parking data loaded yet. Try again, zoom in, or use the CMK map link above to digitize zones.</div>' : '';
   const card = (p) => (
     '<div class="card" onclick="flyTo(' + p.lng + ',' + p.lat + ')">' +
       '<div class="card-top">' +
@@ -1565,7 +1587,7 @@ function renderParkingSidebar() {
     '</div>'
   ).join('') : '<div class="pending-card">No pending community submissions right now.</div>';
 
-  body.innerHTML = note + contribute + section('Free Now', freeNow) + section('Free After', freeLater) + '<div class="detail-section-title">Community submissions</div>' + pendingList;
+  body.innerHTML = note + contribute + emptyMsg + section('Free Now', freeNow) + section('Free After', freeLater) + '<div class="detail-section-title">Community submissions</div>' + pendingList;
 }
 
 function renderParkingMarkers() {
@@ -2829,6 +2851,8 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
+
 
 
 
