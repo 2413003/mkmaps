@@ -155,16 +155,74 @@
     .fab{position:absolute;bottom:20px;right:20px;z-index:200;background:var(--red);color:white;border:none;width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;box-shadow:0 10px 26px rgba(232,58,47,0.35);transition:transform 0.15s;display:flex;align-items:center;justify-content:center;}
     .fab:hover{transform:scale(1.08);}
 
-    /* DETAIL PANEL - slides up from bottom */
-    \.detail-panel{will-change:transform;position:absolute;bottom:0;left:0;right:0;background:var(--mid);border-top:1px solid var(--border);border-radius:16px 16px 0 0;z-index:400;transform:translateY(100%);transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);max-height:75vh;display:flex;flex-direction:column;}
-    .detail-panel.open{transform:translateY(0);}
-    \.detail-drag{touch-action:none;padding:10px;text-align:center;flex-shrink:0;cursor:pointer;}
-    .detail-handle{width:36px;height:3px;background:var(--border);border-radius:2px;display:inline-block;}
-    .detail-close{position:absolute;top:12px;right:16px;background:var(--panel);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
-    .detail-close:hover{color:var(--text);}
-    .detail-scroll{overflow-y:auto;flex:1;padding:0 16px 24px;}
+    /* DETAIL PANEL - compact card on desktop, bottom sheet on mobile */
+    .detail-panel{
+      will-change:transform;
+      position:absolute;
+      top:80px;
+      left:16px;
+      bottom:16px;
+      width:380px;
+      background:var(--mid);
+      border:1px solid var(--border);
+      border-radius:18px;
+      z-index:400;
+      transform:translateX(-420px);
+      opacity:0;
+      transition:transform 0.3s cubic-bezier(0.32,0.72,0,1), opacity 0.25s ease;
+      display:flex;
+      flex-direction:column;
+      box-shadow:0 18px 50px rgba(15,23,42,0.14);
+      backdrop-filter:blur(12px);
+    }
+    .detail-panel.open{transform:translateX(0);opacity:1;}
+    .detail-drag{display:none;}
+    .detail-handle{display:none;}
+    .detail-close{
+      position:absolute;
+      top:14px;
+      right:14px;
+      background:var(--panel2);
+      border:1px solid var(--border);
+      color:var(--muted);
+      width:30px;
+      height:30px;
+      border-radius:50%;
+      font-size:16px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      line-height:1;
+      z-index:10;
+      flex-shrink:0;
+      transition:background 0.15s, color 0.15s;
+    }
+    .detail-close:hover{background:var(--panel);color:var(--text);}
+    .detail-scroll{overflow-y:auto;flex:1;padding:16px 16px 24px;}
     .detail-scroll::-webkit-scrollbar{width:3px;}
-    .detail-scroll::-webkit-scrollbar-thumb{background:var(--border);}
+    .detail-scroll::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    /* On mobile keep it as bottom sheet */
+    @media(max-width:700px){
+      .detail-panel{
+        top:auto;
+        left:0;
+        right:0;
+        bottom:0;
+        width:100%;
+        border-radius:16px 16px 0 0;
+        border:none;
+        border-top:1px solid var(--border);
+        max-height:75vh;
+        transform:translateY(100%);
+        opacity:1;
+        transition:transform 0.35s cubic-bezier(0.32,0.72,0,1);
+      }
+      .detail-panel.open{transform:translateY(0);}
+      .detail-drag{display:block;touch-action:none;padding:10px;text-align:center;flex-shrink:0;cursor:pointer;}
+      .detail-handle{width:36px;height:3px;background:var(--border);border-radius:2px;display:inline-block;}
+      .detail-scroll{padding:0 16px 24px;}
+    }
 
     /* PLACE DETAIL */
     .place-hero{display:flex;align-items:flex-start;gap:14px;margin-bottom:16px;}
@@ -391,7 +449,7 @@
   <div id="buildBadge" style="font-size:10px;color:#6b7280;background:#f3f4f6;border:1px solid #e5e7eb;padding:4px 8px;border-radius:999px;">Build 2026-03-13A</div>
   <div class="search-wrap">
     <span class="search-icon">🔍</span>
-    <input class="search-input" id="searchInput" placeholder="Search places, streets, events in MK..." autocomplete="off"/>
+    <input class="search-input" id="searchInput" placeholder="Search places, postcodes, addresses in MK..." autocomplete="off"/>
     <button class="search-clear" id="searchClear" title="Clear search">×</button>
     <div class="search-results" id="searchResults"></div>
   </div>
@@ -2284,38 +2342,74 @@ function updateSearchClear(){
 recentSearches = loadRecentSearches();
 savedPlaces = loadSavedPlaces();
 
-searchInput.addEventListener('input', async () => {
+// UK postcode regex (full or partial)
+const UK_POSTCODE_RE = /^[A-Z]{1,2}[0-9][0-9A-Z]?(\s*[0-9][A-Z]{2})?$/i;
+function placeTypeIcon(placeType) {
+  if(!placeType) return '📍';
+  if(placeType.includes('postcode')) return '📮';
+  if(placeType.includes('address')) return '🏠';
+  if(placeType.includes('poi')) return '📍';
+  if(placeType.includes('neighborhood') || placeType.includes('locality')) return '🏘️';
+  if(placeType.includes('place') || placeType.includes('district')) return '📍';
+  return '📍';
+}
+function placeTypeSub(f) {
+  const pt = (f.place_type||[])[0]||'';
+  const ctx = (f.context||[]).map(c=>c.text).join(', ');
+  if(pt==='postcode') return 'Postcode · ' + (ctx||'Milton Keynes');
+  if(pt==='address') return 'Address · ' + (ctx||'Milton Keynes');
+  if(pt==='poi') return (f.properties?.category||'Place') + ' · ' + (ctx||'MK');
+  return (f.place_name||'').replace((f.text||'')+', ','').substring(0,60);
+}
+
+let searchDebounceTimer = null;
+searchInput.addEventListener('input', () => {
   updateSearchClear();
-  const q = searchInput.value.trim().toLowerCase();
-  if(!q) { searchResults.style.display='none'; return; }
-  if(!data.places.length) data.places=getMKPlaces();
-  if(!data.transport.length) data.transport=getMKBusRoutes();
-  if(!data.events.length) data.events=getSampleEvents();
-  const local=[
-    ...data.issues.map(r=>({icon:catEmoji[r.category]||'⚠️',name:r.title,sub:`Issue · ${r.category}`,onClick:()=>showIssueDetail(r.id)})),
-    ...data.events.map(e=>({icon:evEmoji(e.category),name:e.title,sub:`Event · ${e.venue}`,onClick:()=>showEventDetail(e.id)})),
-    ...data.places.map(p=>({icon:p.emoji,name:p.name,sub:`${p.category} · ${p.open?'Open':'Closed'}`,onClick:()=>showPlaceDetail(p.id)})),
-    ...data.transport.map(t=>({icon:'🚌',name:`Bus ${t.number}: ${t.name}`,sub:`${t.operator} · ${t.stop}`,onClick:()=>showTransportDetail(t.id)})),
-    ...data.parking.map(p=>({icon:'🅿️',name:p.name,sub:`Free parking · ${p.limit}`,onClick:()=>flyTo(p.lng,p.lat)})),
-  ].filter(r=>r.name.toLowerCase().includes(q)).slice(0,5);
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(async () => {
+    const raw = searchInput.value.trim();
+    const q = raw.toLowerCase();
+    if(!q) { searchResults.style.display='none'; return; }
+    if(!data.places.length) data.places=getMKPlaces();
+    if(!data.transport.length) data.transport=getMKBusRoutes();
+    if(!data.events.length) data.events=getSampleEvents();
 
-  // Also geocode via Mapbox for addresses/streets
-  let geoResults=[];
-  if(q.length>3){
-    try{
-      const r=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json?proximity=-0.7594,52.0406&bbox=-1.05,51.85,-0.55,52.2&country=gb&limit=4&access_token=${mapboxgl.accessToken}`);
-      const d=await r.json();
-      geoResults=(d.features||[]).map(f=>({
-        icon:'📍',
-        name:f.text||f.place_name,
-        sub:(f.place_name||'').replace((f.text||'')+', ','').substring(0,60),
-        onClick:()=>selectGeocodeResult(f)
-      }));
-    }catch(e){}
-  }
+    const isPostcode = UK_POSTCODE_RE.test(raw.trim());
 
-  const all=[...local,...geoResults].slice(0,8);
-  renderSearchResults(all);
+    // Local data results — skip if it looks like a postcode/address
+    const local = isPostcode ? [] : [
+      ...data.issues.map(r=>({icon:catEmoji[r.category]||'⚠️',name:r.title,sub:`Issue · ${r.category}`,onClick:()=>showIssueDetail(r.id)})),
+      ...data.events.map(e=>({icon:evEmoji(e.category),name:e.title,sub:`Event · ${e.venue}`,onClick:()=>showEventDetail(e.id)})),
+      ...data.places.map(p=>({icon:p.emoji,name:p.name,sub:`${p.category} · ${p.open===true?'Open':p.open===false?'Closed':''}`,onClick:()=>showPlaceDetail(p.id)})),
+      ...data.transport.map(t=>({icon:'🚌',name:`Bus ${t.number}: ${t.name}`,sub:`${t.operator} · ${t.stop}`,onClick:()=>showTransportDetail(t.id)})),
+      ...data.parking.map(p=>({icon:'🅿️',name:p.name,sub:`Free parking · ${p.limit}`,onClick:()=>flyTo(p.lng,p.lat)})),
+    ].filter(r=>r.name.toLowerCase().includes(q)).slice(0,isPostcode?0:4);
+
+    // Geocode — fire at 2+ chars for postcodes, 3+ otherwise
+    let geoResults=[];
+    if(q.length >= (isPostcode ? 2 : 3)){
+      try{
+        // For postcodes: don't restrict bbox so we get the exact postcode hit
+        const bboxParam = isPostcode ? '' : '&bbox=-1.05,51.85,-0.55,52.2';
+        const typeParam = isPostcode ? '&types=postcode,address,place' : '&types=poi,address,postcode,place,neighborhood,locality';
+        const geoQ = isPostcode ? raw.trim().toUpperCase() : raw;
+        const r=await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(geoQ)}.json?proximity=-0.7594,52.0406${bboxParam}&country=gb&limit=5${typeParam}&access_token=${mapboxgl.accessToken}`);
+        const d=await r.json();
+        geoResults=(d.features||[]).map(f=>({
+          icon: placeTypeIcon((f.place_type||[])[0]),
+          name: f.text||f.place_name,
+          sub: placeTypeSub(f),
+          onClick:()=>selectGeocodeResult(f)
+        }));
+      }catch(e){}
+    }
+
+    // For postcodes: geo results go first; otherwise local first
+    const all = isPostcode
+      ? [...geoResults, ...local].slice(0,8)
+      : [...local, ...geoResults].slice(0,8);
+    renderSearchResults(all);
+  }, 180);
 });
 
 searchInput.addEventListener('keydown', (e)=>{
@@ -2641,6 +2735,7 @@ let detailDragStart = 0;
 let detailStartOffset = 0;
 
 function getDetailOffset(){
+  if(window.innerWidth > 700) return 0;
   const panel = document.getElementById('detailPanel');
   const m = panel.style.transform.match(/translateY\(([-\d.]+)px\)/);
   if(m) return parseFloat(m[1]);
@@ -2652,17 +2747,18 @@ function getDetailOffset(){
 }
 function setDetailState(state){
   const panel = document.getElementById('detailPanel');
-  const h = panel.getBoundingClientRect().height || 0;
+  const isMobile = window.innerWidth <= 700;
   panel.dataset.state = state;
   if(state==='open'){
     panel.classList.add('open');
-    panel.style.transform = 'translateY(0px)';
-  } else if(state==='peek'){
+    panel.style.transform = '';
+  } else if(state==='peek' && isMobile){
+    const h = panel.getBoundingClientRect().height || 0;
     panel.classList.add('open');
     panel.style.transform = 'translateY(' + Math.max(0, h-220) + 'px)';
   } else {
     panel.classList.remove('open');
-    panel.style.transform = 'translateY(' + h + 'px)';
+    panel.style.transform = '';
   }
 }
 function toggleDetailPeek(){
