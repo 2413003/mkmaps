@@ -2485,34 +2485,43 @@ function applyAreaHighlight(geojson) {
 }
 
 async function showAreaHighlight(name, bbox) {
-  // Try to fetch the real OSM boundary polygon for this area name
+  clearAreaHighlight();
+  if(!name || !bbox) return;
+
   try {
-    // Search within a generous bounding box around the result
     const [w, s, e, n] = bbox;
-    // Expand bbox slightly for the Overpass search
-    const pad = 0.05;
+    // Use a generous search area — MK estates are small so pad well
+    const pad = 0.08;
     const bb = `${s-pad},${w-pad},${n+pad},${e+pad}`;
-    const query = `[out:json][timeout:10];(relation["name"="${name}"]["boundary"="administrative"](${bb});relation["name"="${name}"]["place"](${bb});way["name"="${name}"]["place"](${bb}););out geom;`;
+    // Search for the area by name across all common OSM boundary/place types
+    const escapedName = name.replace(/"/g, '\\"');
+    const query = `[out:json][timeout:15];
+(
+  relation["name"="${escapedName}"](${bb});
+  relation["name:en"="${escapedName}"](${bb});
+  way["name"="${escapedName}"]["place"](${bb});
+  way["name"="${escapedName}"]["boundary"](${bb});
+);
+out geom;`;
+
     const r = await fetch('https://overpass-api.de/api/interpreter', {
-      method:'POST', body:'data='+encodeURIComponent(query)
+      method: 'POST', body: 'data=' + encodeURIComponent(query)
     });
-    if(!r.ok) throw new Error('Overpass error');
+    if(!r.ok) throw new Error('Overpass ' + r.status);
     const d = await r.json();
 
     const features = [];
-    for(const el of (d.elements||[])) {
+    for(const el of (d.elements || [])) {
       if(el.type === 'relation' && el.members) {
-        // Collect outer rings from relation members
-        const outerWays = el.members.filter(m => m.type==='way' && m.role==='outer' && m.geometry);
+        const outerWays = el.members.filter(m => m.type==='way' && m.role==='outer' && m.geometry && m.geometry.length > 1);
         if(!outerWays.length) continue;
-        // Stitch ways into rings
         const rings = stitchWays(outerWays.map(w => w.geometry.map(p => [p.lon, p.lat])));
-        if(rings.length) {
-          features.push({type:'Feature', geometry:{type:'MultiPolygon', coordinates: rings.map(r=>[r])}});
-        }
+        if(rings.length) features.push({type:'Feature', geometry:{type:'MultiPolygon', coordinates:rings.map(r=>[r])}});
       } else if(el.type === 'way' && el.geometry && el.geometry.length > 3) {
         const coords = el.geometry.map(p => [p.lon, p.lat]);
-        features.push({type:'Feature', geometry:{type:'Polygon', coordinates:[coords]}});
+        // Close the ring if needed
+        if(coords[0][0]!==coords[coords.length-1][0] || coords[0][1]!==coords[coords.length-1][1]) coords.push(coords[0]);
+        if(coords.length >= 4) features.push({type:'Feature', geometry:{type:'Polygon', coordinates:[coords]}});
       }
     }
 
@@ -2521,15 +2530,12 @@ async function showAreaHighlight(name, bbox) {
       return;
     }
   } catch(e) {
-    // Fall through to bbox rectangle
+    console.warn('Area highlight OSM fetch failed:', e);
   }
 
-  // Fallback: draw the bbox as a rectangle
+  // Fallback: bbox rectangle
   const [w, s, e, n] = bbox;
-  applyAreaHighlight({
-    type: 'Feature',
-    geometry: {type:'Polygon', coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}
-  });
+  applyAreaHighlight({type:'Feature', geometry:{type:'Polygon', coordinates:[[[w,s],[e,s],[e,n],[w,n],[w,s]]]}});
 }
 
 function stitchWays(ways) {
@@ -3786,12 +3792,15 @@ map.on('load',()=>{
   document.getElementById('sidebar').classList.add('collapsed');
   loadWeather();
 
-  // Silent geolocation on startup
+  // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos=>{
       setUserMarker(pos.coords.latitude, pos.coords.longitude);
       document.querySelectorAll('.near-me-btn').forEach(b=>b.title='Near Me');
-      map.flyTo({center:[pos.coords.longitude, pos.coords.latitude], zoom:14, duration:800});
+      // Only fly to user location if no search has been performed yet
+      if(!lastSearchFeature && !searchInput.value.trim()) {
+        map.flyTo({center:[pos.coords.longitude, pos.coords.latitude], zoom:14, duration:800});
+      }
     },()=>{});
   }
 
