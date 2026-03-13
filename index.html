@@ -2251,8 +2251,8 @@ function showPlaceDetail(id) {
       ${p.phone?`<a class="action-btn" href="tel:${p.phone}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
       ${p.website?`<a class="action-btn" href="${p.website}" target="_blank"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
       <button class="action-btn" onclick="routeTo('${p.name.replace(/'/g,"\\'")}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route here</span></button>
-      <button class="action-btn sv-place-btn" data-lat="${p.lat}" data-lng="${p.lng}" data-name="${p.name.replace(/"/g,'&quot;').replace(/'/g,'&#39;')}"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
-      onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
+      <button class="action-btn sv-place-btn" data-lat="${p.lat}" data-lng="${p.lng}"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
+      <button class="action-btn" onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
     </div>
 
     <div class="detail-section">
@@ -2292,11 +2292,9 @@ function showPlaceDetail(id) {
       </div>
     </div>`;
   openDetail();
-  // Wire street view button (data-attribute approach avoids escaping issues)
+  // Wire street view button via closure (avoids HTML escaping issues)
   const svPlaceBtn = document.querySelector('.sv-place-btn');
-  if(svPlaceBtn) svPlaceBtn.addEventListener('click', () => {
-    openStreetView(parseFloat(svPlaceBtn.dataset.lat), parseFloat(svPlaceBtn.dataset.lng), svPlaceBtn.dataset.name);
-  });
+  if(svPlaceBtn) svPlaceBtn.onclick = () => openStreetView(p.lat, p.lng, p.name);
 }
 
 // ── REVIEWS ──────────────────────────────────────────────────────
@@ -2573,17 +2571,29 @@ function selectGeocodeResult(f){
   clearAreaHighlight();
 
   const placeType = (f.place_type||[])[0] || '';
-  const isArea = f.bbox && ['neighborhood','locality','place','district','region','postcode'].includes(placeType);
+  const areaTypes = ['neighborhood','locality','place','district','region'];
+  const isAreaType = areaTypes.includes(placeType);
   const isPostcodeResult = placeType === 'postcode';
+  const isArea = isAreaType || (isPostcodeResult && f.bbox);
 
   if(isArea) {
-    // Fit the map to the bbox of the area
-    const [w,s,e,n] = f.bbox;
-    map.fitBounds([[w,s],[e,n]], {padding:60, duration:800, maxZoom:15});
-    // Fetch real OSM boundary and draw it
-    // Small delay lets fitBounds animate first
-    setTimeout(() => showAreaHighlight(f.text || f.place_name || '', f.bbox), 500);
-    // No pin for areas — clear any existing one
+    if(f.bbox) {
+      // Fit to bbox and draw real boundary
+      const [w,s,e,n] = f.bbox;
+      map.fitBounds([[w,s],[e,n]], {padding:60, duration:800, maxZoom:15});
+      setTimeout(() => showAreaHighlight(f.text || f.place_name || '', f.bbox), 500);
+    } else {
+      // No bbox from Mapbox — use sensible zoom by type and try OSM boundary anyway
+      const areaZoom = {'neighborhood':14,'locality':14,'place':13,'district':12,'region':11};
+      const zoom = areaZoom[placeType] || 13;
+      map.flyTo({center:f.center, zoom, duration:800});
+      // Still try to fetch and draw the OSM boundary polygon
+      // Build a rough bbox from the center point
+      const pad = placeType==='neighborhood' ? 0.015 : 0.04;
+      const [lng, lat] = f.center;
+      const roughBbox = [lng-pad, lat-pad, lng+pad, lat+pad];
+      setTimeout(() => showAreaHighlight(f.text || f.place_name || '', roughBbox), 500);
+    }
     clearSearchMarker();
   } else {
     // Point result (POI, address, exact postcode centroid)
