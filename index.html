@@ -1270,29 +1270,24 @@ function getFreeParking() {
 }
 
 function renderParkingSidebar() {
-  const body=document.getElementById('sidebarBody');
-  const note = `<div class="card" style="border-style:dashed">
-    <div class="card-title">Free parking (live)</div>
-    <div class="card-sub">Showing free parking and “free after 6pm” tagged in OpenStreetMap. Always check local signage for time limits.</div>
-  </div>`;
+  const body = document.getElementById('sidebarBody');
+  const note = '<div class="empty"><div class="ei">P</div><p>Free parking locations are pulled from OpenStreetMap. Please check signs.</p></div>';
   const freeNow = data.parking.filter(p=>!p.freeAfter);
   const freeLater = data.parking.filter(p=>p.freeAfter);
-  const section = (title, list)=> list.length ? `<div class="detail-section-title">${title}</div>`+list.map(p=>`
-    <div class="card" onclick="flyTo(${p.lng},${p.lat})">
-      <div class="card-top">
-        <span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">🅿️ ${p.type}</span>
-        <span class="card-time">${p.freeAfter || p.limit}</span>
-      </div>
-      <div class="card-title">${p.name}</div>
-      <div class="card-sub">${p.notes}</div>
-      <div class="card-footer">
-        <span class="card-meta">${p.lat.toFixed(3)}, ${p.lng.toFixed(3)}</span>
-      </div>
-    </div>`).join('');
-  body.innerHTML= note + section('Free Now', freeNow) + section('Free After 6pm', freeLater);
-}
-
-function renderParkingMarkers() {
+  const card = (p) => (
+    '<div class="card" onclick="flyTo(' + p.lng + ',' + p.lat + ')">' +
+      '<div class="card-top">' +
+        '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
+        '<span class="card-time">' + (p.freeAfter || p.limit || '') + '</span>' +
+      '</div>' +
+      '<div class="card-title">' + (p.name||'Parking') + '</div>' +
+      '<div class="card-sub">' + (p.notes||'') + '</div>' +
+      '<div class="card-footer"><span class="card-meta">' + Number(p.lat).toFixed(3) + ', ' + Number(p.lng).toFixed(3) + '</span></div>' +
+    '</div>'
+  );
+  const section = (title, list) => list.length ? '<div class="detail-section-title">' + title + '</div>' + list.map(card).join('') : '';
+  body.innerHTML = note + section('Free Now', freeNow) + section('Free After 6pm', freeLater);
+}\nfunction renderParkingMarkers() {
   markers.parking.forEach(m=>m.remove()); markers.parking=[];
   data.parking.forEach(p=>{
     const el=document.createElement('div');
@@ -2209,6 +2204,7 @@ function initTheme() {
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
+
 
 
 
