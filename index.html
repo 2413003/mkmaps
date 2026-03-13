@@ -475,6 +475,60 @@
     .sv-btn:hover{border-color:var(--blue);}
     .sv-btn-icon{font-size:18px;}
     .sv-btn-label{font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);}
+
+    /* ── REDWAY ROUTE BUILDER ────────────────────────────────────────── */
+    .rr-panel{position:absolute;top:80px;left:16px;width:320px;background:rgba(255,255,255,0.97);border:1px solid var(--border);border-radius:18px;z-index:1600;display:none;flex-direction:column;max-height:calc(100vh - 110px);overflow:hidden;box-shadow:0 18px 50px rgba(15,23,42,0.13);backdrop-filter:blur(12px);}
+    .rr-panel.open{display:flex;}
+    .rr-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .rr-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;display:flex;align-items:center;gap:8px;}
+    .rr-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;}
+    .rr-close:hover{color:var(--text);}
+    .rr-body{overflow-y:auto;flex:1;padding:12px;}
+    .rr-body::-webkit-scrollbar{width:3px;}
+    .rr-body::-webkit-scrollbar-thumb{background:var(--border);}
+    .rr-tabs{display:flex;gap:4px;margin-bottom:12px;}
+    .rr-tab{flex:1;padding:7px 4px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.6px;cursor:pointer;transition:all 0.15s;text-align:center;}
+    .rr-tab.active{background:var(--redway);border-color:var(--redway);color:white;}
+    .rr-tab:hover:not(.active){border-color:var(--muted2);color:var(--text);}
+    /* Build tab */
+    .rr-build-hint{font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:10px;padding:8px 10px;background:rgba(204,34,0,0.07);border-radius:8px;border-left:3px solid var(--redway);}
+    .rr-stats{display:flex;gap:8px;margin-bottom:10px;}
+    .rr-stat{flex:1;background:var(--panel2);border-radius:8px;padding:8px;text-align:center;}
+    .rr-stat-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--redway);}
+    .rr-stat-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.6px;margin-top:2px;}
+    .rr-waypoints{margin-bottom:10px;}
+    .rr-wp{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--panel2);border-radius:6px;margin-bottom:4px;font-size:11px;}
+    .rr-wp-num{width:20px;height:20px;border-radius:50%;background:var(--redway);color:white;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;flex-shrink:0;}
+    .rr-wp-label{flex:1;color:var(--text);}
+    .rr-wp-del{background:none;border:none;color:var(--muted2);cursor:pointer;font-size:14px;padding:2px 4px;border-radius:4px;line-height:1;}
+    .rr-wp-del:hover{color:var(--red);}
+    .rr-build-actions{display:flex;gap:6px;margin-bottom:10px;}
+    .rr-btn{flex:1;padding:8px 6px;border-radius:8px;font-family:'DM Mono',monospace;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all 0.15s;}
+    .rr-btn:hover{border-color:var(--muted2);color:var(--text);}
+    .rr-btn.primary{background:var(--redway);border-color:var(--redway);color:white;}
+    .rr-btn.primary:hover{opacity:0.85;}
+    .rr-btn.danger{border-color:rgba(232,58,47,0.4);color:var(--red);}
+    .rr-btn.danger:hover{background:rgba(232,58,47,0.08);}
+    .rr-name-row{display:flex;gap:6px;margin-bottom:10px;}
+    .rr-name-input{flex:1;background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:7px 10px;border-radius:8px;font-family:'DM Mono',monospace;font-size:11px;outline:none;}
+    .rr-name-input:focus{border-color:var(--redway);}
+    /* Saved tab */
+    .rr-saved-empty{text-align:center;padding:24px 12px;color:var(--muted);}
+    .rr-saved-empty-icon{font-size:28px;margin-bottom:8px;}
+    .rr-saved-item{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:border-color 0.15s;}
+    .rr-saved-item:hover{border-color:var(--redway);}
+    .rr-saved-item-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+    .rr-saved-item-name{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;}
+    .rr-saved-item-actions{display:flex;gap:4px;}
+    .rr-saved-item-btn{background:none;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:5px;font-family:'DM Mono',monospace;font-size:9px;cursor:pointer;text-transform:uppercase;}
+    .rr-saved-item-btn:hover{color:var(--text);border-color:var(--muted2);}
+    .rr-saved-item-btn.del:hover{color:var(--red);border-color:var(--red);}
+    .rr-saved-item-meta{font-size:10px;color:var(--muted);display:flex;gap:10px;}
+    /* Mode indicator on map */
+    .rr-mode-bar{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);background:var(--redway);color:white;padding:8px 18px;border-radius:999px;font-size:11px;font-family:'DM Mono',monospace;z-index:1500;display:none;pointer-events:none;box-shadow:0 4px 14px rgba(204,34,0,0.4);}
+    .rr-mode-bar.active{display:block;}
+    @media(max-width:700px){.rr-panel{left:8px;right:8px;width:auto;top:72px;}}
+
     /* MOBILE BOTTOM SHEET */
     .mobile-sheet{display:none;position:fixed;bottom:0;left:0;right:0;z-index:500;flex-direction:column;pointer-events:none;}
     .mobile-tab-bar{display:flex;padding:8px 12px 0;gap:6px;pointer-events:all;background:linear-gradient(transparent,rgba(10,10,10,0.95) 40%);}
@@ -503,6 +557,7 @@
     <button class="header-btn" onclick="toggleSidebar()" title="Toggle list">List</button>
     <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
     <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Route</button>
+    <button class="header-btn" id="rrBtn" onclick="rrToggle()" title="Redway Routes">🛤️ Routes</button>
     <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
     <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
       <span id="weatherIcon">🌤️</span>
@@ -521,6 +576,40 @@
   <div class="layer-item" id="menu-parking" onclick="setLayer('parking',document.getElementById('btn-parking'));toggleLayerMenu(true)">🅿️ Free Parking</div>
   <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('btn-redways'))">🛤️ Redways</div>
 </div>
+
+
+<!-- REDWAY ROUTE BUILDER PANEL -->
+<div class="rr-panel" id="rrPanel">
+  <div class="rr-header">
+    <div class="rr-title">🛤️ Redway Routes</div>
+    <button class="rr-close" onclick="rrClose()">×</button>
+  </div>
+  <div class="rr-body" id="rrBody">
+    <div class="rr-tabs">
+      <button class="rr-tab active" id="rrTabBuild" onclick="rrShowTab('build')">✏️ Build</button>
+      <button class="rr-tab" id="rrTabSaved" onclick="rrShowTab('saved')">📁 Saved</button>
+    </div>
+    <div id="rrBuildTab">
+      <div class="rr-build-hint">Enable Redways then click any point on the map to add waypoints. Your route snaps to the Redway network.</div>
+      <div class="rr-stats">
+        <div class="rr-stat"><div class="rr-stat-val" id="rrDist">0.0</div><div class="rr-stat-label">km</div></div>
+        <div class="rr-stat"><div class="rr-stat-val" id="rrTime">0</div><div class="rr-stat-label">min walk</div></div>
+        <div class="rr-stat"><div class="rr-stat-val" id="rrWpCount">0</div><div class="rr-stat-label">waypoints</div></div>
+      </div>
+      <div class="rr-waypoints" id="rrWaypoints"></div>
+      <div class="rr-name-row">
+        <input class="rr-name-input" id="rrName" placeholder="Route name…" maxlength="60"/>
+      </div>
+      <div class="rr-build-actions">
+        <button class="rr-btn primary" onclick="rrSave()" id="rrSaveBtn" disabled>💾 Save</button>
+        <button class="rr-btn" onclick="rrExportGPX()" id="rrGpxBtn" disabled>⬇ GPX</button>
+        <button class="rr-btn danger" onclick="rrClear()">🗑 Clear</button>
+      </div>
+    </div>
+    <div id="rrSavedTab" style="display:none"></div>
+  </div>
+</div>
+<div class="rr-mode-bar" id="rrModeBar">🛤️ Click map to add waypoint · Redways active</div>
 
 <!-- SAVED PLACES PANEL -->
 <div class="saved-panel" id="savedPanel">
@@ -2578,6 +2667,8 @@ function stitchWays(ways) {
 
 function selectGeocodeResult(f){
   if(!f || !f.center) return;
+  // DEBUG — remove after fixing
+  console.log('geocode result:', JSON.stringify({place_type:f.place_type, bbox:f.bbox, center:f.center, text:f.text}));
   clearAreaHighlight();
 
   const placeType = (f.place_type||[])[0] || '';
@@ -3733,6 +3824,417 @@ document.addEventListener('keydown', e => {
   if(e.key === 'Escape' && svOpen) { closeStreetView(); e.stopPropagation(); }
 });
 
+
+// ── REDWAY ROUTE BUILDER ─────────────────────────────────────────────────────
+
+// State
+let rrActive = false;          // building mode on/off
+let rrWaypoints = [];          // [{lat,lng,label}]
+let rrRouteCoords = [];        // full route coordinate array [lng,lat]
+let rrRedwayGraph = null;      // graph built from loaded Redway GeoJSON
+let rrRedwayNodes = null;      // flat node list
+let savedRoutes = [];          // persisted routes
+
+// ── localStorage helpers ──────────────────────────────────────────────────
+function rrLoadRoutes(){ try{ return JSON.parse(localStorage.getItem('mkmaps_rr_routes')||'[]'); }catch(e){ return []; } }
+function rrSaveRoutes(){ try{ localStorage.setItem('mkmaps_rr_routes', JSON.stringify(savedRoutes)); }catch(e){} }
+
+// ── Panel open/close ──────────────────────────────────────────────────────
+function rrToggle(){
+  const panel = document.getElementById('rrPanel');
+  const btn = document.getElementById('rrBtn');
+  const isOpen = panel.classList.toggle('open');
+  btn.classList.toggle('saved-active', isOpen);
+  if(isOpen){
+    savedRoutes = rrLoadRoutes();
+    rrRenderWaypoints();
+    rrShowTab('build');
+    // Auto-enable Redways if not already on
+    if(!redwaysVisible){
+      const rwBtn = document.getElementById('btn-redways');
+      if(rwBtn) toggleRedways(rwBtn);
+    }
+    rrSetActive(true);
+  } else {
+    rrSetActive(false);
+  }
+}
+function rrClose(){
+  document.getElementById('rrPanel').classList.remove('open');
+  document.getElementById('rrBtn').classList.remove('saved-active');
+  rrSetActive(false);
+}
+
+// ── Build mode ────────────────────────────────────────────────────────────
+function rrSetActive(on){
+  rrActive = on;
+  document.getElementById('rrModeBar').classList.toggle('active', on);
+  map.getCanvas().style.cursor = on ? 'crosshair' : '';
+}
+
+// ── Tab switching ─────────────────────────────────────────────────────────
+function rrShowTab(tab){
+  document.getElementById('rrBuildTab').style.display = tab==='build' ? '' : 'none';
+  document.getElementById('rrSavedTab').style.display  = tab==='saved' ? '' : 'none';
+  document.getElementById('rrTabBuild').classList.toggle('active', tab==='build');
+  document.getElementById('rrTabSaved').classList.toggle('active', tab==='saved');
+  if(tab==='saved') rrRenderSaved();
+}
+
+// ── Map click handler ─────────────────────────────────────────────────────
+map.on('click', async (e) => {
+  if(!rrActive || !document.getElementById('rrPanel').classList.contains('open')) return;
+  const {lng, lat} = e.lngLat;
+  const label = `Point ${rrWaypoints.length + 1}`;
+  rrWaypoints.push({lat, lng, label});
+  await rrRebuildRoute();
+  rrRenderWaypoints();
+  rrUpdateStats();
+});
+
+// ── Build graph from Redway GeoJSON ───────────────────────────────────────
+function rrBuildGraph(geojson){
+  // Nodes: key = "lng,lat" rounded to 6dp  →  {id, lng, lat}
+  // Edges: adjacency list  nodeId → [{nodeId, dist}]
+  const nodeMap = {};
+  const adj = {};
+  let nodeCount = 0;
+
+  function getNode(lng, lat){
+    const key = lng.toFixed(6)+','+lat.toFixed(6);
+    if(!nodeMap[key]){ nodeMap[key] = {id:nodeCount++, lng, lat, key}; }
+    return nodeMap[key];
+  }
+
+  for(const feat of geojson.features){
+    if(feat.geometry.type !== 'LineString') continue;
+    const coords = feat.geometry.coordinates;
+    for(let i=0; i<coords.length-1; i++){
+      const a = getNode(coords[i][0], coords[i][1]);
+      const b = getNode(coords[i+1][0], coords[i+1][1]);
+      const d = rrHaversine(a.lat, a.lng, b.lat, b.lng);
+      if(!adj[a.id]) adj[a.id] = [];
+      if(!adj[b.id]) adj[b.id] = [];
+      adj[a.id].push({id:b.id, dist:d});
+      adj[b.id].push({id:a.id, dist:d});
+    }
+  }
+
+  const nodes = Object.values(nodeMap);
+  return {nodes, adj};
+}
+
+// ── Nearest graph node to a lat/lng ──────────────────────────────────────
+function rrNearestNode(graph, lat, lng){
+  let best = null, bestDist = Infinity;
+  for(const n of graph.nodes){
+    const d = rrHaversine(lat, lng, n.lat, n.lng);
+    if(d < bestDist){ bestDist = d; best = n; }
+  }
+  return best;
+}
+
+// ── Dijkstra shortest path ────────────────────────────────────────────────
+function rrDijkstra(graph, startId, endId){
+  const dist = {};
+  const prev = {};
+  const visited = new Set();
+  // Simple priority queue via array (fine for ~5000 nodes)
+  const queue = [{id:startId, d:0}];
+  dist[startId] = 0;
+
+  while(queue.length){
+    queue.sort((a,b)=>a.d-b.d);
+    const {id} = queue.shift();
+    if(visited.has(id)) continue;
+    visited.add(id);
+    if(id === endId) break;
+    for(const edge of (graph.adj[id]||[])){
+      const nd = (dist[id]||0) + edge.dist;
+      if(nd < (dist[edge.id]??Infinity)){
+        dist[edge.id] = nd;
+        prev[edge.id] = id;
+        queue.push({id:edge.id, d:nd});
+      }
+    }
+  }
+
+  // Reconstruct path
+  const path = [];
+  let cur = endId;
+  while(cur !== undefined){
+    path.unshift(cur);
+    cur = prev[cur];
+  }
+  if(path[0] !== startId) return null; // no path found
+  return path;
+}
+
+// ── Rebuild full route through all waypoints ──────────────────────────────
+async function rrRebuildRoute(){
+  // Ensure graph is built
+  if(!rrRedwayGraph){
+    // Try to get from loaded Mapbox source
+    const src = map.getSource('redways');
+    if(src && src._data){
+      rrRedwayGraph = rrBuildGraph(src._data);
+    } else {
+      // Need to load redways first
+      await loadRedways();
+      await new Promise(r=>setTimeout(r,300));
+      const src2 = map.getSource('redways');
+      if(src2 && src2._data) rrRedwayGraph = rrBuildGraph(src2._data);
+    }
+  }
+
+  if(!rrRedwayGraph || rrWaypoints.length < 1){
+    rrRouteCoords = rrWaypoints.map(w=>[w.lng,w.lat]);
+    rrDrawRoute();
+    return;
+  }
+
+  // Build route segment by segment
+  const allCoords = [[rrWaypoints[0].lng, rrWaypoints[0].lat]];
+
+  for(let i=0; i<rrWaypoints.length-1; i++){
+    const from = rrWaypoints[i];
+    const to   = rrWaypoints[i+1];
+    const nFrom = rrNearestNode(rrRedwayGraph, from.lat, from.lng);
+    const nTo   = rrNearestNode(rrRedwayGraph, to.lat,   to.lng);
+
+    if(!nFrom || !nTo){ allCoords.push([to.lng,to.lat]); continue; }
+
+    const path = rrDijkstra(rrRedwayGraph, nFrom.id, nTo.id);
+    if(path){
+      for(let j=1; j<path.length; j++){
+        const node = rrRedwayGraph.nodes.find(n=>n.id===path[j]);
+        if(node) allCoords.push([node.lng, node.lat]);
+      }
+    } else {
+      // Straight line fallback
+      allCoords.push([to.lng,to.lat]);
+    }
+  }
+
+  rrRouteCoords = allCoords;
+  rrDrawRoute();
+
+  // Update labels with snapped positions if wanted
+  const wp0snap = rrRedwayGraph ? rrNearestNode(rrRedwayGraph, rrWaypoints[0].lat, rrWaypoints[0].lng) : null;
+}
+
+// ── Draw route on map ─────────────────────────────────────────────────────
+function rrDrawRoute(){
+  const geojson = {
+    type:'Feature',
+    geometry:{type:'LineString', coordinates: rrRouteCoords}
+  };
+  if(map.getSource('rr-route')){
+    map.getSource('rr-route').setData(geojson);
+  } else {
+    map.addSource('rr-route',{type:'geojson',data:geojson});
+    map.addLayer({
+      id:'rr-route',type:'line',source:'rr-route',
+      layout:{'line-join':'round','line-cap':'round'},
+      paint:{'line-color':'#cc2200','line-width':4,'line-opacity':0.9,
+             'line-dasharray':[1,0]}
+    }, 'redways'); // render above redways layer
+    // Animated glow
+    map.addLayer({
+      id:'rr-route-glow',type:'line',source:'rr-route',
+      layout:{'line-join':'round','line-cap':'round'},
+      paint:{'line-color':'#ff6b6b','line-width':8,'line-opacity':0.25,'line-blur':4}
+    }, 'rr-route');
+  }
+  // Draw waypoint markers
+  rrDrawWaypointMarkers();
+}
+
+let rrMarkers = [];
+function rrClearMarkers(){ rrMarkers.forEach(m=>m.remove()); rrMarkers=[]; }
+function rrDrawWaypointMarkers(){
+  rrClearMarkers();
+  rrWaypoints.forEach((wp,i)=>{
+    const el = document.createElement('div');
+    el.style.cssText = 'width:24px;height:24px;border-radius:50%;background:#cc2200;border:3px solid white;display:flex;align-items:center;justify-content:center;color:white;font-size:9px;font-weight:700;cursor:pointer;box-shadow:0 2px 8px rgba(204,34,0,0.5);font-family:Syne,sans-serif;';
+    el.textContent = i+1;
+    const m = new mapboxgl.Marker({element:el}).setLngLat([wp.lng,wp.lat]).addTo(map);
+    rrMarkers.push(m);
+  });
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────────
+function rrCalcDistance(){
+  let d = 0;
+  for(let i=0;i<rrRouteCoords.length-1;i++){
+    d += rrHaversine(rrRouteCoords[i][1],rrRouteCoords[i][0],rrRouteCoords[i+1][1],rrRouteCoords[i+1][0]);
+  }
+  return d;
+}
+
+function rrUpdateStats(){
+  const km = rrCalcDistance();
+  document.getElementById('rrDist').textContent = km.toFixed(1);
+  document.getElementById('rrTime').textContent = Math.round(km / 0.083); // ~5km/h walk
+  document.getElementById('rrWpCount').textContent = rrWaypoints.length;
+  const hasPts = rrWaypoints.length >= 2;
+  document.getElementById('rrSaveBtn').disabled = !hasPts;
+  document.getElementById('rrGpxBtn').disabled = !hasPts;
+}
+
+// ── Waypoints panel ───────────────────────────────────────────────────────
+function rrRenderWaypoints(){
+  const el = document.getElementById('rrWaypoints');
+  if(!rrWaypoints.length){
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted);text-align:center;padding:8px 0">No waypoints yet. Click the map to start.</div>';
+    return;
+  }
+  el.innerHTML = rrWaypoints.map((wp,i)=>`
+    <div class="rr-wp">
+      <span class="rr-wp-num">${i+1}</span>
+      <span class="rr-wp-label">${wp.lat.toFixed(4)}, ${wp.lng.toFixed(4)}</span>
+      <button class="rr-wp-del" onclick="rrRemoveWp(${i})" title="Remove">×</button>
+    </div>`).join('');
+}
+
+async function rrRemoveWp(i){
+  rrWaypoints.splice(i,1);
+  if(rrWaypoints.length < 2){ rrRouteCoords = rrWaypoints.map(w=>[w.lng,w.lat]); rrDrawRoute(); }
+  else await rrRebuildRoute();
+  rrRenderWaypoints();
+  rrUpdateStats();
+}
+
+// ── Clear ─────────────────────────────────────────────────────────────────
+function rrClear(){
+  rrWaypoints = [];
+  rrRouteCoords = [];
+  rrClearMarkers();
+  if(map.getSource('rr-route')){
+    map.getSource('rr-route').setData({type:'Feature',geometry:{type:'LineString',coordinates:[]}});
+  }
+  rrRenderWaypoints();
+  rrUpdateStats();
+}
+
+// ── Save ──────────────────────────────────────────────────────────────────
+function rrSave(){
+  if(rrWaypoints.length < 2){ toast('Add at least 2 waypoints.','warn'); return; }
+  const name = document.getElementById('rrName').value.trim() || `Redway Route ${savedRoutes.length+1}`;
+  const km = rrCalcDistance();
+  const route = {
+    id: Date.now(),
+    name,
+    km: parseFloat(km.toFixed(2)),
+    waypoints: JSON.parse(JSON.stringify(rrWaypoints)),
+    coords: JSON.parse(JSON.stringify(rrRouteCoords)),
+    created: new Date().toISOString()
+  };
+  savedRoutes = rrLoadRoutes();
+  savedRoutes.unshift(route);
+  savedRoutes = savedRoutes.slice(0,30);
+  rrSaveRoutes();
+  toast(`✅ "${name}" saved!`,'success');
+  document.getElementById('rrName').value = '';
+}
+
+// ── Load saved route onto map ─────────────────────────────────────────────
+function rrLoadRoute(id){
+  const route = savedRoutes.find(r=>r.id===id);
+  if(!route) return;
+  rrClear();
+  rrWaypoints = JSON.parse(JSON.stringify(route.waypoints));
+  rrRouteCoords = JSON.parse(JSON.stringify(route.coords));
+  rrDrawRoute();
+  rrRenderWaypoints();
+  rrUpdateStats();
+  // Fit map to route
+  if(rrRouteCoords.length > 1){
+    const bounds = rrRouteCoords.reduce((b,c)=>b.extend(c), new mapboxgl.LngLatBounds(rrRouteCoords[0],rrRouteCoords[0]));
+    map.fitBounds(bounds,{padding:60,duration:800});
+  }
+  rrShowTab('build');
+  toast(`Loaded "${route.name}"`,'info');
+}
+
+// ── Delete saved route ────────────────────────────────────────────────────
+function rrDeleteRoute(id){
+  savedRoutes = savedRoutes.filter(r=>r.id!==id);
+  rrSaveRoutes();
+  rrRenderSaved();
+  toast('Route deleted.','info');
+}
+
+// ── Render saved routes tab ───────────────────────────────────────────────
+function rrRenderSaved(){
+  savedRoutes = rrLoadRoutes();
+  const el = document.getElementById('rrSavedTab');
+  if(!savedRoutes.length){
+    el.innerHTML = '<div class="rr-saved-empty"><div class="rr-saved-empty-icon">🛤️</div><p>No saved routes yet.<br>Build a route and hit Save.</p></div>';
+    return;
+  }
+  el.innerHTML = savedRoutes.map(r=>`
+    <div class="rr-saved-item">
+      <div class="rr-saved-item-top">
+        <div class="rr-saved-item-name">${escHtml(r.name)}</div>
+        <div class="rr-saved-item-actions">
+          <button class="rr-saved-item-btn" onclick="rrLoadRoute(${r.id})">Load</button>
+          <button class="rr-saved-item-btn" onclick="rrExportGPXById(${r.id})">GPX</button>
+          <button class="rr-saved-item-btn del" onclick="rrDeleteRoute(${r.id})">Del</button>
+        </div>
+      </div>
+      <div class="rr-saved-item-meta">
+        <span>📏 ${r.km} km</span>
+        <span>🚶 ${Math.round(r.km/0.083)} min walk</span>
+        <span>🚴 ${Math.round(r.km/0.25)} min cycle</span>
+        <span>📅 ${new Date(r.created).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</span>
+      </div>
+    </div>`).join('');
+}
+
+// ── GPX Export ────────────────────────────────────────────────────────────
+function rrExportGPX(){
+  if(!rrRouteCoords.length){ toast('No route to export.','warn'); return; }
+  const name = document.getElementById('rrName').value.trim() || 'MK Redway Route';
+  rrDoExport(name, rrRouteCoords);
+}
+function rrExportGPXById(id){
+  const r = savedRoutes.find(x=>x.id===id);
+  if(!r) return;
+  rrDoExport(r.name, r.coords);
+}
+function rrDoExport(name, coords){
+  const trkpts = coords.map(c=>`    <trkpt lat="${c[1].toFixed(6)}" lon="${c[0].toFixed(6)}"></trkpt>`).join('\n');
+  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
+<gpx version="1.1" creator="MK Maps" xmlns="http://www.topografix.com/GPX/1/1">
+  <metadata><name>${escHtml(name)}</name><desc>Redway route exported from MK Maps</desc></metadata>
+  <trk>
+    <name>${escHtml(name)}</name>
+    <trkseg>
+${trkpts}
+    </trkseg>
+  </trk>
+</gpx>`;
+  const blob = new Blob([gpx], {type:'application/gpx+xml'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name.replace(/[^a-z0-9]/gi,'_')+'.gpx';
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('GPX downloaded — import into Strava, Garmin or Komoot.','success',5000);
+}
+
+// ── Haversine distance (km) ───────────────────────────────────────────────
+function rrHaversine(lat1,lng1,lat2,lng2){
+  const R=6371, dLat=(lat2-lat1)*Math.PI/180, dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+
+// Reset graph when redways reload (style change / theme toggle)
+map.on('style.load',()=>{ rrRedwayGraph = null; });
+
+
 // ── EXPOSE GLOBALS ───────────────────────────────────────────────
 window.setLayer=setLayer;
 window.toggleRedways=toggleRedways;
@@ -3778,6 +4280,16 @@ window.closeNearby=closeNearby;
 window.toast=toast;
 window.toggleSavedPanel=toggleSavedPanel;
 window.clearAreaHighlight=clearAreaHighlight;
+window.rrToggle=rrToggle;
+window.rrClose=rrClose;
+window.rrShowTab=rrShowTab;
+window.rrRemoveWp=rrRemoveWp;
+window.rrClear=rrClear;
+window.rrSave=rrSave;
+window.rrLoadRoute=rrLoadRoute;
+window.rrDeleteRoute=rrDeleteRoute;
+window.rrExportGPX=rrExportGPX;
+window.rrExportGPXById=rrExportGPXById;
 window.openStreetView=openStreetView;
 window.closeStreetView=closeStreetView;
 window.savedItemClick=savedItemClick;
