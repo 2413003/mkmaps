@@ -536,7 +536,15 @@
   </div>
 </div>
 
-<script src="app.js"></script>
+<script src="app.js" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>app.js failed to load</div>'"></script>
+<script>
+if(!window.initApp){
+  var d=document.createElement('div');
+  d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';
+  d.textContent='MK Maps error: app.js missing or failed. Make sure app.js is in repo root and deployed.';
+  document.body.appendChild(d);
+}
+</script>
 <script src="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.js" onload="try{initApp()}catch(e){var d=document.createElement('div');d.style.cssText='position:fixed;top:80px;left:16px;right:16px;background:#111827;color:#fff;padding:12px 14px;border-radius:10px;font-family:monospace;font-size:12px;z-index:99999;';d.textContent='MK Maps init error: '+e.message;document.body.appendChild(d);}" onerror="document.body.innerHTML='<div style=padding:40px;font-family:monospace;color:red>Mapbox failed to load</div>'"></script>
 </body>
 </html>
