@@ -2946,6 +2946,7 @@ map.on('load',()=>{
     navigator.geolocation.getCurrentPosition(pos=>{
       setUserMarker(pos.coords.latitude, pos.coords.longitude);
       document.querySelectorAll('.near-me-btn').forEach(b=>b.title='Near Me');
+      map.flyTo({center:[pos.coords.longitude, pos.coords.latitude], zoom:14, duration:800});
     },()=>{});
   }
 
