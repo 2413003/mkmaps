@@ -556,7 +556,7 @@
   <div class="header-right">
     <button class="header-btn" onclick="toggleSidebar()" title="Toggle list">List</button>
     <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
-    <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Route</button>
+    <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Directions</button>
     <button class="header-btn" id="rrBtn" onclick="rrToggle()" title="Redway Routes">🛤️ Routes</button>
     <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
     <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
@@ -1162,7 +1162,7 @@ function showIssueDetail(id) {
     </div>
     <div class="detail-section">
       <div class="detail-section-title">Location</div>
-      <div style="font-size:12px;color:var(--muted)">${r.latitude.toFixed(5)}, ${r.longitude.toFixed(5)}</div>
+
     </div>`;
   openDetail();
 }
@@ -1374,7 +1374,7 @@ function showTransportDetail(id) {
       <div class="hours-row"><span class="hours-day">Updated</span><span class="hours-time">${fmtUpdated(r.updated)}</span></div>
       <div class="hours-row"><span class="hours-day">Route</span><span class="hours-time">${r.number}</span></div>
       <div class="hours-row"><span class="hours-day">Vehicle</span><span class="hours-time">${r.stop}</span></div>
-      <div class="hours-row"><span class="hours-day">Coords</span><span class="hours-time">${r.lat.toFixed(5)}, ${r.lng.toFixed(5)}</span></div>
+
     </div>
     <div style="font-size:10px;color:var(--muted);margin-top:8px">Live positions refresh every ~20 seconds.</div>
   `:`
@@ -2098,12 +2098,12 @@ function showParkingDetail(p){
       (p.source==='community' ? '<button class="action-btn" id="'+base+'_verify"><span class="action-btn-icon">OK</span><span class="action-btn-label">Verify</span></button>' : '')+
     '</div>'+
     '<div class="detail-section"><div class="detail-section-title">Rules</div><div style="font-size:12px;color:var(--muted)">'+escHtml(p.notes||p.limit||'Check signage')+'</div></div>'+
-    '<div class="detail-section"><div class="detail-section-title">Location</div><div style="font-size:11px">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div></div>';
+    '<div class="detail-section"><div class="detail-section-title">Location</div></div>';
   openDetail();
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
   const copyBtn = document.getElementById(base+'_copy');
-  if(copyBtn) copyBtn.onclick = ()=>copySearch(name+' - '+lat.toFixed(5)+', '+lng.toFixed(5));
+  if(copyBtn) copyBtn.onclick = ()=>copySearch(name+', '+placeName);
   if(p.source==='community'){
     const verifyBtn = document.getElementById(base+'_verify');
     if(verifyBtn) verifyBtn.onclick = ()=>verifyParkingReport(String(p.sourceId||p.id||''));
@@ -2532,7 +2532,7 @@ function showSearchDetail(f){
     '</div>'+
     '<div class=\"detail-section\"><div class=\"detail-section-title\">Location</div>'+
       '<div style=\"font-size:12px;color:var(--muted)\">'+escHtml(placeName)+'</div>'+
-      '<div style=\"margin-top:6px;font-size:11px\">'+lat.toFixed(5)+', '+lng.toFixed(5)+'</div>'+
+''+
     '</div>';
   openDetail();
   const dirBtn = document.getElementById(base+'_dir');
@@ -2667,17 +2667,16 @@ function stitchWays(ways) {
 
 function selectGeocodeResult(f){
   if(!f || !f.center) return;
-  // DEBUG — remove after fixing
-  console.log('geocode result:', JSON.stringify({place_type:f.place_type, bbox:f.bbox, center:f.center, text:f.text}));
   clearAreaHighlight();
 
   const placeType = (f.place_type||[])[0] || '';
-  const areaTypes = ['neighborhood','locality','place','district','region','locality'];
+  const areaTypes = ['neighborhood','locality','place','district','region'];
   const isAreaType = areaTypes.includes(placeType);
   const isPostcodeResult = placeType === 'postcode';
-  // Treat anything with a bbox as an area — Mapbox sometimes returns
-  // MK estates as 'poi' or 'locality' but still provides a bbox
-  const isArea = f.bbox ? !isPostcodeResult : isAreaType;
+  // Treat as area if: has bbox, OR named area type, OR no place_type and name
+  // doesn't start with a number (i.e. not '12 High St')
+  const looksLikeArea = !placeType && f.text && !/^\d/.test(f.text.trim());
+  const isArea = isPostcodeResult ? !!f.bbox : (!!f.bbox || isAreaType || looksLikeArea);
 
   if(isArea) {
     if(f.bbox) {
@@ -2686,16 +2685,14 @@ function selectGeocodeResult(f){
       map.fitBounds([[w,s],[e,n]], {padding:60, duration:800, maxZoom:15});
       setTimeout(() => showAreaHighlight(f.text || f.place_name || '', f.bbox), 500);
     } else {
-      // No bbox from Mapbox — use sensible zoom by type and try OSM boundary anyway
+      // No bbox from Mapbox — use sensible zoom, build rough bbox from center
       const areaZoom = {'neighborhood':14,'locality':14,'place':13,'district':12,'region':11};
-      const zoom = areaZoom[placeType] || 13;
+      const zoom = areaZoom[placeType] || 14;
       map.flyTo({center:f.center, zoom, duration:800});
-      // Still try to fetch and draw the OSM boundary polygon
-      // Build a rough bbox from the center point
-      const pad = placeType==='neighborhood' ? 0.015 : 0.04;
+      const pad = (placeType==='place'||placeType==='district') ? 0.04 : 0.018;
       const [lng, lat] = f.center;
       const roughBbox = [lng-pad, lat-pad, lng+pad, lat+pad];
-      setTimeout(() => showAreaHighlight(f.text || f.place_name || '', roughBbox), 500);
+      setTimeout(() => showAreaHighlight(f.text || '', roughBbox), 600);
     }
     clearSearchMarker();
   } else {
@@ -3863,6 +3860,18 @@ function rrClose(){
   document.getElementById('rrPanel').classList.remove('open');
   document.getElementById('rrBtn').classList.remove('saved-active');
   rrSetActive(false);
+  // Clear the drawn route and markers from map when closing
+  rrClearFromMap();
+}
+function rrClearFromMap(){
+  rrClearMarkers();
+  try{
+    if(map.getLayer('rr-route-glow')) map.removeLayer('rr-route-glow');
+    if(map.getLayer('rr-route')) map.removeLayer('rr-route');
+    if(map.getSource('rr-route')) map.removeSource('rr-route');
+  } catch(e){}
+  rrWaypoints=[];
+  rrRouteCoords=[];
 }
 
 // ── Build mode ────────────────────────────────────────────────────────────
@@ -4092,7 +4101,7 @@ function rrRenderWaypoints(){
   el.innerHTML = rrWaypoints.map((wp,i)=>`
     <div class="rr-wp">
       <span class="rr-wp-num">${i+1}</span>
-      <span class="rr-wp-label">${wp.lat.toFixed(4)}, ${wp.lng.toFixed(4)}</span>
+      <span class="rr-wp-label">${wp.label || "Point "+(i+1)}</span>
       <button class="rr-wp-del" onclick="rrRemoveWp(${i})" title="Remove">×</button>
     </div>`).join('');
 }
@@ -4120,7 +4129,7 @@ function rrClear(){
 // ── Save ──────────────────────────────────────────────────────────────────
 function rrSave(){
   if(rrWaypoints.length < 2){ toast('Add at least 2 waypoints.','warn'); return; }
-  const name = document.getElementById('rrName').value.trim() || `Redway Route ${savedRoutes.length+1}`;
+  const name = document.getElementById('rrName').value.trim() || `Redway Route ${rrLoadRoutes().length+1}`;
   const km = rrCalcDistance();
   const route = {
     id: Date.now(),
@@ -4134,8 +4143,10 @@ function rrSave(){
   savedRoutes.unshift(route);
   savedRoutes = savedRoutes.slice(0,30);
   rrSaveRoutes();
-  toast(`✅ "${name}" saved!`,'success');
   document.getElementById('rrName').value = '';
+  // Switch to saved tab so user sees the route
+  rrShowTab('saved');
+  toast(`✅ Saved — view it in the Saved tab`,'success',4000);
 }
 
 // ── Load saved route onto map ─────────────────────────────────────────────
