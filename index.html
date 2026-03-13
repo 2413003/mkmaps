@@ -578,11 +578,6 @@ const quickTrips = [
   {name:'Xscape', lat:52.0377, lng:-0.7619, icon:'⛸️'}
 ];
 
-// Start with a layer so the sidebar has content even before map fully loads
-const startupLayer = getSavedLayer();
-const startupBtn = document.getElementById('btn-'+startupLayer);
-setLayer(startupLayer, startupBtn);
-
 // Map click
 map.on('click', e => {
   if (e.originalEvent && e.originalEvent.target && e.originalEvent.target.closest('.mapboxgl-marker')) return;
@@ -947,6 +942,7 @@ function renderTransportSidebar() {
 
 function renderTransportMarkers() {
   markers.transport.forEach(m=>m.remove()); markers.transport=[];
+  if(!map || !map.isStyleLoaded()) return;
   const filtered = filterTransport(data.transport||[]);
   const features = filtered.map(r=>({
     type:'Feature',
