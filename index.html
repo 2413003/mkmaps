@@ -54,11 +54,79 @@
       padding:10px 12px 0;
       min-height:auto;
     }
-    /* ── LOGO — floating red pill ───────────────────────────── */
-    .logo{display:flex;align-items:center;gap:0;flex-shrink:0;cursor:pointer;}
-    .logo-icon{width:42px;height:42px;background:var(--red);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 2px 10px rgba(232,58,47,.45);transition:transform .15s;}
-    .logo-icon:hover{transform:scale(1.06);}
-    .logo-text{display:none;} /* hidden — logo icon is the identity, like Google Maps */
+    /* ── LOGO BUTTON — hamburger menu trigger ───────────────── */
+    .logo{display:none;} /* legacy hidden */
+    .logo-icon{display:none;} /* legacy */
+    .logo-btn{
+      width:42px;height:42px;flex-shrink:0;
+      background:var(--red);border:none;border-radius:13px;
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;
+      box-shadow:0 2px 10px rgba(232,58,47,.4);
+      transition:transform .15s,box-shadow .15s;
+      padding:0;
+    }
+    .logo-btn:hover{transform:scale(1.05);box-shadow:0 4px 14px rgba(232,58,47,.5);}
+    .logo-hamburger{display:flex;flex-direction:column;gap:4px;align-items:center;}
+    .logo-hamburger span{display:block;width:16px;height:2px;background:white;border-radius:2px;}
+    .mobile-menu-btn{display:none;} /* legacy — replaced by logo-btn */
+
+    /* ── APP MENU DRAWER — slide in from left like Google Maps ── */
+    .app-menu-overlay{
+      display:none;position:fixed;inset:0;z-index:3998;
+      background:rgba(0,0,0,0);
+      transition:background .25s;
+    }
+    .app-menu-overlay.open{display:block;background:rgba(0,0,0,.35);}
+    .app-menu{
+      position:fixed;top:0;left:0;bottom:0;
+      width:300px;max-width:85vw;
+      background:var(--panel);
+      z-index:3999;
+      display:flex;flex-direction:column;
+      transform:translateX(-100%);
+      transition:transform .28s cubic-bezier(.4,0,.2,1);
+      box-shadow:4px 0 24px rgba(0,0,0,.18);
+      overflow:hidden;
+    }
+    .app-menu.open{transform:translateX(0);}
+    .app-menu-header{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 16px 14px;
+      border-bottom:1px solid var(--border);
+      flex-shrink:0;
+    }
+    .app-menu-logo{display:flex;align-items:center;gap:10px;}
+    .app-menu-logo-icon{
+      width:36px;height:36px;background:var(--red);border-radius:10px;
+      display:flex;align-items:center;justify-content:center;font-size:17px;
+    }
+    .app-menu-logo-text{font-family:'Syne',sans-serif;font-size:18px;font-weight:900;letter-spacing:-.5px;}
+    .app-menu-logo-text span{color:var(--red);}
+    .app-menu-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:4px;}
+    .app-menu-close:hover{color:var(--text);}
+    .app-menu-body{overflow-y:auto;flex:1;padding:10px 0 24px;}
+    .app-menu-section-label{
+      font-size:9px;text-transform:uppercase;letter-spacing:1.2px;
+      color:var(--muted);font-weight:700;
+      padding:12px 18px 4px;
+    }
+    .app-menu-item{
+      display:flex;align-items:center;gap:12px;
+      width:100%;padding:12px 18px;
+      background:transparent;border:none;
+      font-family:'DM Mono',monospace;font-size:13px;
+      color:var(--text);cursor:pointer;text-align:left;
+      transition:background .1s;
+    }
+    .app-menu-item:hover{background:var(--panel2);}
+    .app-menu-divider{height:1px;background:var(--border);margin:6px 0;}
+    .app-menu-build{
+      padding:16px 18px 0;
+      font-size:10px;color:var(--muted);line-height:1.7;
+    }
+    .app-menu-build span{font-size:9px;color:var(--muted2);}
+    body:not(.theme-day) .app-menu{background:#111;}
 
     /* ── SEARCH — floating pill like Google Maps ────────────── */
     .search-wrap{flex:1;max-width:560px;position:relative;}
@@ -263,8 +331,8 @@
     .map-wrap{position:fixed;inset:0;overflow:hidden;}
     #map{position:absolute;inset:0;width:100%;height:100%;}
     .map-hint{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(32,33,36,.88);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);padding:8px 16px;border-radius:var(--r-xl);font-size:11px;color:#fff;z-index:200;pointer-events:none;white-space:nowrap;transition:opacity .8s;}
-    /* FAB — report/add button, bottom-right above Mapbox controls */
-    .fab{position:fixed;bottom:90px;right:14px;z-index:200;background:var(--red);color:white;border:none;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(232,58,47,.4);transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;}
+    /* FAB — report button: hidden by default, only shows on Issues layer */
+    .fab{position:fixed;bottom:90px;right:14px;z-index:200;background:var(--red);color:white;border:none;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(232,58,47,.4);transition:transform .15s,box-shadow .15s,opacity .2s;display:none;align-items:center;justify-content:center;}
     .fab:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(232,58,47,.5);}
 
     /* ── LOCATE BTN — hidden, Mapbox's own geolocate does this ── */
@@ -951,10 +1019,12 @@
 
 <header>
   <div class="header-top">
-    <div class="logo">
-      <div class="logo-icon">📍</div>
-      <div class="logo-text">MK <span>Maps</span></div>
-    </div>
+    <!-- Logo = hamburger menu button, like Google Maps -->
+    <button class="logo-btn" id="logoBtn" onclick="openAppMenu()" title="Menu" aria-label="Open menu">
+      <span class="logo-hamburger">
+        <span></span><span></span><span></span>
+      </span>
+    </button>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
       <input class="search-input" id="searchInput" placeholder="Search MK — places, postcodes, addresses…" autocomplete="off"/>
@@ -967,12 +1037,9 @@
         <span class="weather-temp" id="weatherTemp">—°C</span>
         <span class="weather-label" id="weatherDesc"></span>
       </div>
-      <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
-      <button class="header-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️</button>
     </div>
-    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
   </div>
-  <!-- Layer chips row — replaces floating layer bar -->
+  <!-- Layer chips row — float over map -->
   <div class="layer-row" id="layerRow">
     <button class="layer-chip issues" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
     <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
@@ -982,12 +1049,34 @@
     <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
     <button class="layer-chip redways" id="chip-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
     <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)"><span class="layer-dot"></span>Photos</button>
-    <span style="margin-left:auto;flex-shrink:0;display:flex;gap:6px;padding-left:8px;border-left:1px solid var(--border);">
-      <button class="layer-chip" onclick="toggleRoutePanel()" id="dirChip">🗺️ Directions</button>
-      <button class="layer-chip" id="rrChipBtn" onclick="rrToggle()">🛤️ Routes</button>
-    </span>
   </div>
 </header>
+
+<!-- APP MENU DRAWER — slides in from left, like Google Maps -->
+<div class="app-menu-overlay" id="appMenuOverlay" onclick="closeAppMenu()"></div>
+<div class="app-menu" id="appMenu">
+  <div class="app-menu-header">
+    <div class="app-menu-logo">
+      <div class="app-menu-logo-icon">📍</div>
+      <div class="app-menu-logo-text">MK <span>Maps</span></div>
+    </div>
+    <button class="app-menu-close" onclick="closeAppMenu()">×</button>
+  </div>
+  <div class="app-menu-body">
+    <div class="app-menu-section-label">Navigate</div>
+    <button class="app-menu-item" onclick="closeAppMenu();toggleRoutePanel()">🗺️ Directions</button>
+    <button class="app-menu-item" onclick="closeAppMenu();rrToggle()">🛤️ Redway Routes</button>
+    <div class="app-menu-divider"></div>
+    <div class="app-menu-section-label">My Places</div>
+    <button class="app-menu-item" id="savedBtn" onclick="closeAppMenu();toggleSavedPanel()">★ Saved Places</button>
+    <div class="app-menu-divider"></div>
+    <div class="app-menu-section-label">More</div>
+    <button class="app-menu-item" id="mobileWeatherItem" onclick="closeAppMenu();toggleWeatherDetail()">🌤️ <span id="mobileWeatherLabel">Weather</span></button>
+    <button class="app-menu-item" onclick="closeAppMenu();openSettings()">⚙️ Settings</button>
+    <div class="app-menu-divider"></div>
+    <div class="app-menu-build">MK Maps · Build 2026-03-14<br><span>Not affiliated with MK City Council</span></div>
+  </div>
+</div>
 
 <!-- MOBILE NAV DRAWER -->
 <div class="mobile-nav-drawer" id="mobileNavDrawer">
@@ -1728,14 +1817,14 @@ function setLayer(layer, btn, opts={}) {
   showSkeletons(4);
   if(layer==='issues') loadIssues();
   else if(layer==='transport') {loadTransport(); document.getElementById('fab').style.display='none';}
-  else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='flex';}
+  else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='none';}
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
   else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
   else if(layer==='roadworks') {loadRoadworks(); document.getElementById('fab').style.display='none';}
+  // FAB only on issues — report a problem
+  document.getElementById('fab').style.display = layer==='issues' ? 'flex' : 'none';
   if(layer==='parking') setParkingZonesVisible(true);
-  else { setParkingZonesVisible(false); if(digitizeMode) cancelDigitize(); }
-  if(layer!=='issues') document.getElementById('fab').style.display = layer==='events'?'flex':'none';
-  else document.getElementById('fab').style.display='flex';
+  else { setParkingZonesVisible(false); if(typeof digitizeMode!=='undefined' && digitizeMode && typeof cancelDigitize==='function') cancelDigitize(); }
 }
 
 // ── ISSUES ───────────────────────────────────────────────────────
@@ -2977,8 +3066,42 @@ function parseConditionalFree(tag) {
   return {freeAfter, freeNow, cond};
 }
 function getCouncilFreeParking() {
+  // Real MK car parks — mix of free, limited-wait, and pay-but-free-outside-hours
+  // Sources: MK Council CMK Parking Guide, MKBC website, local knowledge
   return [
-    {id:'council_coachway',name:'MK Coachway Park & Ride',type:'Park & Ride',limit:'All day',notes:'Council Park & Ride (free parking)',freeNow:true,freeAfter:'',source:'council',lat:52.0553,lng:-0.69908}
+    // ── CMK / City Centre ───────────────────────────────────────
+    {id:'mkp_coachway',   name:'MK Coachway Park & Ride',    type:'Park & Ride', capacity:900,  limit:'All day',      notes:'Free parking, pay for bus into CMK. Open 24/7.',                     freeNow:true,  freeAfter:'', source:'council', lat:52.0553, lng:-0.69908},
+    {id:'mkp_midsummer',  name:'Midsummer Place Car Park',   type:'Multi-storey',capacity:1500, limit:'First 2hr free', notes:'2 hrs free with retail receipt. CMK Shopping.',                    freeNow:false, freeAfter:'Free evenings after 6pm', source:'council', lat:52.0430, lng:-0.7578},
+    {id:'mkp_xscape',     name:'Xscape Car Park',            type:'Surface',     capacity:2000, limit:'3hr free',     notes:'3 hrs free with Xscape validation. Snow dome complex.',               freeNow:false, freeAfter:'Free after 6pm', source:'council', lat:52.0398, lng:-0.7736},
+    {id:'mkp_thecentre',  name:'thecentre:mk Car Parks',     type:'Multi-storey',capacity:3000, limit:'Paid 7am–6pm', notes:'Multiple decks. Free after 6pm and Sundays after 4pm.',               freeNow:false, freeAfter:'Free Sun after 4pm & weekdays after 6pm', source:'council', lat:52.0412, lng:-0.7587},
+    {id:'mkp_secklow',    name:'Secklow Gate Car Park',      type:'Surface',     capacity:300,  limit:'Paid 7am–6pm', notes:'CMK on-street style surface car park. Free outside paid hours.',      freeNow:false, freeAfter:'After 6pm & weekends', source:'council', lat:52.0418, lng:-0.7600},
+    {id:'mkp_grafton',    name:'Grafton Gate Car Park',      type:'Surface',     capacity:200,  limit:'Paid 7am–6pm', notes:'Edge of CMK. Free evenings and weekends.',                            freeNow:false, freeAfter:'After 6pm & weekends', source:'council', lat:52.0425, lng:-0.7620},
+    {id:'mkp_childs',     name:'Childs Way Car Park',        type:'Surface',     capacity:150,  limit:'Free',         notes:'Free surface car park near the Hub.',                                 freeNow:true,  freeAfter:'', source:'council', lat:52.0356, lng:-0.7644},
+
+    // ── District Centres ────────────────────────────────────────
+    {id:'mkp_westcroft',  name:'Westcroft District Centre',  type:'Surface',     capacity:600,  limit:'Free',         notes:'Free parking for Westcroft shops. Monitored 2hr limit.',              freeNow:true,  freeAfter:'', source:'council', lat:52.0168, lng:-0.7808},
+    {id:'mkp_kingston',   name:'Kingston Centre',            type:'Surface',     capacity:1800, limit:'Free',         notes:'Free surface parking. Retail park with IKEA, Next, M&S.',             freeNow:true,  freeAfter:'', source:'council', lat:52.0098, lng:-0.7830},
+    {id:'mkp_bletchley',  name:'Bletchley Town Centre',      type:'Surface',     capacity:500,  limit:'Free 2hr',     notes:'Free 2-hour parking in Bletchley town centre bays.',                  freeNow:true,  freeAfter:'', source:'council', lat:51.9972, lng:-0.7395},
+    {id:'mkp_wolverton',  name:'Wolverton Town Centre',      type:'Surface',     capacity:200,  limit:'Free',         notes:'Free parking on Church Street and Stratford Road.',                   freeNow:true,  freeAfter:'', source:'council', lat:52.0664, lng:-0.8103},
+    {id:'mkp_newport',    name:'Newport Pagnell High St',    type:'Surface',     capacity:150,  limit:'Free 2hr',     notes:'Free 2-hour bays on High Street and Silver Street.',                  freeNow:true,  freeAfter:'', source:'council', lat:52.0855, lng:-0.7215},
+    {id:'mkp_olney',      name:'Olney High Street',          type:'Surface',     capacity:100,  limit:'Free 2hr',     notes:'Free parking off Market Place. Busy on market days.',                 freeNow:true,  freeAfter:'', source:'council', lat:52.1529, lng:-0.6945},
+    {id:'mkp_stony',      name:'Stony Stratford Market Sq',  type:'Surface',     capacity:120,  limit:'Free 2hr',     notes:'Free 2hr on-street and car park off Cofferidge Close.',               freeNow:true,  freeAfter:'', source:'council', lat:52.0596, lng:-0.8465},
+    {id:'mkp_woburn',     name:'Woburn Sands High Street',   type:'Surface',     capacity:80,   limit:'Free',         notes:'Free parking on High Street and Station Road.',                       freeNow:true,  freeAfter:'', source:'council', lat:51.9988, lng:-0.6493},
+
+    // ── Leisure / Attractions ────────────────────────────────────
+    {id:'mkp_willen',     name:'Willen Lake North',          type:'Surface',     capacity:400,  limit:'Free',         notes:'Free parking at Willen Lake. Popular weekend destination.',            freeNow:true,  freeAfter:'', source:'council', lat:52.0611, lng:-0.7258},
+    {id:'mkp_willen_s',   name:'Willen Lake South',          type:'Surface',     capacity:250,  limit:'Free',         notes:'Free parking near Willen Hospice and Peace Pagoda.',                  freeNow:true,  freeAfter:'', source:'council', lat:52.0567, lng:-0.7243},
+    {id:'mkp_campbell',   name:'Campbell Park',              type:'Surface',     capacity:200,  limit:'Free',         notes:'Free parking on Avebury Boulevard near park entrance.',               freeNow:true,  freeAfter:'', source:'council', lat:52.0440, lng:-0.7512},
+    {id:'mkp_ouzel',      name:'Ouzel Valley Park',          type:'Surface',     capacity:80,   limit:'Free',         notes:'Free parking off Brickhill Street near the Ouzel.',                  freeNow:true,  freeAfter:'', source:'council', lat:51.9992, lng:-0.7483},
+    {id:'mkp_caldecotte', name:'Caldecotte Lake',            type:'Surface',     capacity:150,  limit:'Free',         notes:'Free parking at Caldecotte Lake. Good for walks and cycling.',        freeNow:true,  freeAfter:'', source:'council', lat:51.9978, lng:-0.7116},
+    {id:'mkp_tattenhoe',  name:'Tattenhoe Park',             type:'Surface',     capacity:60,   limit:'Free',         notes:'Free parking off Tattenhoe Lane.',                                    freeNow:true,  freeAfter:'', source:'council', lat:52.0030, lng:-0.7954},
+    {id:'mkp_linford',    name:'Great Linford Lakes',        type:'Surface',     capacity:80,   limit:'Free',         notes:'Free parking at Great Linford lakes and nature reserve.',             freeNow:true,  freeAfter:'', source:'council', lat:52.0750, lng:-0.7630},
+    {id:'mkp_emberton',   name:'Emberton Country Park',      type:'Surface',     capacity:200,  limit:'Pay & Display',notes:'Pay & Display but free for Friends of Emberton members.',              freeNow:false, freeAfter:'Honesty box system — free off-peak', source:'council', lat:52.1104, lng:-0.6812},
+
+    // ── Rail / Transport ─────────────────────────────────────────
+    {id:'mkp_mkcentral',  name:'MK Central Station (S)',     type:'Surface',     capacity:600,  limit:'Paid',         notes:'Short-stay paid. Free drop-off only on station forecourt.',            freeNow:false, freeAfter:'Free Sun & Bank Holidays after 12pm', source:'council', lat:52.0344, lng:-0.7705},
+    {id:'mkp_bletchley_s',name:'Bletchley Station Car Park', type:'Surface',     capacity:180,  limit:'Paid weekdays',notes:'Pay weekdays. Free evenings after 6pm and weekends.',                  freeNow:false, freeAfter:'After 6pm weekdays & all weekend', source:'council', lat:51.9963, lng:-0.7367},
+    {id:'mkp_wolverton_s', name:'Wolverton Station',         type:'Surface',     capacity:50,   limit:'Free',         notes:'Free unmanaged street parking near Wolverton Station.',               freeNow:true,  freeAfter:'', source:'council', lat:52.0651, lng:-0.8091},
   ];
 }
 
@@ -3200,52 +3323,68 @@ async function fetchFreeParkingOSM() {
 
 function renderParkingSidebar() {
   const body = document.getElementById('sidebarBody');
-  const statusNote = parkingNowStatus() ? 'CMK paid bays are usually free now (outside 7am-6pm). Always check signage.' : 'CMK paid bays are in paid hours (7am-6pm). Always check signage.';
-  const note = '<div class="empty"><div class="ei">P</div><p><strong>Sources:</strong> OpenStreetMap free/conditional tags and the official CMK Parking Guide map.</p>'+
-    '<p><a href="'+PARKING_MAP_URL+'" target="_blank" rel="noopener">Open CMK parking map (PDF)</a><br/>'+
-    '<a href="'+PARKING_INFO_URL+'" target="_blank" rel="noopener">Council parking info</a></p>'+
-    '<p style="color:var(--muted)">'+statusNote+'</p></div>';
-  const freeNow = data.parking.filter(p=>p.freeNow);
-  const freeLater = data.parking.filter(p=>!p.freeNow && p.freeAfter);
-  const emptyMsg = (!data.parking || !data.parking.length) ? '<div class="pending-card">No free parking data loaded yet. Try again, zoom in, or use the CMK map link above to digitize zones.</div>' : '';
+  const isPaidHours = !parkingNowStatus();
+  const timeMsg = isPaidHours
+    ? '⚠️ Paid hours now (7am–6pm). Free spots shown in green.'
+    : '✅ Outside paid hours — most CMK bays free until 7am.';
+
   const card = (p) => {
     const idx = data.parking.indexOf(p);
     const distStr = userLat ? `<span class="card-dist">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
+    const freeLabel = p.freeNow
+      ? '<span style="color:#10b981;font-weight:600">🟢 Free now</span>'
+      : p.freeAfter
+        ? `<span style="color:var(--amber);font-weight:600">🕐 ${escHtml(p.freeAfter)}</span>`
+        : `<span style="color:var(--muted)">${escHtml(p.limit||'')}</span>`;
+    const capacityStr = p.capacity ? `<span style="font-size:10px;color:var(--muted)">🚗 ~${p.capacity} spaces</span>` : '';
+    const typeChip = `<span class="card-tag" style="background:rgba(16,185,129,0.1);color:#10b981">P ${escHtml(p.type||'Parking')}</span>`;
     return (
       '<div class="card" onclick="showParkingDetailByIndex(' + idx + ')">' +
-        '<div class="card-top">' +
-          '<span class="card-tag" style="background:rgba(16,185,129,0.12);color:#10b981">P ' + (p.type||'Parking') + '</span>' +
-          '<span class="card-time">' + (p.freeNow ? '🟢 Free now' : (p.freeAfter ? '🕐 '+p.freeAfter : p.limit || '')) + '</span>' +
-        '</div>' +
-        '<div class="card-title">' + escHtml(p.name||'Parking') + '</div>' +
-        '<div class="card-sub">' + escHtml((p.notes||'').substring(0,80)) + '</div>' +
-        '<div class="card-footer"><span class="card-meta">' + (p.source==='community'?'Community':'OSM') + '</span>' + distStr + '</div>' +
+        '<div class="card-top">' + typeChip + '<span class="card-time">' + freeLabel + '</span></div>' +
+        '<div class="card-title">' + escHtml(p.name||'Car Park') + '</div>' +
+        '<div class="card-sub">' + escHtml((p.notes||'').substring(0,90)) + '</div>' +
+        '<div class="card-footer">' + capacityStr + distStr + '</div>' +
       '</div>'
     );
   };
-  const section = (title, list) => list.length ? '<div class="detail-section-title">' + title + '</div>' + list.map(card).join('') : '';
+
+  // Sort by distance if location known, else free-now first
+  let sorted = [...data.parking];
+  if(userLat) sorted.sort((a,b)=>distKm(userLat,userLng,a.lat,a.lng)-distKm(userLat,userLng,b.lat,b.lng));
+  else sorted.sort((a,b)=>(b.freeNow?1:0)-(a.freeNow?1:0));
+
+  const freeNowList = sorted.filter(p=>p.freeNow);
+  const freeCondList = sorted.filter(p=>!p.freeNow && p.freeAfter);
+  const paidList = sorted.filter(p=>!p.freeNow && !p.freeAfter);
+
+  const section = (title, color, list) => list.length
+    ? `<div class="detail-section-title" style="color:${color}">${title} (${list.length})</div>` + list.map(card).join('')
+    : '';
+
+  const statusBar = `<div style="padding:10px 14px;font-size:11px;background:var(--panel2);border-bottom:1px solid var(--border);color:var(--text);line-height:1.5">${timeMsg}<br><a href="${PARKING_MAP_URL}" target="_blank" rel="noopener" style="color:var(--blue);font-size:10px">Official CMK parking map (PDF) →</a></div>`;
 
   const contribute = '<div class="detail-section-title">Contribute</div>'+
-    '<div class="pending-card">Help digitize the official CMK map and report missing free parking. Submissions are reviewed like Google Maps edits.</div>'+
+    '<div style="padding:0 0 10px"><div style="font-size:11px;color:var(--muted);margin-bottom:8px;padding:0 2px">Know a free spot we\'re missing? Add it to help other residents.</div>'+
     '<div class="contribute-row">'+
-      '<button class="btn-primary" onclick="startParkingReport()">Add free parking</button>'+
-      '<button class="btn-secondary" onclick="startParkingDigitize()">Digitize zone</button>'+
-    '</div>'+
-    (digitizeMode ? '<div class="contribute-row"><button class="btn-secondary" onclick="cancelDigitize()">Cancel digitize</button></div>' : '');
+      '<button class="btn-primary" onclick="startParkingReport()" style="font-size:11px;padding:9px">+ Add free spot</button>'+
+    '</div></div>';
 
-  const pending = (communityParkingPending||[]).slice(0,6);
-  const pendingList = pending.length ? pending.map(p=>
-    '<div class="pending-card">'+
-      '<div style="font-weight:600">'+escHtml(p.name||'Free parking')+'</div>'+
-      '<div style="font-size:11px;color:var(--muted);margin-top:4px">'+escHtml(p.notes||'Community submission')+'</div>'+
-      '<div class="pending-actions">'+
-        '<button class="btn-secondary" onclick="verifyParkingReport(\''+escJs(String(p.sourceId||p.id||''))+'\')">Verify ('+(p.votes||0)+')</button>'+
-        '<button class="btn-secondary" onclick="flyTo('+p.lng+','+p.lat+')">View</button>'+
-      '</div>'+
-    '</div>'
-  ).join('') : '<div class="pending-card">No pending community submissions right now.</div>';
+  const pending = (communityParkingPending||[]).slice(0,4);
+  const pendingSection = pending.length ? '<div class="detail-section-title">Pending Verification</div>' + pending.map(p=>
+    '<div class="pending-card"><div style="font-weight:600">'+escHtml(p.name||'Community spot')+'</div>'+
+    '<div style="font-size:11px;color:var(--muted);margin:3px 0">'+escHtml(p.notes||'')+'</div>'+
+    '<div class="pending-actions"><button class="btn-secondary" onclick="flyTo('+p.lng+','+p.lat+')" style="font-size:10px;padding:4px 10px">View on map</button></div></div>'
+  ).join('') : '';
 
-  body.innerHTML = note + contribute + emptyMsg + section('Free Now', freeNow) + section('Free After', freeLater) + '<div class="detail-section-title">Community submissions</div>' + pendingList;
+  const emptyMsg = sorted.length === 0 ? '<div class="empty"><div class="ei">🅿️</div><p>Loading car parks… If this takes too long, OSM may be slow. The list will populate shortly.</p></div>' : '';
+
+  body.innerHTML = statusBar
+    + section('Free Now', '#10b981', freeNowList)
+    + section('Free Outside Paid Hours', '#ea8600', freeCondList)
+    + section('Paid (may be free outside hours)', 'var(--muted)', paidList)
+    + emptyMsg
+    + contribute
+    + pendingSection;
 }
 
 function showParkingDetailByIndex(i){
@@ -7804,19 +7943,28 @@ window.welcomeGo=welcomeGo;
 window.welcomeSkip=welcomeSkip;
 window.closeNearmeCard=closeNearmeCard;
 
-function openMobileNav() {
-  const drawer = document.getElementById('mobileNavDrawer');
-  if(!drawer) return;
-  drawer.style.display = 'block';
+// ── APP MENU (hamburger drawer) ───────────────────────────────────
+function openAppMenu() {
+  document.getElementById('appMenu').classList.add('open');
+  document.getElementById('appMenuOverlay').classList.add('open');
+  // Update weather label
   const wt = document.getElementById('weatherTemp');
   const wi = document.getElementById('weatherIcon');
   const ml = document.getElementById('mobileWeatherLabel');
   if(ml && wt && wi) ml.textContent = wi.textContent + ' ' + wt.textContent;
 }
-function closeMobileNav() {
-  const drawer = document.getElementById('mobileNavDrawer');
-  if(drawer) drawer.style.display = 'none';
+function closeAppMenu() {
+  document.getElementById('appMenu').classList.remove('open');
+  document.getElementById('appMenuOverlay').classList.remove('open');
 }
+window.openAppMenu=openAppMenu;
+window.closeAppMenu=closeAppMenu;
+
+// Legacy aliases so any remaining openMobileNav calls still work
+function openMobileNav() { openAppMenu(); }
+function closeMobileNav() { closeAppMenu(); }
+window.openMobileNav=openMobileNav;
+window.closeMobileNav=closeMobileNav;
 
 } // end initApp
 
