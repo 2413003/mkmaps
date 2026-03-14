@@ -2935,6 +2935,13 @@ async function showPlaceDetail(id) {
 //   rating     bigint  (1–5)
 //   text       text
 
+function setRating(n, placeId) {
+  selectedRating = n;
+  document.querySelectorAll('#starSelect .star-btn').forEach((b,i) => {
+    b.classList.toggle('active', i < n);
+  });
+}
+
 async function getReviews(placeId) {
   try {
     const osmId = data.places.find(p=>p.id===placeId)?.osm_id || placeId;
@@ -5087,7 +5094,7 @@ function addPOILayer() {
     source:'poi-labels',
     minzoom:12,
     layout:{
-      'text-field':['concat',['get','icon'],' ',['get','name']],
+      'text-field':['get','name'],
       'text-font':['DIN Pro Medium','Arial Unicode MS Regular'],
       'text-size':11,
       'text-anchor':'top',
