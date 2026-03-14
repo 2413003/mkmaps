@@ -2781,12 +2781,18 @@ async function loadEvents() {
       if (!dup) merged.push(te);
     });
 
-    // Filter out past events, sort upcoming first
-    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    // Filter out past events — check actual datetime so 9am events vanish after 9am
+    const _now = new Date();
     const upcoming = merged.filter(e => {
       if(!e.date) return false;
-      const d = new Date(e.date);
-      return !isNaN(d) && d >= todayStart;
+      let dt;
+      if(e.time && /^\d{2}:\d{2}/.test(e.time)) {
+        dt = new Date(e.date + 'T' + e.time);
+        dt = new Date(dt.getTime() + 2 * 60 * 60 * 1000); // 2h grace period
+      } else {
+        dt = new Date(e.date + 'T23:59:59'); // no time = show all day
+      }
+      return !isNaN(dt) && dt > _now;
     });
     upcoming.sort((a,b) => new Date(a.date) - new Date(b.date));
     data.events = upcoming;
@@ -2872,7 +2878,7 @@ function renderEventMarkers() {
     if(!e.latitude||!e.longitude) return;
     const el=document.createElement('div');
     const isToday_ = isToday(e.date);
-    el.style.cssText=`width:32px;height:32px;border-radius:10px;background:${isToday_?'#f5a623':'#d48a1a'};display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;box-shadow:0 3px 10px rgba(245,166,35,0.4);border:2px solid rgba(255,255,255,${isToday_?'0.5':'0.2'});transition:transform .15s;`;
+    el.style.cssText=`width:30px;height:30px;border-radius:50%;background:${isToday_?'#f5a623':'#d48a1a'};display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,0.3);border:2px solid rgba(255,255,255,0.9);transition:transform .15s;`;
     el.textContent=evEmoji(e.category);
     el.addEventListener('mouseenter',()=>el.style.transform='scale(1.12)');
     el.addEventListener('mouseleave',()=>el.style.transform='');
@@ -3240,12 +3246,8 @@ let _parkingLaneCacheTime = 0;
 const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
 
 async function loadParkingLaneLayer() {
-  // ── UK LAW BASIS ─────────────────────────────────────────────────────────
-  // On-street parking is permitted by default in the UK (Highway Code R238)
-  // unless signs/markings restrict it. MK residential estates: genuinely free.
-  // Layer A: Mapbox vector tiles → immediate colour for ALL roads by class
-  // Layer B: OSM explicit restrictions → override with red/amber where tagged
-  // ─────────────────────────────────────────────────────────────────────────
+  // Wait for map to be ready before adding vector tile layers
+  if(!map.loaded()) { await new Promise(res => map.once('idle', res)); }
   if(!map.getLayer('pk-base-res')) {
     try {
       map.addLayer({
@@ -3262,9 +3264,25 @@ async function loadParkingLaneLayer() {
       },'road-label');
     } catch(_) {}
   }
+  // Add CMK paid zone boundary polygon
+  if(!map.getSource('cmk-zone')) {
+    try {
+      map.addSource('cmk-zone', {type:'geojson', data:{type:'FeatureCollection', features:[{
+        type:'Feature', geometry:{type:'Polygon', coordinates:[[
+          [-0.7795,52.0520],[-0.7415,52.0520],[-0.7415,52.0300],[-0.7795,52.0300],[-0.7795,52.0520]
+        ]]}, properties:{zone:'CMK'}
+      }]}});
+      map.addLayer({id:'cmk-zone-fill',type:'fill',source:'cmk-zone',
+        paint:{'fill-color':'#f59e0b','fill-opacity':0.06}},'road-label');
+      map.addLayer({id:'cmk-zone-line',type:'line',source:'cmk-zone',
+        paint:{'line-color':'#f59e0b','line-width':2,'line-dasharray':[5,3],'line-opacity':0.8}},'road-label');
+    } catch(_){}
+  }
   try {
     map.setLayoutProperty('pk-base-res','visibility','visible');
     map.setLayoutProperty('pk-base-sec','visibility','visible');
+    try{map.setLayoutProperty('cmk-zone-fill','visibility','visible');}catch(_){}
+    try{map.setLayoutProperty('cmk-zone-line','visibility','visible');}catch(_){}
   } catch(_){}
 
   // Return early if OSM restriction overlay already fresh
@@ -3455,11 +3473,9 @@ function showParkingLanePopup(lngLat, street, parts, props) {
 }
 
 function hideParkingLaneLayer() {
-  try {
-    ['parking-lanes','parking-lanes-hit','pk-base-res','pk-base-sec'].forEach(id=>{
-      try{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');}catch(_){}
-    });
-  } catch(_) {}
+  ['parking-lanes','parking-lanes-hit','pk-base-res','pk-base-sec','cmk-zone-fill','cmk-zone-line'].forEach(id=>{
+    try{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');}catch(_){}
+  });
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
 }
@@ -4429,7 +4445,8 @@ function renderStaySidebar(items) {
     body.innerHTML=`<div class="empty"><div class="ei">🏨</div><p>No accommodation found nearby.</p></div>`;
     return;
   }
-  body.innerHTML = items.map(p => {
+  const _stay_sorted = userLat ? [...items].sort((a,b)=>distKm(userLat,userLng,a.lat,a.lng)-distKm(userLat,userLng,b.lat,b.lng)) : items;
+  body.innerHTML = _stay_sorted.map(p => {
     const stars = p.stars ? '★'.repeat(p.stars)+'☆'.repeat(Math.max(0,5-p.stars)) : '';
     const dist = userLat ? `<span class="card-dist">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
     return `<div class="place-card" onclick="showStayDetail(${p.id})">
@@ -9194,6 +9211,14 @@ function openMobileNav() { openAppMenu(); }
 function closeMobileNav() { closeAppMenu(); }
 window.openMobileNav=openMobileNav;
 window.closeMobileNav=closeMobileNav;
+
+
+// Re-add parking layers after satellite/theme style switch
+map.on('style.load', () => {
+  if(activeLayer === 'parking') {
+    setTimeout(() => { try { loadParkingLaneLayer().catch(()=>{}); } catch(_) {} }, 400);
+  }
+});
 
 } // end initApp
 
