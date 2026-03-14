@@ -96,6 +96,7 @@
     .layer-btn.events.active{background:var(--amber);border-color:var(--amber);color:#000;}
     .layer-btn.places.active{background:var(--green);border-color:var(--green);color:#000;}
     .layer-btn.redways.active{background:var(--redway);border-color:var(--redway);color:white;}
+    .layer-btn.roadworks.active{background:#f59e0b;border-color:#f59e0b;color:#000;}
     .layer-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
     .layer-divider{width:1px;height:20px;background:var(--border);margin:0 4px;flex-shrink:0;}
 
@@ -143,6 +144,7 @@
     .card-meta{font-size:10px;color:var(--muted);}
     .upvote-btn{display:flex;align-items:center;gap:4px;background:transparent;border:1px solid var(--border);color:var(--muted);padding:3px 8px;border-radius:4px;font-family:'DM Mono',monospace;font-size:10px;cursor:pointer;transition:all 0.15s;}
     .upvote-btn:hover{border-color:var(--red);color:var(--red);}
+    .upvote-btn.voted{border-color:var(--green);color:var(--green);cursor:default;}
     .stars{color:var(--amber);letter-spacing:1px;font-size:11px;}
 
     /* TRANSPORT */
@@ -807,6 +809,7 @@
     </div>
     <div class="mobile-nav-body">
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleLayerMenu()">🗂️ Layers</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();setLayer('roadworks',document.getElementById('btn-roadworks'))">🚧 Roadworks</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleRoutePanel()">🗺️ Directions</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();rrToggle()">🛤️ Redway Routes</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleSavedPanel()">★ Saved Places</div>
@@ -824,6 +827,7 @@
   <div class="layer-item" id="menu-events" onclick="setLayer('events',document.getElementById('btn-events'));toggleLayerMenu(true)">📅 What's On</div>
   <div class="layer-item" id="menu-places" onclick="setLayer('places',document.getElementById('btn-places'));toggleLayerMenu(true)">📍 Places</div>
   <div class="layer-item" id="menu-parking" onclick="setLayer('parking',document.getElementById('btn-parking'));toggleLayerMenu(true)">🅿️ Free Parking</div>
+  <div class="layer-item" id="menu-roadworks" onclick="setLayer('roadworks',document.getElementById('btn-roadworks'));toggleLayerMenu(true)">🚧 Roadworks</div>
   <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('btn-redways'))">🛤️ Redways</div>
   <div style="padding:6px 8px 2px;font-size:9px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;text-align:center;letter-spacing:0.5px">Build 2026-03-13A</div>
 </div>
@@ -884,6 +888,7 @@
   <button class="layer-btn events" id="btn-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
   <button class="layer-btn places" id="btn-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
   <button class="layer-btn places" id="btn-parking" onclick="setLayer('parking',this)"><span class="layer-dot"></span>Free Parking</button>
+  <button class="layer-btn roadworks" id="btn-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
   <div class="layer-divider"></div>
   <button class="layer-btn redways" id="btn-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
 </div>
@@ -1090,8 +1095,8 @@ geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords
 
 // State
 let activeLayer = 'issues';
-let data = {issues:[],transport:[],events:[],places:[],parking:[]};
-let markers = {issues:[],transport:[],events:[],places:[],parking:[]};
+let data = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
+let markers = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
 let pendingMarker = null, pendingLat = null, pendingLng = null;
 let redwaysVisible = false;
 let selectedRating = 0;
@@ -1211,10 +1216,10 @@ function setLayer(layer, btn, opts={}) {
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
   const mi = document.getElementById('menu-'+layer);
   if(mi) mi.classList.add('active');
-  const titles={issues:'Live Issues',transport:'Public Transport',events:"What's On",places:'Places & Businesses',parking:'Free Parking'};
-  const hints={issues:'Click map to report an issue',transport:'Live bus & train info',events:'Click map to add an event',places:'Click a place for full details',parking:'Free parking spaces and lots'};
-  document.getElementById('sidebarTitle').textContent=titles[layer];
-  document.getElementById('mapHint').textContent=hints[layer];
+  const titles={issues:'Live Issues',transport:'Public Transport',events:"What's On",places:'Places & Businesses',parking:'Free Parking',roadworks:'Roadworks'};
+  const hints={issues:'Click map to report an issue',transport:'Live bus & train info',events:'Click map to add an event',places:'Click a place for full details',parking:'Free parking spaces and lots',roadworks:'Live & planned roadworks in MK'};
+  document.getElementById('sidebarTitle').textContent=titles[layer]||layer;
+  document.getElementById('mapHint').textContent=hints[layer]||'';
   document.getElementById('mapHint').style.opacity='1';
   setTimeout(()=>{document.getElementById('mapHint').style.opacity='0';},4000);
   clearMarkersExcept(layer);
@@ -1224,6 +1229,7 @@ function setLayer(layer, btn, opts={}) {
   else if(layer==='events') {loadEvents(); document.getElementById('fab').style.display='flex';}
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
   else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
+  else if(layer==='roadworks') {loadRoadworks(); document.getElementById('fab').style.display='none';}
   if(layer==='parking') setParkingZonesVisible(true);
   else { setParkingZonesVisible(false); if(digitizeMode) cancelDigitize(); }
   if(layer!=='issues') document.getElementById('fab').style.display = layer==='events'?'flex':'none';
@@ -1267,6 +1273,7 @@ async function loadIssues() {
 
 function renderIssuesSidebar() {
   const today=new Date().toDateString();
+  const voted = getVotedIssues();
   const totalUpvotes = data.issues.reduce((s,r)=>s+(r.upvotes||0),0);
   document.getElementById('s1').textContent=data.issues.length;
   document.getElementById('s2').textContent=data.issues.filter(r=>new Date(r.created_at).toDateString()===today).length;
@@ -1319,7 +1326,7 @@ function renderIssuesSidebar() {
       <div class="card-title">${r.title}</div>
       ${r.description?`<div class="card-sub">${r.description}</div>`:''}
       <div class="card-footer">
-        <button class="upvote-btn" onclick="upvoteIssue(event,${r.id})">▲ ${r.upvotes||0} confirmed</button>
+        <button class="upvote-btn${voted.has(String(r.id))?' voted':''}" onclick="upvoteIssue(event,${r.id})" ${voted.has(String(r.id))?'title="Already confirmed"':''}>▲ ${r.upvotes||0} confirmed</button>
         <span class="card-meta">${r._dist!==undefined?`<span class="card-dist">📍 ${fmtDist(r._dist)}</span>`:parseFloat(r.latitude).toFixed(3)+', '+parseFloat(r.longitude).toFixed(3)}</span>
       </div>
     </div>`).join('');
@@ -1449,9 +1456,9 @@ function showIssueDetail(id) {
     </div>
     ${r.description?`<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;padding:12px;background:var(--panel);border-radius:8px;border:1px solid var(--border)">${escHtml(r.description)}</div>`:''}
     <div class="action-row">
-      <button class="action-btn" onclick="upvoteIssue(event,${r.id})">
-        <span class="action-btn-icon">▲</span>
-        <span class="action-btn-label">Confirm (${r.upvotes||0})</span>
+      <button class="action-btn${getVotedIssues().has(String(r.id))?'" style="color:var(--green)':''}" onclick="upvoteIssue(event,${r.id})">
+        <span class="action-btn-icon">${getVotedIssues().has(String(r.id))?'✅':'▲'}</span>
+        <span class="action-btn-label">${getVotedIssues().has(String(r.id))?'Confirmed':'Confirm ('+( r.upvotes||0)+')'}</span>
       </button>
       <button class="action-btn" onclick="routeTo('${escJs(r.title)}',${r.latitude},${r.longitude})">
         <span class="action-btn-icon">🗺️</span>
@@ -2926,6 +2933,202 @@ async function showPlaceDetail(id) {
     </div>`;
 }
 
+// ── ROADWORKS ────────────────────────────────────────────────────
+// Sources: OSM Overpass (highway=construction, works tagged by council
+// mappers) + community issue reports tagged as Closure.
+// Street Manager (DfT statutory API) requires authority credentials
+// and is not callable from the browser — OSM is the best open source.
+
+let roadworksCache = null;
+let roadworksCacheTime = 0;
+const RW_CACHE_TTL = 15 * 60 * 1000; // 15 min
+
+async function fetchOSMRoadworks() {
+  if(roadworksCache && (Date.now() - roadworksCacheTime) < RW_CACHE_TTL) return roadworksCache;
+  const BB = '51.90,-0.95,52.15,-0.55';
+  const query = `[out:json][timeout:20];
+(
+  way["highway"="construction"](${BB});
+  way["construction"]["highway"](${BB});
+  node["highway"="construction"](${BB});
+  way["access"="no"]["temporary"](${BB});
+  way["repair"="yes"](${BB});
+);
+out center body 100;`;
+  const r = await fetch('https://overpass-api.de/api/interpreter', {
+    method:'POST', body:'data='+encodeURIComponent(query)
+  });
+  if(!r.ok) return [];
+  const d = await r.json();
+  let idCounter = 500000;
+  const works = (d.elements||[]).map(e => {
+    const tags = e.tags||{};
+    const lat = e.type==='way' ? e.center?.lat : e.lat;
+    const lng = e.type==='way' ? e.center?.lon : e.lon;
+    if(!lat||!lng) return null;
+    const road = tags.name || tags['addr:street'] || tags.ref || 'Unnamed road';
+    const desc = tags.description || tags.note || tags['construction:description'] || '';
+    const conType = tags.construction || tags.highway || 'works';
+    return {
+      id: idCounter++,
+      title: road,
+      description: desc,
+      category: conType.includes('motor')||conType.includes('trunk')||conType.includes('primary') ? 'Major Road' : 'Minor Road',
+      lat, lng,
+      source: 'osm',
+      osm_id: e.id,
+      tags
+    };
+  }).filter(Boolean);
+  roadworksCache = works;
+  roadworksCacheTime = Date.now();
+  return works;
+}
+
+async function loadRoadworks() {
+  document.getElementById('sidebarTitle').textContent = 'Roadworks';
+  document.getElementById('sidebarCount').textContent = '…';
+  showSkeletons(3);
+
+  // Two sources in parallel: OSM construction + community closure reports
+  const [osmWorks, communityRaw] = await Promise.allSettled([
+    fetchOSMRoadworks(),
+    db.get('reports','&category=eq.Closure&resolved=eq.false').catch(()=>[])
+  ]);
+
+  const osm = osmWorks.status==='fulfilled' ? (osmWorks.value||[]) : [];
+  const community = (communityRaw.status==='fulfilled' && Array.isArray(communityRaw.value))
+    ? communityRaw.value.map(r=>({
+        id:'c_'+r.id, title:r.title, description:r.description||'',
+        category:'Reported Closure', lat:r.latitude, lng:r.longitude,
+        source:'community', upvotes:r.upvotes||0, created_at:r.created_at
+      }))
+    : [];
+
+  // Merge, community first
+  data.roadworks = [...community, ...osm];
+
+  renderRoadworksSidebar();
+  renderRoadworksMarkers();
+
+  document.getElementById('sidebarCount').textContent = data.roadworks.length;
+  document.getElementById('s1').textContent = data.roadworks.length;
+  document.getElementById('s2').textContent = community.length + ' reported';
+  document.getElementById('s3').textContent = osm.length + ' OSM';
+
+  const trustEl = document.getElementById('issuesTrustBar');
+  if(trustEl) {
+    trustEl.innerHTML = `<span style="color:var(--amber)">🚧 Live</span> · OSM construction data + community reports`;
+    trustEl.style.display = 'block';
+  }
+}
+
+function renderRoadworksSidebar() {
+  const body = document.getElementById('sidebarBody');
+  if(!data.roadworks.length) {
+    body.innerHTML=`<div class="empty"><div class="ei">✅</div><p>No roadworks found in MK right now.<br/><span style="color:var(--muted)">OSM data updates from council mappers.</span></p></div>`;
+    return;
+  }
+  body.innerHTML = data.roadworks.map(r => {
+    const isCommunity = r.source==='community';
+    const color = isCommunity ? '#f97316' : '#f59e0b';
+    const badge = isCommunity ? 'Reported' : 'OSM';
+    const ago = r.created_at ? timeAgo(r.created_at) : '';
+    return `
+    <div class="card" onclick="showRoadworkDetail('${escJs(String(r.id))}')">
+      <div class="card-top">
+        <span class="card-tag" style="background:${color}20;color:${color}">🚧 ${escHtml(r.category)}</span>
+        <span class="card-time" style="font-size:9px;background:var(--panel2);padding:2px 6px;border-radius:6px;">${badge}</span>
+      </div>
+      <div class="card-title">${escHtml(r.title)}</div>
+      ${r.description?`<div class="card-sub">${escHtml(r.description.substring(0,80))}${r.description.length>80?'…':''}</div>`:''}
+      <div class="card-footer">
+        <span class="card-meta">${ago}</span>
+        ${userLat?`<span class="card-dist">📍 ${fmtDist(distKm(userLat,userLng,r.lat,r.lng))}</span>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderRoadworksMarkers() {
+  markers.roadworks.forEach(m=>m.remove()); markers.roadworks=[];
+  data.roadworks.forEach(r => {
+    if(!r.lat||!r.lng) return;
+    const el = document.createElement('div');
+    const isCommunity = r.source==='community';
+    el.style.cssText = `width:32px;height:32px;border-radius:8px;background:${isCommunity?'#f97316':'#f59e0b'};display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.35);border:2px solid rgba(255,255,255,0.5);`;
+    el.textContent = '🚧';
+    el.onclick = () => showRoadworkDetail(String(r.id));
+    markers.roadworks.push(new mapboxgl.Marker({element:el}).setLngLat([r.lng,r.lat]).addTo(map));
+  });
+}
+
+function showRoadworkDetail(id) {
+  const r = data.roadworks.find(x=>String(x.id)===String(id));
+  if(!r) return;
+  flyTo(r.lng, r.lat);
+  const isCommunity = r.source==='community';
+  const color = isCommunity ? '#f97316' : '#f59e0b';
+
+  document.getElementById('detailScroll').innerHTML=`
+    <div class="place-hero" style="margin-bottom:14px">
+      <div class="place-icon-big" style="background:${color}20;font-size:26px;">🚧</div>
+      <div style="flex:1">
+        <div class="place-name" style="font-size:16px">${escHtml(r.title)}</div>
+        <div class="place-cat">${escHtml(r.category)}</div>
+        <span class="open-badge closed">● Active</span>
+      </div>
+    </div>
+
+    ${r.description?`
+    <div style="font-size:12px;color:var(--muted);line-height:1.7;padding:12px;background:var(--panel);border-radius:8px;border:1px solid var(--border);margin-bottom:14px;">
+      ${escHtml(r.description)}
+    </div>`:
+    `<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">No additional details available.</div>`}
+
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <a href="https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}" target="_blank"
+         style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 6px;text-decoration:none;color:var(--text);">
+        <span style="font-size:18px;">🚗</span>
+        <span style="font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">Avoid route</span>
+      </a>
+      <button onclick="flyTo(${r.lng},${r.lat})"
+         style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:10px 6px;cursor:pointer;color:var(--text);">
+        <span style="font-size:18px;">📍</span>
+        <span style="font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--muted);">View on map</span>
+      </button>
+    </div>
+
+    <div style="background:var(--panel);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;">
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid var(--border);">
+        <span style="font-size:16px;">📡</span>
+        <div>
+          <div style="font-size:11px;font-weight:500;">${isCommunity?'Community report':'OpenStreetMap data'}</div>
+          <div style="font-size:10px;color:var(--muted);">${isCommunity?'Reported by an MK Maps user':'Updated by council mappers'}</div>
+        </div>
+      </div>
+      ${r.created_at?`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;">
+        <span style="font-size:16px;">🕐</span>
+        <div>
+          <div style="font-size:11px;font-weight:500;">${timeAgo(r.created_at)}</div>
+          <div style="font-size:10px;color:var(--muted);">Reported</div>
+        </div>
+      </div>`:
+      `<div style="padding:10px 14px;font-size:11px;color:var(--muted);">
+        <a href="https://www.openstreetmap.org/way/${r.osm_id||''}" target="_blank" rel="noopener" style="color:var(--blue);">
+          View on OpenStreetMap →
+        </a>
+      </div>`}
+    </div>
+
+    <div style="font-size:10px;color:var(--muted2);line-height:1.6;padding:8px 0;">
+      Data from OpenStreetMap contributors and community reports.
+      ${!isCommunity?'OSM roadworks are updated by local council mappers — coverage may vary.':''}
+    </div>`;
+  openDetail();
+}
+
 // ── REVIEWS (persistent via Supabase) ────────────────────────────
 // Existing table schema:
 //   id         bigint (PK)
@@ -3582,24 +3785,111 @@ function openEventModal(lat,lng) {
   const latVal = (lat!==undefined && lat!==null) ? lat : pendingLat;
   const lngVal = (lng!==undefined && lng!==null) ? lng : pendingLng;
   document.getElementById('eventBody').innerHTML=`
-    <p class="form-hint">Add an event, pop-up or activity happening in MK.</p>
+    <p class="form-hint">Add a local event — market, sport, music, community activity. Goes live instantly.</p>
+
     <div class="form-group"><label>Category *</label>
-      <select id="e-cat"><option value="">Select...</option><option value="Sports">⚽ Sports</option><option value="Arts">🎨 Arts</option><option value="Music">🎵 Music</option><option value="Market">🛍️ Market / Pop-up</option><option value="Food">🍕 Food & Drink</option><option value="Community">👥 Community</option></select></div>
-    <div class="form-group"><label>Event Name *</label><input id="e-title" placeholder="e.g. CMK Street Food Market"/></div>
-    <div class="form-group"><label>Venue</label><input id="e-venue" placeholder="e.g. Midsummer Boulevard"/></div>
-    <div class="form-group"><label>Description</label><textarea id="e-desc" placeholder="What's on, who's it for?"></textarea></div>
+      <select id="e-cat">
+        <option value="">Select a category…</option>
+        <option value="Sports">⚽ Sports & Fitness</option>
+        <option value="Music">🎵 Music & Nightlife</option>
+        <option value="Arts">🎨 Arts & Culture</option>
+        <option value="Market">🛍️ Market / Pop-up</option>
+        <option value="Food">🍕 Food & Drink</option>
+        <option value="Community">👥 Community</option>
+        <option value="Family">👨‍👩‍👧 Family</option>
+      </select>
+    </div>
+
+    <div class="form-group"><label>Event Name *</label>
+      <input id="e-title" placeholder="e.g. Campbell Park Parkrun"/>
+    </div>
+
+    <div class="form-group"><label>Description</label>
+      <textarea id="e-desc" placeholder="What's on, who's it for, any entry requirements?"></textarea>
+    </div>
+
     <div class="row2" style="margin-bottom:12px">
       <div class="form-group" style="margin:0"><label>Date *</label><input type="date" id="e-date"/></div>
       <div class="form-group" style="margin:0"><label>Time</label><input type="time" id="e-time"/></div>
     </div>
-    <div class="form-group"><label>Location — Lat / Lng *</label>
-      <div class="row2">
-        <input type="number" id="e-lat" placeholder="52.0406" step="0.00001" value="${latVal?latVal.toFixed(5):''}"/>
-        <input type="number" id="e-lng" placeholder="-0.7594" step="0.00001" value="${lngVal?lngVal.toFixed(5):''}"/>
-      </div></div>
-    <div class="form-group"><label>Free entry?</label><select id="e-free"><option value="true">Yes — free</option><option value="false">No — ticketed</option></select></div>
+
+    <div class="form-group">
+      <label>📍 Venue / Location *</label>
+      <input id="e-venue-search" placeholder="Search for a venue or address in MK…" autocomplete="off"
+             oninput="eventVenueSearch(this.value)" style="margin-bottom:4px;"/>
+      <div id="e-venue-results" style="display:none;background:var(--panel);border:1px solid var(--border);border-radius:8px;max-height:160px;overflow-y:auto;margin-bottom:6px;"></div>
+      <div id="e-venue-display" style="display:none;padding:8px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:12px;margin-bottom:4px;"></div>
+      <input type="hidden" id="e-venue"/>
+      <input type="hidden" id="e-lat" value="${latVal||''}"/>
+      <input type="hidden" id="e-lng" value="${lngVal||''}"/>
+      ${latVal ? `<div id="e-venue-display" style="padding:8px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:12px;">📍 Location from map tap — or search above to change</div>` : ''}
+    </div>
+
+    <div class="form-group"><label>Free entry?</label>
+      <select id="e-free">
+        <option value="true">Yes — free</option>
+        <option value="false">No — ticketed</option>
+      </select>
+    </div>
+
     <button class="btn-primary" onclick="submitEvent()">Add to Map →</button>`;
+
   document.getElementById('eventModal').classList.add('open');
+
+  // If we have a map-tap location, reverse-geocode it as the default venue
+  if(latVal && lngVal) {
+    reverseGeocode(latVal, lngVal).then(addr => {
+      const el = document.getElementById('e-venue-display');
+      if(el) { el.textContent = '📍 ' + addr; el.style.display='block'; }
+      const ven = document.getElementById('e-venue');
+      if(ven) ven.value = addr;
+    });
+  }
+}
+
+let eventVenueTimer = null;
+function eventVenueSearch(q) {
+  clearTimeout(eventVenueTimer);
+  const resultsEl = document.getElementById('e-venue-results');
+  if(!q || q.length < 2) { if(resultsEl) resultsEl.style.display='none'; return; }
+  eventVenueTimer = setTimeout(async () => {
+    try {
+      const r = await fetch(
+        `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(q)}.json`
+        + `?proximity=-0.7594,52.0406&bbox=-1.05,51.85,-0.55,52.2&country=gb&limit=5`
+        + `&types=poi,address,neighborhood,place&access_token=${mapboxgl.accessToken}`
+      );
+      const d = await r.json();
+      const features = d.features || [];
+      if(!resultsEl) return;
+      if(!features.length) { resultsEl.style.display='none'; return; }
+      resultsEl.innerHTML = features.map((f,i) =>
+        `<div style="padding:9px 12px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);"
+              onmousedown="selectEventVenue('${escJs(f.place_name||f.text||'')}',${f.center[1]},${f.center[0]})"
+              onmouseover="this.style.background='var(--panel2)'"
+              onmouseout="this.style.background=''">
+           <div style="font-weight:500">${escHtml(f.text||f.place_name)}</div>
+           <div style="font-size:10px;color:var(--muted)">${escHtml((f.place_name||'').replace((f.text||'')+', ','').substring(0,60))}</div>
+         </div>`
+      ).join('');
+      resultsEl.style.display = 'block';
+    } catch(err) {}
+  }, 220);
+}
+
+function selectEventVenue(name, lat, lng) {
+  const searchEl = document.getElementById('e-venue-search');
+  const resultsEl = document.getElementById('e-venue-results');
+  const displayEl = document.getElementById('e-venue-display');
+  const venueEl = document.getElementById('e-venue');
+  if(searchEl) searchEl.value = name;
+  if(resultsEl) resultsEl.style.display = 'none';
+  if(displayEl) { displayEl.textContent = '📍 ' + name; displayEl.style.display = 'block'; }
+  if(venueEl) venueEl.value = name;
+  const latEl = document.getElementById('e-lat');
+  const lngEl = document.getElementById('e-lng');
+  if(latEl) latEl.value = lat;
+  if(lngEl) lngEl.value = lng;
 }
 
 function startParkingReport(){
@@ -3814,35 +4104,62 @@ async function submitIssue() {
 }
 
 async function submitEvent() {
-  const cat=document.getElementById('e-cat').value;
-  const title=document.getElementById('e-title').value.trim();
-  const venue=document.getElementById('e-venue').value.trim();
-  const desc=document.getElementById('e-desc').value.trim();
-  const date=document.getElementById('e-date').value;
-  const time=document.getElementById('e-time').value;
-  const lat=parseFloat(document.getElementById('e-lat').value);
-  const lng=parseFloat(document.getElementById('e-lng').value);
-  const free=document.getElementById('e-free').value==='true';
-  if(!cat||!title||!date||!lat||!lng){toast('Please fill in category, name, date and location.','warn');return;}
-  const btn=document.querySelector('#eventBody .btn-primary');
-  btn.disabled=true;btn.textContent='Adding...';
-  try{
-    await db.post('events',{category:cat,title,venue,description:desc,date,time,latitude:lat,longitude:lng,free});
-    document.getElementById('eventBody').innerHTML=`<div class="success-msg"><div class="success-icon">✅</div><h3>Added!</h3><p>Event is live on the map.</p></div>`;
+  const cat   = document.getElementById('e-cat').value;
+  const title = document.getElementById('e-title').value.trim();
+  const venue = (document.getElementById('e-venue')?.value || document.getElementById('e-venue-search')?.value || '').trim();
+  const desc  = document.getElementById('e-desc').value.trim();
+  const date  = document.getElementById('e-date').value;
+  const time  = document.getElementById('e-time').value;
+  const lat   = parseFloat(document.getElementById('e-lat').value);
+  const lng   = parseFloat(document.getElementById('e-lng').value);
+  const free  = document.getElementById('e-free').value === 'true';
+
+  if(!cat)   { toast('Please select a category.','warn'); return; }
+  if(!title) { toast('Please enter an event name.','warn'); return; }
+  if(!date)  { toast('Please pick a date.','warn'); return; }
+  if(!lat||!lng) { toast('Please search for and select a venue location.','warn'); return; }
+
+  const btn = document.querySelector('#eventBody .btn-primary');
+  btn.disabled=true; btn.textContent='Adding…';
+  try {
+    await db.post('events', {category:cat, title, venue, description:desc, date, time, latitude:lat, longitude:lng, free});
+    document.getElementById('eventBody').innerHTML=`
+      <div class="success-msg">
+        <div class="success-icon">✅</div>
+        <h3>Event added!</h3>
+        <p>Live on the map now. Thank you for contributing to MK Maps.</p>
+      </div>`;
     toast('Event added — live on the map now.','success');
-    setTimeout(()=>{closeModal('eventModal');loadEvents();},1800);
-  }catch(e){toast('Submission error: '+e.message,'error');btn.disabled=false;btn.textContent='Add to Map →';}
+    setTimeout(()=>{ closeModal('eventModal'); loadEvents(); }, 1800);
+  } catch(e) {
+    toast('Submission error: '+e.message,'error');
+    btn.disabled=false; btn.textContent='Add to Map →';
+  }
 }
 
 // ── UPVOTE ───────────────────────────────────────────────────────
+function getVotedIssues() {
+  try { return new Set(JSON.parse(localStorage.getItem('mkmaps_voted')||'[]')); } catch(e) { return new Set(); }
+}
+function saveVotedIssue(id) {
+  try {
+    const v = getVotedIssues();
+    v.add(String(id));
+    localStorage.setItem('mkmaps_voted', JSON.stringify([...v]));
+  } catch(e) {}
+}
 async function upvoteIssue(e,id) {
   if(e&&e.stopPropagation) e.stopPropagation();
+  const voted = getVotedIssues();
+  if(voted.has(String(id))) { toast('You\'ve already confirmed this issue.','info'); return; }
   const r=data.issues.find(x=>x.id===id);
   if(!r) return;
   r.upvotes=(r.upvotes||0)+1;
   await db.patch('reports',id,{upvotes:r.upvotes});
+  saveVotedIssue(id);
   renderIssuesSidebar();
   renderLocalIntel();
+  toast('Thanks — confirmation recorded.','success');
 }
 
 // ── DETAIL PANEL ─────────────────────────────────────────────────
@@ -5171,6 +5488,9 @@ window.rrLoadRoute=rrLoadRoute;
 window.rrDeleteRoute=rrDeleteRoute;
 window.rrExportGPX=rrExportGPX;
 window.rrExportGPXById=rrExportGPXById;
+window.showRoadworkDetail=showRoadworkDetail;
+window.eventVenueSearch=eventVenueSearch;
+window.selectEventVenue=selectEventVenue;
 window.openMobileNav=openMobileNav;
 window.closeMobileNav=closeMobileNav;
 window.previewPhoto=previewPhoto;
