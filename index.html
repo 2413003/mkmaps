@@ -293,6 +293,20 @@
 
     /* ── CARDS ───────────────────────────────────────────────── */
     .card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+    /* ── EVENT CARD with thumbnail ── */
+    .event-card{display:flex;align-items:stretch;gap:0;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:8px;cursor:pointer;overflow:hidden;transition:box-shadow .15s,transform .1s;}
+    .event-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
+    .event-card-thumb{width:88px;flex-shrink:0;background:var(--panel2);overflow:hidden;position:relative;min-height:84px;}
+    .event-card-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+    .event-card-thumb-placeholder{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;background:linear-gradient(135deg,rgba(245,166,35,.15),rgba(232,58,47,.1));}
+    .event-card-body{flex:1;min-width:0;padding:10px 12px;}
+    .event-card-cat{font-size:9px;text-transform:uppercase;letter-spacing:.7px;color:var(--amber);margin-bottom:3px;font-weight:600;}
+    .event-card-title{font-size:13px;font-weight:600;color:var(--text);line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .event-card-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:5px;}
+    .event-card-footer{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+    .event-card-date{font-size:10px;font-weight:600;color:var(--text);}
+    .event-card-price{font-size:10px;color:var(--green);}
+    body:not(.theme-day) .event-card-price{color:#81c995;}
     .card:hover{border-color:var(--muted2);box-shadow:var(--shadow-sm);transform:translateY(-1px);}
 
     /* ── PLACE CARDS — thumbnail layout like Google Maps ─────── */
@@ -1100,6 +1114,8 @@
     <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)" style="display:none"></button>
     <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)" style="display:none"></button>
     <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)" style="display:none"></button>
+    <button class="layer-chip stay" id="chip-stay" onclick="setLayer('stay',this)" style="display:none"></button>
+    <button class="layer-chip food" id="chip-food" onclick="setLayer('food',this)" style="display:none"></button>
     <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)" style="display:none"></button>
   </div>
 </header>
@@ -1123,6 +1139,8 @@
     <button class="app-menu-item" onclick="closeAppMenu();setLayer('issues',document.getElementById('chip-issues'))">⚠️ Report an Issue</button>
     <button class="app-menu-item" onclick="closeAppMenu();setLayer('transport',document.getElementById('chip-transport'))">🚌 Public Transport</button>
     <button class="app-menu-item" onclick="closeAppMenu();setLayer('places',document.getElementById('chip-places'))">📍 Places</button>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('stay',document.getElementById('chip-stay'))">🛏️ Places to Stay</button>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('food',document.getElementById('chip-food'))">🍽️ Food & Drink</button>
     <button class="app-menu-item" onclick="closeAppMenu();setLayer('roadworks',document.getElementById('chip-roadworks'))">🚧 Roadworks</button>
     <button class="app-menu-item" onclick="closeAppMenu();togglePhotoLayer(document.getElementById('chip-photos'))">📷 Community Photos</button>
     <div class="app-menu-divider"></div>
@@ -1736,7 +1754,7 @@ geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords
 // State
 let activeLayer = 'none';
 let data = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
-let markers = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
+let markers = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[],stay:[],food:[]};
 let pendingMarker = null, pendingLat = null, pendingLng = null;
 let redwaysVisible = false;
 let selectedRating = 0;
@@ -1905,6 +1923,8 @@ function clearActiveLayer(){
   // Hide all layer-specific overlays
   setParkingZonesVisible(false);
   hideParkingLaneLayer();
+  if(markers.stay) { markers.stay.forEach(m=>m.remove()); markers.stay=[]; }
+  if(markers.food) { markers.food.forEach(m=>m.remove()); markers.food=[]; }
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
   const sb = document.getElementById('sidebar');
@@ -1949,6 +1969,8 @@ function setLayer(layer, btn, opts={}) {
   else if(layer==='places') {loadPlaces(); document.getElementById('fab').style.display='none';}
   else if(layer==='parking') {loadParking(); document.getElementById('fab').style.display='none';}
   else if(layer==='roadworks') {loadRoadworks(); document.getElementById('fab').style.display='none';}
+  else if(layer==='stay') {loadStayLayer(); document.getElementById('fab').style.display='none';}
+  else if(layer==='food') {loadFoodLayer(); document.getElementById('fab').style.display='none';}
   // FAB only on issues — report a problem
   document.getElementById('fab').style.display = layer==='issues' ? 'flex' : 'none';
   if(layer==='parking') setParkingZonesVisible(true);
@@ -2612,13 +2634,16 @@ async function fetchTicketmasterEvents() {
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 90);
     const endStr = endDate.toISOString().split('.')[0] + 'Z';
+    const startDate = new Date();
+    const startStr = startDate.toISOString().split('.')[0] + 'Z';
     const url = `https://app.ticketmaster.com/discovery/v2/events.json`
       + `?apikey=${TM_KEY}`
       + `&latlong=${MK_LAT},${MK_LNG}`
-      + `&radius=15&unit=miles`
+      + `&radius=20&unit=miles`
       + `&countryCode=GB`
-      + `&size=50`
+      + `&size=100`
       + `&sort=date,asc`
+      + `&startDateTime=${encodeURIComponent(startStr)}`
       + `&endDateTime=${encodeURIComponent(endStr)}`;
     const r = await fetch(url);
     if (!r.ok) return [];
@@ -2682,34 +2707,89 @@ function tmCat(segment, genre) {
   return 'Entertainment';
 }
 
+async function fetchSkiddleEvents() {
+  try {
+    // Skiddle public API — no key required for basic search
+    const today = new Date().toISOString().split('T')[0];
+    const url = `https://www.skiddle.com/api/v1/events/search/?api_key=test&latitude=${MK_LAT}&longitude=${MK_LNG}&radius=15&min_date=${today}&limit=50&order=date&description=1&imageurl=1`;
+    const r = await fetch(url);
+    if(!r.ok) return [];
+    const d = await r.json();
+    const results = d.results || [];
+    let idCounter = 400000;
+    return results.map(e => {
+      const lat = parseFloat(e.venue?.latitude) || parseFloat(e.latitude) || null;
+      const lng = parseFloat(e.venue?.longitude) || parseFloat(e.longitude) || null;
+      const cat = skiddleCat(e.EventCode||'');
+      return {
+        id: idCounter++,
+        title: e.eventname || e.EventName || '',
+        description: e.description || '',
+        category: cat,
+        date: e.date || '',
+        time: e.openingtimes?.doorsopen || '',
+        venue: e.venue?.name || 'Milton Keynes',
+        latitude: lat, longitude: lng,
+        free: e.entryprice === '0.00' || e.entryprice === 0,
+        priceStr: e.entryprice && parseFloat(e.entryprice) > 0 ? `From £${parseFloat(e.entryprice).toFixed(0)}` : null,
+        ticketUrl: e.link || null,
+        imageUrl: e.largeimageurl || e.imageurl || null,
+        source: 'skiddle',
+        created_at: new Date().toISOString(),
+      };
+    }).filter(e => e.latitude && e.longitude && e.title);
+  } catch(err) {
+    console.warn('Skiddle fetch failed:', err);
+    return [];
+  }
+}
+
+function skiddleCat(code) {
+  const c = (code||'').toLowerCase();
+  if(['CLUB','LIVE','GNRDAY'].some(x=>c.includes(x.toLowerCase()))) return 'Music';
+  if(['SPORT','FITNESS'].some(x=>c.includes(x.toLowerCase()))) return 'Sports';
+  if(['COMEDY','THEATRE','ARTS'].some(x=>c.includes(x.toLowerCase()))) return 'Arts';
+  if(['FAMILY','KIDS'].some(x=>c.includes(x.toLowerCase()))) return 'Family';
+  if(['FOOD','DRINK'].some(x=>c.includes(x.toLowerCase()))) return 'Food';
+  return 'Entertainment';
+}
+
 async function loadEvents() {
   showSkeletons(3);
   try {
-    // Fetch both sources in parallel
-    const [tmEvents, communityRaw] = await Promise.allSettled([
+    // Fetch all sources in parallel
+    const [tmEvents, skiddleEvents, communityRaw] = await Promise.allSettled([
       fetchTicketmasterEvents(),
+      fetchSkiddleEvents(),
       db.get('events').catch(() => [])
     ]);
 
     const tm = tmEvents.status === 'fulfilled' ? (tmEvents.value || []) : [];
+    const skiddle = skiddleEvents.status === 'fulfilled' ? (skiddleEvents.value || []) : [];
     const community = (communityRaw.status === 'fulfilled' && Array.isArray(communityRaw.value))
       ? communityRaw.value : [];
 
     eventsFromTM = tm.length > 0;
 
-    // Merge: community events first (user-submitted), then TM, deduplicate by title proximity
+    // Merge: community first, then TM, then Skiddle — deduplicate by title
     const merged = [...community];
-    tm.forEach(te => {
+    [...tm, ...skiddle].forEach(te => {
       const dup = merged.some(ce =>
         ce.title?.toLowerCase() === te.title?.toLowerCase() ||
-        (ce.date === te.date && distKm(ce.latitude||0, ce.longitude||0, te.latitude, te.longitude) < 0.2)
+        (ce.date === te.date && distKm(ce.latitude||0, ce.longitude||0, te.latitude||0, te.longitude||0) < 0.15)
       );
       if (!dup) merged.push(te);
     });
 
-    // Sort by date ascending
-    merged.sort((a,b) => new Date(a.date) - new Date(b.date));
-    data.events = merged;
+    // Filter out past events, sort upcoming first
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+    const upcoming = merged.filter(e => {
+      if(!e.date) return false;
+      const d = new Date(e.date);
+      return !isNaN(d) && d >= todayStart;
+    });
+    upcoming.sort((a,b) => new Date(a.date) - new Date(b.date));
+    data.events = upcoming;
 
     renderEventsSidebar();
     renderEventMarkers();
@@ -2761,30 +2841,31 @@ function renderEventsSidebar() {
   }
 
   if(!events.length) {
-    body.innerHTML=`<div class="empty"><div class="ei">📅</div><p>No events found${f?' for '+f:''} right now.<br/><span style="color:var(--muted)">Tap + to add one, or check back soon.</span></p></div>`;
+    body.innerHTML=`<div class="empty"><div class="ei">📅</div><p>No upcoming events found${f?' for '+f:''} right now.<br/><span style="color:var(--muted)">Tap + to add one, or check back soon.</span></p></div>`;
     return;
   }
 
   body.innerHTML=events.map(e=>{
-    const priceLabel = e.free ? '🆓 Free' : (e.priceStr ? `🎟️ ${e.priceStr}` : '🎟️ Ticketed');
-    const srcBadge = e.source==='ticketmaster' ? `<span style="font-size:9px;color:var(--muted2);margin-left:auto">TM</span>` : '';
-    return `
-    <div class="card" onclick="showEventDetail(${e.id})">
-      <div class="card-top">
-        <span class="card-tag" style="background:rgba(245,166,35,0.12);color:var(--amber)">${evEmoji(e.category)} ${e.category}</span>
-        <span class="card-time">${fmtDate(e.date)}</span>
-      </div>
-      <div class="card-title">${escHtml(e.title)}</div>
-      <div class="card-sub">${escHtml(e.venue)}${e.time?' · '+e.time:''}</div>
-      <div class="card-footer">
-        <span class="card-meta">${priceLabel}</span>
-        ${e._dist!==undefined?`<span class="card-dist">📍 ${fmtDist(e._dist)}</span>`:''}
-        ${srcBadge}
+    const priceLabel = e.free ? 'Free' : (e.priceStr || 'Ticketed');
+    const priceColor = e.free ? 'var(--green)' : 'var(--muted)';
+    const dateStr = fmtDate(e.date) + (e.time ? ' · ' + e.time : '');
+    const thumb = e.imageUrl
+      ? `<img src="${escHtml(e.imageUrl)}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\'event-card-thumb-placeholder\'>${evEmoji(e.category)}</div>'">`
+      : `<div class="event-card-thumb-placeholder">${evEmoji(e.category)}</div>`;
+    return `<div class="event-card" onclick="showEventDetail(${e.id})">
+      <div class="event-card-thumb">${thumb}</div>
+      <div class="event-card-body">
+        <div class="event-card-cat">${evEmoji(e.category)} ${escHtml(e.category||'Event')}</div>
+        <div class="event-card-title">${escHtml(e.title)}</div>
+        <div class="event-card-sub">📍 ${escHtml(e.venue||'Milton Keynes')}</div>
+        <div class="event-card-footer">
+          <span class="event-card-date">${dateStr}</span>
+          <span class="event-card-price" style="color:${priceColor}">${escHtml(priceLabel)}</span>
+        </div>
       </div>
     </div>`;
   }).join('');
 }
-
 function renderEventMarkers() {
   markers.events.forEach(m=>m.remove()); markers.events=[];
   data.events.forEach(e=>{
@@ -3779,7 +3860,9 @@ function renderParkingSidebar() {
 
   // Map legend — shown at top of sidebar, always visible
   const legend = `<div style="padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel2)">
-    <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;margin-bottom:10px">🗺️ Tap any road on the map to see parking rules</div>
+    <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;margin-bottom:6px">🅿️ MK Parking</div>
+    <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:10px">26 confirmed MK car parks shown. On-street road colours load from OSM data — coverage is limited where roads haven't been tagged yet. Tap any coloured road for details.</div>
+    <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:800;margin-bottom:8px">🗺️ Tap any road on the map to see parking rules</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:11px">
       <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#22c55e;display:inline-block;flex-shrink:0"></span>Free parking</div>
       <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#f59e0b;display:inline-block;flex-shrink:0"></span>Limited / timed</div>
@@ -4232,6 +4315,251 @@ async function showPlaceDetail(id) {
       <button class="btn-primary" style="margin-top:0" onclick="submitReview(${id})">Post Review</button>
     </div>`;
 }
+
+// ── PLACES TO STAY ────────────────────────────────────────────────────────
+let _stayCache = null, _stayCacheTime = 0;
+const STAY_TTL = 20 * 60 * 1000;
+
+async function loadStayLayer() {
+  clearAllMarkers();
+  const body = document.getElementById('sidebarBody');
+  document.getElementById('sidebarTitle').textContent = 'Places to Stay';
+  showSkeletons(4);
+
+  if(_stayCache && Date.now() - _stayCacheTime < STAY_TTL) {
+    renderStayMarkers(_stayCache);
+    renderStaySidebar(_stayCache);
+    return;
+  }
+
+  const bbox = '51.88,-0.98,52.18,-0.52';
+  const query = `[out:json][timeout:30];
+(
+  node["tourism"~"hotel|guest_house|hostel|motel|apartment|chalet|camp_site|caravan_site"](${bbox});
+  way["tourism"~"hotel|guest_house|hostel|motel|apartment"](${bbox});
+);
+out center tags qt;`;
+
+  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+  let d = null;
+  for(const ep of eps) {
+    try { const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)}); if(r.ok){d=await r.json();break;} } catch(_){}
+  }
+
+  const items = [];
+  if(d && d.elements) {
+    d.elements.forEach((el,i) => {
+      const t = el.tags || {};
+      const lat = el.lat || el.center?.lat;
+      const lng = el.lon || el.center?.lon;
+      if(!lat||!lng) return;
+      const type = t.tourism || 'hotel';
+      const typeEmoji = {hotel:'🏨',guest_house:'🏠',hostel:'🛏️',motel:'🏩',apartment:'🏢',chalet:'🏡',camp_site:'⛺',caravan_site:'🚐'}[type]||'🏨';
+      const typeLabel = type.replace(/_/g,' ').replace(/\w/g,l=>l.toUpperCase());
+      items.push({
+        id: 900000+i, name: t.name||typeLabel, type: typeLabel, emoji: typeEmoji,
+        lat, lng,
+        stars: t.stars ? parseInt(t.stars)||0 : 0,
+        website: t.website||t['contact:website']||null,
+        phone: t.phone||t['contact:phone']||null,
+        address: [t['addr:housenumber'],t['addr:street'],t['addr:city']].filter(Boolean).join(' '),
+        checkIn: t.check_in||null, checkOut: t.check_out||null,
+        rooms: t.rooms||null,
+      });
+    });
+  }
+  _stayCache = items; _stayCacheTime = Date.now();
+  renderStayMarkers(items);
+  renderStaySidebar(items);
+  document.getElementById('sidebarCount').textContent = items.length;
+}
+
+function renderStayMarkers(items) {
+  if(markers.stay) markers.stay.forEach(m=>m.remove());
+  markers.stay = [];
+  items.forEach(p => {
+    const el = document.createElement('div');
+    el.style.cssText = 'width:32px;height:32px;border-radius:10px;background:#1a73e8;display:flex;align-items:center;justify-content:center;font-size:15px;cursor:pointer;box-shadow:0 2px 8px rgba(26,115,232,0.4);border:2px solid rgba(255,255,255,0.7);transition:transform .15s;';
+    el.textContent = p.emoji;
+    el.addEventListener('mouseenter',()=>el.style.transform='scale(1.15)');
+    el.addEventListener('mouseleave',()=>el.style.transform='');
+    el.onclick = () => showStayDetail(p);
+    addMarkerTooltip(el, p.name);
+    markers.stay.push(new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map));
+  });
+}
+
+function renderStaySidebar(items) {
+  const body = document.getElementById('sidebarBody');
+  if(!items.length){
+    body.innerHTML=`<div class="empty"><div class="ei">🏨</div><p>No accommodation found nearby.</p></div>`;
+    return;
+  }
+  body.innerHTML = items.map(p => {
+    const stars = p.stars ? '★'.repeat(p.stars)+'☆'.repeat(Math.max(0,5-p.stars)) : '';
+    const dist = userLat ? `<span class="card-dist">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
+    return `<div class="place-card" onclick="showStayDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <div class="place-card-thumb" style="width:80px;background:linear-gradient(135deg,rgba(26,115,232,.12),rgba(26,115,232,.06));display:flex;align-items:center;justify-content:center;font-size:26px">${p.emoji}</div>
+      <div class="place-card-body">
+        <div class="place-card-tag">${escHtml(p.type)}</div>
+        <div class="place-card-name">${escHtml(p.name)}</div>
+        <div class="place-card-meta">${stars ? `<span style="color:#ea8600;font-size:11px">${stars}</span>` : ''}${p.address?` ${escHtml(p.address.slice(0,30))}`:'Milton Keynes'}</div>
+        ${dist ? `<div class="place-card-footer">${dist}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showStayDetail(p) {
+  if(typeof p === 'string') { try{ p = JSON.parse(p); }catch(e){ return; } }
+  flyTo(p.lng, p.lat);
+  const stars = p.stars ? '<span style="color:#ea8600;font-size:14px">'+'★'.repeat(p.stars)+'☆'.repeat(Math.max(0,5-p.stars))+'</span>' : '';
+  const dist = userLat ? `<span style="font-size:11px;color:var(--blue)">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
+  openDetail(`
+    <div class="place-hero" style="padding-top:14px">
+      <div class="place-icon-big" style="background:rgba(26,115,232,.1);font-size:26px">${p.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div class="place-name">${escHtml(p.name)}</div>
+        <div class="place-cat">${escHtml(p.type)} ${dist}</div>
+        ${stars ? `<div style="margin-top:3px">${stars}</div>` : ''}
+      </div>
+    </div>
+    <div class="action-row" style="margin-top:14px">
+      <button class="action-btn" onclick="routeTo('${escJs(p.name)}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Directions</span></button>
+      ${p.website?`<a class="action-btn" href="${escHtml(p.website)}" target="_blank" rel="noopener"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
+      ${p.phone?`<a class="action-btn" href="tel:${escHtml(p.phone)}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
+      <a class="action-btn" href="https://www.google.com/search?q=${encodeURIComponent(p.name+' Milton Keynes')}" target="_blank" rel="noopener"><span class="action-btn-icon">🔍</span><span class="action-btn-label">Search</span></a>
+    </div>
+    ${p.address?`<div class="detail-section" style="margin-top:16px"><div class="detail-section-title">Address</div><div style="font-size:12px;color:var(--muted)">${escHtml(p.address)}, Milton Keynes</div></div>`:''}
+    ${p.checkIn||p.checkOut?`<div class="detail-section"><div class="detail-section-title">Check In / Out</div><div style="font-size:12px;color:var(--muted)">${p.checkIn?'In: '+p.checkIn:''}${p.checkIn&&p.checkOut?' · ':''}${p.checkOut?'Out: '+p.checkOut:''}</div></div>`:''}
+    <div style="font-size:10px;color:var(--muted2);margin-top:8px;line-height:1.6">Data via OpenStreetMap. Book directly or search for live availability and prices.</div>
+  `);
+}
+
+// ── FOOD & DRINK LAYER ────────────────────────────────────────────────────────
+let _foodCache = null, _foodCacheTime = 0;
+const FOOD_TTL = 20 * 60 * 1000;
+
+async function loadFoodLayer() {
+  clearAllMarkers();
+  document.getElementById('sidebarTitle').textContent = 'Food & Drink';
+  showSkeletons(5);
+
+  if(_foodCache && Date.now() - _foodCacheTime < FOOD_TTL) {
+    renderFoodMarkers(_foodCache);
+    renderFoodSidebar(_foodCache);
+    return;
+  }
+
+  const bbox = '51.88,-0.98,52.18,-0.52';
+  const query = `[out:json][timeout:30];
+(
+  node["amenity"~"restaurant|cafe|fast_food|pub|bar|food_court|ice_cream|bakery"](${bbox});
+  way["amenity"~"restaurant|cafe|fast_food|pub|bar"](${bbox});
+);
+out center tags qt;`;
+
+  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+  let d = null;
+  for(const ep of eps) {
+    try { const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)}); if(r.ok){d=await r.json();break;} } catch(_){}
+  }
+
+  const items = [];
+  const FOOD_EMOJI = {restaurant:'🍽️',cafe:'☕',fast_food:'🍔',pub:'🍺',bar:'🍸',food_court:'🥡',ice_cream:'🍦',bakery:'🥐'};
+  if(d && d.elements) {
+    d.elements.forEach((el,i) => {
+      const t = el.tags || {};
+      const lat = el.lat || el.center?.lat;
+      const lng = el.lon || el.center?.lon;
+      if(!lat||!lng||!t.name) return;
+      const type = t.amenity || 'restaurant';
+      items.push({
+        id: 950000+i, name: t.name, type: type.replace(/_/g,' ').replace(/\w/g,l=>l.toUpperCase()),
+        emoji: FOOD_EMOJI[type]||'🍽️', lat, lng,
+        cuisine: t.cuisine ? t.cuisine.replace(/_/g,' ') : null,
+        website: t.website||t['contact:website']||null,
+        phone: t.phone||t['contact:phone']||null,
+        address: [t['addr:housenumber'],t['addr:street']].filter(Boolean).join(' '),
+        openingHours: t.opening_hours||null,
+        takeaway: t.takeaway === 'yes',
+        delivery: t.delivery === 'yes',
+      });
+    });
+  }
+  // Sort by name
+  items.sort((a,b)=>a.name.localeCompare(b.name));
+  _foodCache = items; _foodCacheTime = Date.now();
+  renderFoodMarkers(items);
+  renderFoodSidebar(items);
+  document.getElementById('sidebarCount').textContent = items.length;
+}
+
+function renderFoodMarkers(items) {
+  if(markers.food) markers.food.forEach(m=>m.remove());
+  markers.food = [];
+  const FOOD_COLORS = {restaurant:'#f97316',cafe:'#a16207',fast_food:'#ef4444',pub:'#b45309',bar:'#7c3aed',bakery:'#d97706'};
+  items.forEach(p => {
+    const el = document.createElement('div');
+    const bg = FOOD_COLORS[p.type.toLowerCase().replace(/ /g,'_')]||'#f97316';
+    el.style.cssText = `width:28px;height:28px;border-radius:8px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.25);border:1.5px solid rgba(255,255,255,0.6);transition:transform .15s;`;
+    el.textContent = p.emoji;
+    el.addEventListener('mouseenter',()=>el.style.transform='scale(1.15)');
+    el.addEventListener('mouseleave',()=>el.style.transform='');
+    el.onclick = () => showFoodDetail(p);
+    addMarkerTooltip(el, p.name);
+    markers.food.push(new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map));
+  });
+}
+
+function renderFoodSidebar(items) {
+  const body = document.getElementById('sidebarBody');
+  // Category filter
+  const cats = [...new Set(items.map(p=>p.type))].sort();
+  const f = activeFilters['food'];
+  let filtered = f ? items.filter(p=>p.type===f) : items;
+  if(userLat) filtered = filtered.map(p=>({...p,_dist:distKm(userLat,userLng,p.lat,p.lng)})).sort((a,b)=>a._dist-b._dist);
+  renderFilterBar(cats, 'food');
+  if(!filtered.length){ body.innerHTML=`<div class="empty"><div class="ei">🍽️</div><p>No food & drink places found.</p></div>`; return; }
+  body.innerHTML = filtered.map(p => {
+    const dist = p._dist !== undefined ? `<span class="card-dist">📍 ${fmtDist(p._dist)}</span>` : '';
+    return `<div class="place-card" onclick="showFoodDetail(${p.id})">
+      <div class="place-card-thumb" style="width:70px;display:flex;align-items:center;justify-content:center;font-size:24px;background:rgba(249,115,22,.08)">${p.emoji}</div>
+      <div class="place-card-body">
+        <div class="place-card-tag">${escHtml(p.type)}${p.cuisine?` · ${escHtml(p.cuisine)}`:''}</div>
+        <div class="place-card-name">${escHtml(p.name)}</div>
+        <div class="place-card-meta">${escHtml(p.address||'Milton Keynes')}</div>
+        ${dist ? `<div class="place-card-footer">${dist}${p.takeaway?' · <span style="font-size:9px;color:var(--muted)">Takeaway</span>':''}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function showFoodDetail(idOrObj) {
+  const p = typeof idOrObj === 'object' ? idOrObj : (_foodCache||[]).find(x=>x.id===idOrObj);
+  if(!p) return;
+  flyTo(p.lng, p.lat);
+  const dist = userLat ? `<span style="font-size:11px;color:var(--blue)">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
+  openDetail(`
+    <div class="place-hero" style="padding-top:14px">
+      <div class="place-icon-big" style="background:rgba(249,115,22,.1);font-size:26px">${p.emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div class="place-name">${escHtml(p.name)}</div>
+        <div class="place-cat">${escHtml(p.type)}${p.cuisine?' · '+escHtml(p.cuisine):''} ${dist}</div>
+      </div>
+    </div>
+    <div class="action-row" style="margin-top:14px">
+      <button class="action-btn" onclick="routeTo('${escJs(p.name)}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Directions</span></button>
+      ${p.website?`<a class="action-btn" href="${escHtml(p.website)}" target="_blank" rel="noopener"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
+      ${p.phone?`<a class="action-btn" href="tel:${escHtml(p.phone)}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
+      <a class="action-btn" href="https://www.google.com/search?q=${encodeURIComponent(p.name+' Milton Keynes menu')}" target="_blank" rel="noopener"><span class="action-btn-icon">🔍</span><span class="action-btn-label">Menu</span></a>
+    </div>
+    ${p.address?`<div class="detail-section" style="margin-top:16px"><div class="detail-section-title">Address</div><div style="font-size:12px;color:var(--muted)">${escHtml(p.address)}, Milton Keynes</div></div>`:''}
+    ${p.openingHours?`<div class="detail-section"><div class="detail-section-title">Opening Hours</div><div style="font-size:12px;color:var(--muted)">${escHtml(p.openingHours)}</div></div>`:''}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">${p.takeaway?'<span style="font-size:10px;background:rgba(249,115,22,.1);color:#f97316;padding:3px 8px;border-radius:10px">Takeaway</span>':''}${p.delivery?'<span style="font-size:10px;background:rgba(26,115,232,.1);color:var(--blue);padding:3px 8px;border-radius:10px">Delivery</span>':''}</div>
+  `);
+}
+
 
 // ── ROADWORKS ────────────────────────────────────────────────────
 // Sources: OSM Overpass (highway=construction, works tagged by council
