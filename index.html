@@ -1039,16 +1039,17 @@
       </div>
     </div>
   </div>
-  <!-- Layer chips row — float over map -->
+  <!-- Layer chips row — float over map. Roadworks & Photos moved to burger menu. -->
   <div class="layer-row" id="layerRow">
     <button class="layer-chip issues" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
     <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
     <button class="layer-chip events" id="chip-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
     <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
     <button class="layer-chip parking" id="chip-parking" onclick="setLayer('parking',this)"><span class="layer-dot"></span>Parking</button>
-    <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
     <button class="layer-chip redways" id="chip-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
-    <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)"><span class="layer-dot"></span>Photos</button>
+    <!-- Hidden stubs — IDs used by JS but chips not shown in row -->
+    <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)" style="display:none"></button>
+    <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)" style="display:none"></button>
   </div>
 </header>
 
@@ -1066,6 +1067,10 @@
     <div class="app-menu-section-label">Navigate</div>
     <button class="app-menu-item" onclick="closeAppMenu();toggleRoutePanel()">🗺️ Directions</button>
     <button class="app-menu-item" onclick="closeAppMenu();rrToggle()">🛤️ Redway Routes</button>
+    <div class="app-menu-divider"></div>
+    <div class="app-menu-section-label">Layers</div>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('roadworks',document.getElementById('chip-roadworks'))">🚧 Roadworks</button>
+    <button class="app-menu-item" onclick="closeAppMenu();togglePhotoLayer(document.getElementById('chip-photos'))">📷 Community Photos</button>
     <div class="app-menu-divider"></div>
     <div class="app-menu-section-label">My Places</div>
     <button class="app-menu-item" id="savedBtn" onclick="closeAppMenu();toggleSavedPanel()">★ Saved Places</button>
@@ -1649,7 +1654,7 @@ const db = {
 // ── MAP ──────────────────────────────────────────────────────────
 const map = new mapboxgl.Map({
   container:'map',
-  style:'mapbox://styles/mapbox/dark-v11',
+  style:'mapbox://styles/mapbox/streets-v12',
   center:[-0.7594,52.0406],
   zoom:13,
   pitch:0,
@@ -6216,11 +6221,11 @@ function toggleSatellite() {
   if(satelliteActive) {
     // Remember current style
     const isDay = document.body.classList.contains('theme-day');
-    preSatStyle = isDay ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11';
+    preSatStyle = isDay ? 'mapbox://styles/mapbox/streets-v12' : 'mapbox://styles/mapbox/dark-v11';
     map.setStyle('mapbox://styles/mapbox/satellite-streets-v12');
     label.textContent = 'Map';
   } else {
-    map.setStyle(preSatStyle || 'mapbox://styles/mapbox/light-v11');
+    map.setStyle(preSatStyle || 'mapbox://styles/mapbox/streets-v12');
     label.textContent = 'Satellite';
   }
 }
@@ -6852,7 +6857,6 @@ window.closeNavBanner=closeNavBanner;
 // ── START ────────────────────────────────────────────────────────
 setTimeout(()=>{document.getElementById('mapHint').style.opacity='0';},5000);
 map.on('load',()=>{
-  // Restore last layer
   // Init saved button badge
   const _sv = loadSavedPlaces();
   if(_sv.length) { const sb=document.getElementById('savedBtn'); if(sb) sb.textContent=`★ Saved (${_sv.length})`; }
@@ -6862,6 +6866,18 @@ map.on('load',()=>{
   // Sidebar starts collapsed — user opens it by tapping a layer chip (Google Maps pattern)
   const sb2 = document.getElementById('sidebar');
   if(sb2) sb2.classList.add('collapsed');
+
+  // Auto-load place markers in the background so the map shows POIs immediately
+  // (like Google Maps which always shows businesses on the base map)
+  setTimeout(async () => {
+    try {
+      const osm = await fetchOSMPlaces();
+      if(osm && osm.length > 0 && activeLayer !== 'places') {
+        data.places = osm;
+        renderPlaceMarkers(); // show on map without opening sidebar
+      }
+    } catch(e) { /* silent — user can still tap Places chip to load */ }
+  }, 1500);
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
@@ -7005,11 +7021,13 @@ function applyTheme(theme) {
   const body = document.body;
   const isDark = theme === 'dark';
   body.classList.toggle('theme-day', !isDark);
+  const dayStyle   = 'mapbox://styles/mapbox/streets-v12';
+  const nightStyle = 'mapbox://styles/mapbox/dark-v11';
   // Update map style
   if(typeof satelliteActive !== 'undefined' && satelliteActive) {
-    preSatStyle = isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+    preSatStyle = isDark ? nightStyle : dayStyle;
   } else {
-    try { map.setStyle(isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'); } catch(e) {}
+    try { map.setStyle(isDark ? nightStyle : dayStyle); } catch(e) {}
   }
 }
 
