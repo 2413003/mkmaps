@@ -86,7 +86,7 @@
     body:not(.theme-day) .cat-chip:hover{border-color:#555;}
 
     /* LAYER BAR */
-    .layer-bar{position:absolute;top:72px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);border:1px solid var(--border);border-radius:999px;display:flex;gap:6px;align-items:center;padding:6px;z-index:1200;box-shadow:0 12px 30px rgba(15,23,42,0.10);}
+    .layer-bar{position:absolute;top:72px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);border:1px solid var(--border);border-radius:999px;display:flex;gap:6px;align-items:center;padding:6px;z-index:1200;box-shadow:0 12px 30px rgba(15,23,42,0.10);transition:opacity 0.15s;}
     .layer-bar::-webkit-scrollbar{display:none;}
     .layer-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;font-family:'DM Mono',monospace;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
     .layer-btn:hover{color:var(--text);border-color:var(--muted2);}
@@ -885,7 +885,6 @@
     <div id="map"></div>
     <div class="map-hint" id="mapHint">Click map to report an issue</div>
     <button class="fab" id="fab" onclick="onFabClick()">＋</button>
-    <button class="near-me-btn" id="nearMeBtn" onclick="toggleNearMe()" title="Sort by distance to me">🎯</button>
     <div class="sat-toggle" id="satToggle" onclick="toggleSatellite()" title="Toggle satellite view">
       <img src="https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/-0.7594,52.0406,12,0/60x44?access_token=pk.eyJ1IjoibWtjaGVzcyIsImEiOiJjbWt5YjM0ejMwNmt6M2RzNm9sZmdoZGM4In0.FBGsSGKuCtYzLoDNbZx51Q" alt="Satellite" onerror="this.style.background='#1a3a5c';this.style.display='block'"/>
       <div class="sat-toggle-label" id="satLabel">Satellite</div>
@@ -4522,10 +4521,24 @@ async function catChipClick(btn, cat) {
 }
 
 // Show chips when search is focused (like Google Maps)
-document.getElementById('searchInput').addEventListener('focus', showCatChips);
+// Also hide the layer-bar to avoid overlap — matches Google Maps behaviour
+const layerBarEl = document.querySelector('.layer-bar');
+document.getElementById('searchInput').addEventListener('focus', () => {
+  showCatChips();
+  if(layerBarEl) { layerBarEl.style.opacity = '0'; layerBarEl.style.pointerEvents = 'none'; }
+});
+document.getElementById('searchInput').addEventListener('blur', () => {
+  setTimeout(() => {
+    if(!activeCatChip) {
+      hideCatChips();
+      if(layerBarEl) { layerBarEl.style.opacity = ''; layerBarEl.style.pointerEvents = ''; }
+    }
+  }, 150);
+});
 document.addEventListener('click', e => {
   if(!e.target.closest('#catChips') && !e.target.closest('.search-wrap')) {
     hideCatChips();
+    if(layerBarEl) { layerBarEl.style.opacity = ''; layerBarEl.style.pointerEvents = ''; }
   }
 });
 // Always keep chips visible once a chip is active
