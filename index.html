@@ -41,65 +41,41 @@
     *{box-sizing:border-box;margin:0;padding:0;}
     body{font-family:'DM Mono',monospace;background:#000;color:var(--text);height:100dvh;overflow:hidden;-webkit-font-smoothing:antialiased;position:relative;}
 
-    /* ── FLOATING MAP OVERLAY (replaces header) ─────────────── */
-    .map-overlay-top{
+    /* ── HEADER — transparent floating overlay over the map ─── */
+    header{
       position:fixed;top:0;left:0;right:0;z-index:1000;
+      display:flex;flex-direction:column;
+      background:transparent;
       pointer-events:none;
-      padding:10px 12px 0;
-      background:linear-gradient(to bottom,rgba(0,0,0,0.22) 0%,rgba(0,0,0,0.08) 70%,transparent 100%);
     }
-    body.theme-day .map-overlay-top{
-      background:linear-gradient(to bottom,rgba(255,255,255,0.18) 0%,rgba(255,255,255,0.06) 70%,transparent 100%);
-    }
-    .map-overlay-top > * { pointer-events:auto; }
-
-    /* ── FLOATING SEARCH ROW ────────────────────────────────── */
-    .float-search-row{
+    header > * { pointer-events:auto; }
+    .header-top{
       display:flex;align-items:center;gap:8px;
-      margin-bottom:8px;
+      padding:10px 12px 0;
+      min-height:auto;
     }
-    .float-logo{
-      width:40px;height:40px;background:var(--red);border-radius:12px;
-      display:flex;align-items:center;justify-content:center;
-      font-size:18px;flex-shrink:0;cursor:pointer;
-      box-shadow:0 2px 12px rgba(232,58,47,0.45);
-      transition:transform .15s,box-shadow .15s;
-    }
-    .float-logo:hover{transform:scale(1.06);box-shadow:0 4px 18px rgba(232,58,47,0.55);}
-    .logo-icon{width:30px;height:30px;background:var(--red);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
-    .logo-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;color:var(--text);}
-    .logo-text span{color:var(--red);}
-    .float-actions{display:flex;align-items:center;gap:5px;flex-shrink:0;}
-    .float-icon-btn{
-      height:40px;padding:0 12px;
-      background:var(--panel);border:1px solid var(--border);
-      border-radius:20px;font-size:13px;cursor:pointer;color:var(--text);
-      transition:all .15s;font-family:'DM Mono',monospace;white-space:nowrap;
-      box-shadow:var(--shadow-sm);
-      display:flex;align-items:center;
-    }
-    .float-icon-btn:hover{border-color:var(--muted2);box-shadow:var(--shadow-md);}
-    .float-icon-btn.saved-active{color:#ea8600;border-color:#ea8600;}
-    body:not(.theme-day) .float-icon-btn.saved-active{color:var(--amber);border-color:var(--amber);}
-    body:not(.theme-day) .float-icon-btn{background:#1a1a1a;border-color:#333;color:#ccc;}
+    /* ── LOGO — floating red pill ───────────────────────────── */
+    .logo{display:flex;align-items:center;gap:0;flex-shrink:0;cursor:pointer;}
+    .logo-icon{width:42px;height:42px;background:var(--red);border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 2px 10px rgba(232,58,47,.45);transition:transform .15s;}
+    .logo-icon:hover{transform:scale(1.06);}
+    .logo-text{display:none;} /* hidden — logo icon is the identity, like Google Maps */
 
-    /* ── SEARCH ─────────────────────────────────────────────── */
+    /* ── SEARCH — floating pill like Google Maps ────────────── */
     .search-wrap{flex:1;max-width:560px;position:relative;}
     .search-input{
-      width:100%;height:40px;
-      background:var(--panel);border:1px solid var(--border);
-      color:var(--text);padding:0 36px 0 40px;
-      border-radius:20px;font-family:'DM Mono',monospace;
+      width:100%;height:42px;
+      background:var(--panel);border:none;
+      color:var(--text);padding:0 38px 0 42px;
+      border-radius:21px;font-family:'DM Mono',monospace;
       font-size:13px;outline:none;
-      box-shadow:var(--shadow-md);
-      transition:border-color .15s,box-shadow .15s;
+      box-shadow:0 2px 8px rgba(0,0,0,0.18),0 1px 3px rgba(0,0,0,0.1);
+      transition:box-shadow .15s;
     }
-    .search-input:focus{border-color:#1a73e8;box-shadow:0 2px 20px rgba(26,115,232,.18);}
-    body:not(.theme-day) .search-input{background:#1a1a1a;border-color:#333;color:#f0ede8;}
-    body:not(.theme-day) .search-input:focus{border-color:var(--red);box-shadow:0 2px 20px rgba(232,58,47,.18);}
+    .search-input:focus{box-shadow:0 3px 14px rgba(0,0,0,0.22),0 1px 4px rgba(0,0,0,0.12);}
+    body:not(.theme-day) .search-input{background:#1e1e1e;color:#f0ede8;}
     .search-input::placeholder{color:var(--muted);}
-    .search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;color:var(--muted);}
-    .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--muted2);border:none;color:var(--panel);width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;line-height:1;transition:background .15s;}
+    .search-icon{position:absolute;left:14px;top:50%;transform:translateY(-50%);font-size:14px;pointer-events:none;color:var(--muted);}
+    .search-clear{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--muted2);border:none;color:var(--panel);width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:11px;font-weight:700;cursor:pointer;line-height:1;transition:background .15s;}
     .search-clear:hover{background:var(--text);}
     .search-wrap.has-text .search-clear{display:flex;}
     .search-results{
@@ -136,50 +112,66 @@
     .search-cat-chip.active{color:white;border-color:transparent;}
     .search-recents-label{padding:8px 14px 2px;font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);font-weight:600;}
 
-    /* ── HEADER RIGHT (legacy hidden — replaced by float-actions) ── */
-    .header-right{display:none;}
-    .header-btn{display:none;}
-    .weather-chip{display:flex;align-items:center;gap:4px;height:40px;padding:0 10px;background:var(--panel);border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all .15s;color:var(--text);font-family:'DM Mono',monospace;box-shadow:var(--shadow-sm);}
-    .weather-chip:hover{border-color:var(--muted2);box-shadow:var(--shadow-md);}
+    /* ── HEADER RIGHT — floating pill buttons ───────────────── */
+    .header-right{display:flex;align-items:center;gap:5px;flex-shrink:0;}
+    .weather-chip{display:flex;align-items:center;gap:4px;height:42px;padding:0 12px;background:var(--panel);border:none;border-radius:21px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:box-shadow .15s;color:var(--text);font-family:'DM Mono',monospace;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+    .weather-chip:hover{box-shadow:0 4px 12px rgba(0,0,0,0.2);}
     .weather-temp{font-weight:500;}
-    body:not(.theme-day) .weather-chip{background:#1a1a1a;border-color:#333;}
-    body:not(.theme-day) .search-cat-chip{background:#1e1e1e;border-color:#333;color:#ccc;}
+    .header-btn{display:flex;align-items:center;gap:5px;height:42px;padding:0 14px;background:var(--panel);border:none;border-radius:21px;font-size:12px;cursor:pointer;color:var(--text);transition:box-shadow .15s;font-family:'DM Mono',monospace;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.15);}
+    .header-btn:hover{box-shadow:0 4px 12px rgba(0,0,0,0.2);}
+    .header-btn.saved-active{color:#ea8600;}
+    body:not(.theme-day) .header-btn.saved-active{color:var(--amber);}
+    body:not(.theme-day) .weather-chip,.body:not(.theme-day) .header-btn{background:#1e1e1e;}
 
-    /* ── LAYER CHIPS — now floating pills below search bar ──── */
+    /* ── LAYER CHIPS — float over map as individual pills ───── */
+    /* Chips row: transparent background, no border */
     .layer-row{
-      display:flex;align-items:center;gap:5px;
-      padding:0 0 8px;
+      display:flex;align-items:center;gap:6px;
+      padding:8px 12px 10px;
       overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;
       background:transparent;border-top:none;
+      /* Chips fade in naturally over the map gradient */
     }
     .layer-row::-webkit-scrollbar{display:none;}
-    /* Individual chips get shadow so they read over the map */
-    .layer-chip{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:var(--r-xl);font-size:11px;font-weight:500;cursor:pointer;border:1.5px solid transparent;color:var(--text);background:var(--panel);font-family:'DM Mono',monospace;white-space:nowrap;transition:all .15s;flex-shrink:0;box-shadow:var(--shadow-sm);}
-    .layer-chip:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
-    body:not(.theme-day) .layer-chip{color:#ccc;background:#1a1a1a;border-color:transparent;}
-    body:not(.theme-day) .layer-chip:hover{color:#f0ede8;}
-    .layer-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;}
-    .layer-chip-divider-group{margin-left:auto;flex-shrink:0;display:flex;gap:5px;}
+    /* Each chip gets its own elevation — floats over map */
+    .layer-chip{
+      display:flex;align-items:center;gap:5px;
+      padding:7px 14px;border-radius:21px;
+      font-size:11px;font-weight:500;cursor:pointer;
+      border:none;
+      color:var(--text);background:var(--panel);
+      font-family:'DM Mono',monospace;white-space:nowrap;
+      transition:box-shadow .15s,transform .1s;
+      flex-shrink:0;
+      box-shadow:0 2px 6px rgba(0,0,0,0.16),0 1px 2px rgba(0,0,0,0.08);
+    }
+    .layer-chip:hover{box-shadow:0 4px 12px rgba(0,0,0,0.2);transform:translateY(-1px);}
+    .layer-dot{width:7px;height:7px;border-radius:50%;background:currentColor;flex-shrink:0;opacity:.6;}
     /* Light active */
-    .layer-chip.issues.active{background:#fce8e6;border-color:#f28b82;color:#c5221f;}
-    .layer-chip.transport.active{background:#e8f0fe;border-color:#aecbfa;color:#1a73e8;}
-    .layer-chip.events.active{background:#fef7e0;border-color:#fdd663;color:#ea8600;}
-    .layer-chip.places.active{background:#e6f4ea;border-color:#81c995;color:#137333;}
-    .layer-chip.parking.active{background:#e6f4ea;border-color:#81c995;color:#137333;}
-    .layer-chip.roadworks.active{background:#fef7e0;border-color:#fdd663;color:#ea8600;}
-    .layer-chip.redways.active{background:#fce8e6;border-color:#f28b82;color:#c5221f;}
-    .layer-chip.photos.active{background:#f3e8fd;border-color:#d7aefb;color:#7627bb;}
-    /* Dark active */
-    body:not(.theme-day) .layer-chip{color:#ccc;background:rgba(26,26,26,0.95);border-color:transparent;}
+    .layer-chip.issues.active{background:#fce8e6;color:#c5221f;}
+    .layer-chip.transport.active{background:#e8f0fe;color:#1a73e8;}
+    .layer-chip.events.active{background:#fef7e0;color:#ea8600;}
+    .layer-chip.places.active{background:#e6f4ea;color:#137333;}
+    .layer-chip.parking.active{background:#e6f4ea;color:#137333;}
+    .layer-chip.roadworks.active{background:#fef7e0;color:#ea8600;}
+    .layer-chip.redways.active{background:#fce8e6;color:#c5221f;}
+    .layer-chip.photos.active{background:#f3e8fd;color:#7627bb;}
+    /* Directions/Routes — visually distinct action chips */
+    .layer-chip#dirChip,.layer-chip#rrChipBtn{background:var(--panel);font-weight:600;}
+    /* Dark mode */
+    body:not(.theme-day) .layer-chip{background:#1e1e1e;color:#ccc;}
     body:not(.theme-day) .layer-chip:hover{color:#f0ede8;}
-    body:not(.theme-day) .layer-chip.issues.active{background:rgba(232,58,47,.25);border-color:rgba(232,58,47,.6);color:#f28b82;}
-    body:not(.theme-day) .layer-chip.transport.active{background:rgba(26,115,232,.25);border-color:rgba(26,115,232,.6);color:#aecbfa;}
-    body:not(.theme-day) .layer-chip.events.active{background:rgba(245,166,35,.25);border-color:rgba(245,166,35,.6);color:#fdd663;}
-    body:not(.theme-day) .layer-chip.places.active{background:rgba(52,168,83,.25);border-color:rgba(52,168,83,.6);color:#81c995;}
-    body:not(.theme-day) .layer-chip.parking.active{background:rgba(52,168,83,.25);border-color:rgba(52,168,83,.6);color:#81c995;}
-    body:not(.theme-day) .layer-chip.roadworks.active{background:rgba(245,166,35,.25);border-color:rgba(245,166,35,.6);color:#fdd663;}
-    body:not(.theme-day) .layer-chip.redways.active{background:rgba(204,34,0,.25);border-color:rgba(204,34,0,.6);color:#f28b82;}
-    body:not(.theme-day) .layer-chip.photos.active{background:rgba(167,139,250,.25);border-color:rgba(167,139,250,.6);color:#d7aefb;}
+    body:not(.theme-day) .layer-chip.issues.active{background:rgba(232,58,47,.22);color:#f28b82;}
+    body:not(.theme-day) .layer-chip.transport.active{background:rgba(26,115,232,.22);color:#aecbfa;}
+    body:not(.theme-day) .layer-chip.events.active{background:rgba(245,166,35,.22);color:#fdd663;}
+    body:not(.theme-day) .layer-chip.places.active{background:rgba(52,168,83,.22);color:#81c995;}
+    body:not(.theme-day) .layer-chip.parking.active{background:rgba(52,168,83,.22);color:#81c995;}
+    body:not(.theme-day) .layer-chip.roadworks.active{background:rgba(245,166,35,.22);color:#fdd663;}
+    body:not(.theme-day) .layer-chip.redways.active{background:rgba(204,34,0,.22);color:#f28b82;}
+    body:not(.theme-day) .layer-chip.photos.active{background:rgba(167,139,250,.22);color:#d7aefb;}
+    body:not(.theme-day) .weather-chip{background:#1e1e1e;}
+    body:not(.theme-day) .header-btn{background:#1e1e1e;color:#ccc;}
+    body:not(.theme-day) .search-cat-chip{background:#1e1e1e;border-color:#333;color:#ccc;}
 
     /* hide legacy elements */
     .layer-bar,.layer-bar-wrap,.layer-btn,.theme-toggle,.cat-chips,.cat-chip,.legacy-hidden{display:none!important;}
@@ -193,11 +185,13 @@
 
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
 
-    /* ── LAYOUT — map is the full page, everything else is absolute ── */
+    /* ── LAYOUT — map fills everything, everything else is fixed ── */
     .main{position:fixed;inset:0;overflow:hidden;}
 
     /* ── SIDEBAR ─────────────────────────────────────────────── */
-    .sidebar{position:fixed;top:116px;left:12px;bottom:20px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;z-index:900;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;box-shadow:var(--shadow-lg);}
+    /* Sidebar top offset accounts for floating header (≈104px) */
+    .sidebar{position:fixed;top:108px;left:12px;bottom:20px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;z-index:900;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;box-shadow:var(--shadow-lg);}
+    /* Start collapsed — only open when user picks a layer */
     .sidebar.collapsed{transform:translateX(calc(-340px - 20px));opacity:0;pointer-events:none;}
     @media(max-width:700px){
       .sidebar{display:none;}
@@ -265,16 +259,24 @@
     .on-time{color:#137333;}body:not(.theme-day) .on-time{color:#81c995;}
     .delayed{color:#ea8600;}body:not(.theme-day) .delayed{color:#fdd663;}
 
-    /* ── MAP ─────────────────────────────────────────────────── */
+    /* ── MAP — fills entire viewport ────────────────────────── */
     .map-wrap{position:fixed;inset:0;overflow:hidden;}
     #map{position:absolute;inset:0;width:100%;height:100%;}
     .map-hint{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(32,33,36,.88);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);padding:8px 16px;border-radius:var(--r-xl);font-size:11px;color:#fff;z-index:200;pointer-events:none;white-space:nowrap;transition:opacity .8s;}
-    .fab{position:fixed;bottom:22px;right:22px;z-index:200;background:var(--red);color:white;border:none;width:52px;height:52px;border-radius:50%;font-size:22px;cursor:pointer;box-shadow:0 4px 16px rgba(232,58,47,.4);transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;}
+    /* FAB — report/add button, bottom-right above Mapbox controls */
+    .fab{position:fixed;bottom:90px;right:14px;z-index:200;background:var(--red);color:white;border:none;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(232,58,47,.4);transition:transform .15s,box-shadow .15s;display:flex;align-items:center;justify-content:center;}
     .fab:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(232,58,47,.5);}
 
+    /* ── LOCATE BTN — hidden, Mapbox's own geolocate does this ── */
+    .locate-btn{display:none !important;}
+
     /* ── DETAIL PANEL ────────────────────────────────────────── */
-    .detail-panel{will-change:transform;position:fixed;top:8px;left:364px;bottom:12px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);z-index:2000;transform:translateX(calc(-380px));opacity:0;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;}
+    .detail-panel{will-change:transform;position:fixed;top:108px;left:364px;bottom:20px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);z-index:1600;transform:translateX(calc(-380px));opacity:0;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;}
     .detail-panel.open{transform:translateX(0);opacity:1;}
+    @media(max-width:700px){
+      .detail-panel{top:auto;left:0;right:0;bottom:0;width:100%;border-radius:var(--r-lg) var(--r-lg) 0 0;border:none;border-top:1px solid var(--border);max-height:75vh;transform:translateY(100%);opacity:1;z-index:700;transition:transform .32s cubic-bezier(.34,1.1,.64,1);}
+      .detail-panel.open{transform:translateY(0);}
+    }
     .detail-drag{display:none;}
     .detail-handle{display:none;}
     .detail-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.06);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;flex-shrink:0;transition:background .15s;backdrop-filter:blur(4px);}
@@ -427,7 +429,7 @@
     .skeleton-card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:14px;margin-bottom:8px;}
 
     /* ── ROUTING ─────────────────────────────────────────────── */
-    .route-panel{position:fixed;top:120px;left:12px;z-index:1500;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;width:300px;box-shadow:var(--shadow-lg);display:none;max-height:calc(100vh - 140px);overflow-y:auto;}
+    .route-panel{position:fixed;top:120px;left:12px;z-index:1500;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;width:300px;box-shadow:var(--shadow-lg);display:none;}
     .route-panel.open{display:block;}
     .route-panel-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;}
     .route-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1;padding:0;}
@@ -494,7 +496,7 @@
     .nearby-dist{font-size:10px;color:#1a73e8;white-space:nowrap;}
     body:not(.theme-day) .nearby-dist,.nearby-dist{color:#1a73e8;}
     body:not(.theme-day) .nearby-dist{color:#aecbfa;}
-    .weather-detail{position:fixed;top:58px;right:16px;z-index:8000;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;min-width:210px;box-shadow:var(--shadow-lg);display:none;}
+    .weather-detail{position:fixed;top:62px;right:16px;z-index:8000;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-md);padding:16px;min-width:210px;box-shadow:var(--shadow-lg);display:none;}
     .weather-detail.open{display:block;}
     .weather-detail-title{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;margin-bottom:12px;}
     .weather-row{display:flex;justify-content:space-between;font-size:12px;padding:5px 0;border-bottom:1px solid var(--border);}
@@ -504,7 +506,7 @@
     .install-banner.show{display:flex;}
     .install-btn{background:#1a73e8;color:white;border:none;padding:6px 14px;border-radius:var(--r-sm);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;}
     .install-x{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1;padding:0 2px;}
-    .saved-panel{position:fixed;top:110px;right:16px;width:320px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);z-index:2000;display:none;flex-direction:column;max-height:calc(100vh - 130px);overflow:hidden;}
+    .saved-panel{position:fixed;top:62px;right:16px;width:320px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);z-index:2000;display:none;flex-direction:column;max-height:calc(100vh - 80px);overflow:hidden;}
     .saved-panel.open{display:flex;}
     .saved-panel-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .saved-panel-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
@@ -527,8 +529,7 @@
     @media(max-width:700px){.saved-panel{right:8px;left:8px;width:auto;top:62px;}}
 
     /* ── MOBILE ──────────────────────────────────────────────── */
-    .mobile-menu-btn{display:none;align-items:center;justify-content:center;width:40px;height:40px;background:var(--panel);border:1px solid var(--border);border-radius:50%;font-size:18px;cursor:pointer;flex-shrink:0;color:var(--text);box-shadow:var(--shadow-sm);}
-    body:not(.theme-day) .mobile-menu-btn{background:#1a1a1a;border-color:#333;}
+    .mobile-menu-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;background:var(--panel2);border:1px solid var(--border);border-radius:var(--r-sm);font-size:18px;cursor:pointer;flex-shrink:0;color:var(--text);}
     .mobile-nav-drawer{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:4000;}
     .mobile-nav-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.5);}
     .mobile-nav-panel{position:absolute;top:0;right:0;bottom:0;width:280px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow-y:auto;}
@@ -539,58 +540,44 @@
     .mobile-nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r-md);font-size:13px;cursor:pointer;color:var(--text);border:1px solid var(--border);background:var(--panel2);font-family:'DM Mono',monospace;transition:background .1s;}
     .mobile-nav-item:hover{background:var(--panel);}
     .mobile-nav-divider{height:1px;background:var(--border);margin:4px 0;}
-
-    /* ── MOBILE BOTTOM SHEET — proper peek/drag pattern ─────── */
+    /* ── MOBILE BOTTOM SHEET — peek/expand like Apple/Google Maps */
     .mobile-sheet{
       display:none;
+      flex-direction:column;
       position:fixed;bottom:0;left:0;right:0;
       z-index:600;
       border-radius:20px 20px 0 0;
       background:var(--panel);
-      border-top:1px solid var(--border);
-      box-shadow:0 -4px 24px rgba(0,0,0,0.18);
-      flex-direction:column;
-      /* Start in peek state */
-      max-height:72vh;
-      transform:translateY(calc(100% - 108px));
+      box-shadow:0 -2px 20px rgba(0,0,0,.15);
+      /* Peek state: only handle + tab bar visible (~88px) */
+      transform:translateY(calc(100% - 88px));
       transition:transform .32s cubic-bezier(.4,0,.2,1);
       will-change:transform;
+      max-height:78vh;
     }
-    body:not(.theme-day) .mobile-sheet{
-      box-shadow:0 -4px 32px rgba(0,0,0,0.45);
-    }
+    body:not(.theme-day) .mobile-sheet{box-shadow:0 -2px 20px rgba(0,0,0,.4);}
     .mobile-sheet.expanded{transform:translateY(0);}
-    .mobile-sheet.hidden{transform:translateY(100%);}
 
-    /* Drag handle + tab row combined into one peek bar */
-    .mobile-sheet-peek{
-      display:flex;flex-direction:column;align-items:center;
-      flex-shrink:0;cursor:pointer;padding:10px 0 0;
-      user-select:none;touch-action:none;
-    }
+    /* Handle — visual drag affordance */
     .mobile-sheet-handle{
-      width:40px;height:4px;background:var(--muted2);border-radius:2px;
-      margin-bottom:10px;transition:background .15s;
+      display:block;width:40px;height:4px;
+      background:var(--muted2);border-radius:2px;
+      margin:10px auto 6px;cursor:grab;
     }
-    .mobile-sheet-peek:hover .mobile-sheet-handle{background:var(--muted);}
-
-    /* Tab row sits right at the peek line */
+    /* Tab row */
     .mobile-tab-bar{
       display:flex;
-      width:100%;
-      overflow-x:auto;
-      scrollbar-width:none;
+      overflow-x:auto;scrollbar-width:none;
       border-bottom:1px solid var(--border);
-      padding:0 12px;
-      gap:0;
+      cursor:pointer;
     }
     .mobile-tab-bar::-webkit-scrollbar{display:none;}
     .mobile-tab{
-      flex-shrink:0;
-      padding:10px 14px;
+      flex:1;min-width:64px;
+      padding:9px 4px 11px;
       border:none;background:transparent;
-      color:var(--muted);
-      font-family:'DM Mono',monospace;font-size:11px;font-weight:500;
+      color:var(--muted);font-family:'DM Mono',monospace;
+      font-size:10px;font-weight:500;
       cursor:pointer;
       border-bottom:2px solid transparent;
       transition:color .15s,border-color .15s;
@@ -598,34 +585,29 @@
     }
     .mobile-tab.active{color:var(--red);border-bottom-color:var(--red);}
     .mobile-list{
-      flex:1;overflow-y:auto;
-      padding:6px 0 32px;
-      background:var(--panel);
+      flex:1;background:var(--panel);
+      overflow-y:auto;
+      padding-bottom:24px;
     }
-    .mobile-list::-webkit-scrollbar{width:3px;}
-    .mobile-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
 
     @media(max-width:700px){
+      .sidebar{display:none;}
       .layer-bar{display:none!important;}
       .route-panel{width:calc(100vw - 24px);}
       .weather-chip .weather-label{display:none;}
       .mobile-sheet{display:flex;}
+      .header-right .header-btn:not(#savedBtn):not(#settingsBtn){display:none;}
       .mobile-menu-btn{display:flex;}
       .search-wrap{max-width:none;}
-      /* FAB sits above the peek bar (108px) */
-      .fab{bottom:128px;}
-      .sat-toggle{bottom:148px;}
-      .locate-btn{bottom:148px;}
-      .map-hint{bottom:128px;}
-      .mapboxgl-ctrl-bottom-right{bottom:118px!important;}
-      .mapboxgl-ctrl-bottom-left{bottom:118px!important;}
-      /* Overlay padding tighter on mobile */
-      .map-overlay-top{padding:8px 10px 0;}
-      .float-logo{width:36px;height:36px;font-size:16px;border-radius:10px;}
-      .float-icon-btn{height:36px;padding:0 10px;font-size:12px;}
-      .float-actions .weather-chip{display:none;}
-      .layer-row{padding:0 0 6px;gap:4px;}
-      .layer-chip{padding:6px 10px;font-size:10px;}
+      /* FAB sits above mobile sheet peek (88px) */
+      .fab{bottom:104px;}
+      .sat-toggle{bottom:108px;}
+      .map-hint{bottom:104px;}
+      .mapboxgl-ctrl-bottom-right{bottom:94px!important;}
+      .mapboxgl-ctrl-bottom-left{bottom:94px!important;}
+      .header-top{padding:6px 10px;}
+      .layer-row{padding:6px 8px 8px;gap:4px;}
+      .layer-chip{padding:6px 11px;font-size:10px;box-shadow:0 1px 4px rgba(0,0,0,.14);}
     }
 
     /* ── CLUSTER MARKERS ────────────────────────────────────── */
@@ -691,10 +673,7 @@
     .map-tooltip.show{opacity:1;display:block;}
 
     /* ── ZOOM TO MY LOCATION BUTTON ──────────────────────────── */
-    .locate-btn{position:fixed;bottom:84px;right:22px;z-index:200;background:var(--panel);border:1px solid var(--border);color:var(--text);width:44px;height:44px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;transition:all .15s;}
-    .locate-btn:hover{border-color:#1a73e8;color:#1a73e8;transform:scale(1.05);}
-    .locate-btn.active{background:#1a73e8;border-color:#1a73e8;color:white;}
-    @media(max-width:700px){.locate-btn{bottom:160px;}}
+    /* locate-btn removed — Mapbox geolocate control handles this */
 
     /* ── STREET VIEW ─────────────────────────────────────────── */
     .sv-overlay{position:fixed;inset:0;z-index:9500;background:#000;display:none;flex-direction:column;}
@@ -733,7 +712,7 @@
     ════════════════════════════════════════════════════════════ */
 
     /* ── REDWAY ROUTE BUILDER PANEL ─────────────────────────── */
-    .rr-panel{position:fixed;top:120px;left:12px;z-index:1600;width:320px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);display:none;flex-direction:column;max-height:calc(100vh - 140px);overflow:hidden;}
+    .rr-panel{position:fixed;top:120px;left:12px;z-index:1600;width:320px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);box-shadow:var(--shadow-lg);display:none;flex-direction:column;max-height:calc(100vh - 120px);overflow:hidden;}
     .rr-panel.open{display:flex;}
     .rr-header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 12px;border-bottom:1px solid var(--border);flex-shrink:0;}
     .rr-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
@@ -958,7 +937,7 @@
     }
 
     /* ── ROUTE PANEL IMPROVEMENTS ────────────────────────────── */
-    .route-panel{position:absolute;top:8px;left:12px;z-index:300;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;width:300px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;}
+    .route-panel{position:fixed;top:120px;left:12px;z-index:1500;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;width:300px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;}
     .route-panel.open{display:flex;}
     .route-panel-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .route-panel-title-text{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;}
@@ -970,33 +949,32 @@
 </head>
 <body>
 
-<!-- FLOATING MAP OVERLAY — search bar + layer chips float OVER the map -->
-<div class="map-overlay-top" id="mapOverlayTop">
-  <!-- Search row: logo + search + action buttons -->
-  <div class="float-search-row">
-    <div class="float-logo" onclick="document.getElementById('sidebar').classList.toggle('collapsed')">
+<header>
+  <div class="header-top">
+    <div class="logo">
       <div class="logo-icon">📍</div>
+      <div class="logo-text">MK <span>Maps</span></div>
     </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input class="search-input" id="searchInput" placeholder="Search MK — places, postcodes…" autocomplete="off"/>
+      <input class="search-input" id="searchInput" placeholder="Search MK — places, postcodes, addresses…" autocomplete="off"/>
       <button class="search-clear" id="searchClear" title="Clear">×</button>
       <div class="search-results" id="searchResults"></div>
     </div>
-    <div class="float-actions">
+    <div class="header-right">
       <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
         <span id="weatherIcon">🌤️</span>
         <span class="weather-temp" id="weatherTemp">—°C</span>
         <span class="weather-label" id="weatherDesc"></span>
       </div>
-      <button class="float-icon-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★</button>
-      <button class="float-icon-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️</button>
+      <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
+      <button class="header-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️</button>
     </div>
     <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
   </div>
-  <!-- Layer chips float below search -->
+  <!-- Layer chips row — replaces floating layer bar -->
   <div class="layer-row" id="layerRow">
-    <button class="layer-chip issues active" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
+    <button class="layer-chip issues" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
     <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
     <button class="layer-chip events" id="chip-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
     <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
@@ -1004,12 +982,12 @@
     <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
     <button class="layer-chip redways" id="chip-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
     <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)"><span class="layer-dot"></span>Photos</button>
-    <span class="layer-chip-divider-group">
+    <span style="margin-left:auto;flex-shrink:0;display:flex;gap:6px;padding-left:8px;border-left:1px solid var(--border);">
       <button class="layer-chip" onclick="toggleRoutePanel()" id="dirChip">🗺️ Directions</button>
       <button class="layer-chip" id="rrChipBtn" onclick="rrToggle()">🛤️ Routes</button>
     </span>
   </div>
-</div>
+</header>
 
 <!-- MOBILE NAV DRAWER -->
 <div class="mobile-nav-drawer" id="mobileNavDrawer">
@@ -1174,7 +1152,7 @@
     <div id="map"></div>
     <div class="map-hint" id="mapHint">Click map to report an issue</div>
     <button class="fab" id="fab" onclick="onFabClick()">＋</button>
-    <button class="locate-btn" id="locateBtn" onclick="onLocateClick()" title="Go to my location">📍</button>
+    <!-- locate-btn removed: Mapbox geolocate control (bottom-right) handles this -->
 
     <!-- FLOATING DIRECTIONS PILL — appears when a place/result is selected -->
     <button class="dir-pill" id="dirPill" onclick="onDirPillClick()">
@@ -1242,17 +1220,17 @@
   </div>
 </div>
 
-<!-- MOBILE BOTTOM SHEET — peek/expand pattern like Apple/Google Maps -->
+<!-- MOBILE BOTTOM SHEET — peek/expand pattern (Apple/Google Maps style) -->
 <div class="mobile-sheet" id="mobileSheet">
-  <!-- Tappable peek bar: handle + tabs always visible above fold -->
-  <div class="mobile-sheet-peek" id="mobileSheetPeek" onclick="toggleMobileSheet()">
-    <div class="mobile-sheet-handle"></div>
+  <!-- Drag handle — tap to toggle, drag to expand/collapse -->
+  <div id="mobileSheetHandle" style="padding:4px 0;cursor:grab;text-align:center;" onclick="toggleMobileSheet()">
+    <span class="mobile-sheet-handle"></span>
   </div>
-  <div class="mobile-tab-bar">
-    <button class="mobile-tab active" onclick="mobileTab('issues',this);expandMobileSheet()">⚠️ Issues</button>
-    <button class="mobile-tab" onclick="mobileTab('transport',this);expandMobileSheet()">🚌 Transport</button>
-    <button class="mobile-tab" onclick="mobileTab('events',this);expandMobileSheet()">📅 Events</button>
-    <button class="mobile-tab" onclick="mobileTab('places',this);expandMobileSheet()">📍 Places</button>
+  <div class="mobile-tab-bar" onclick="expandMobileSheet()">
+    <button class="mobile-tab active" onclick="mobileTab('issues',this);event.stopPropagation()">⚠️ Issues</button>
+    <button class="mobile-tab" onclick="mobileTab('transport',this);event.stopPropagation()">🚌 Transport</button>
+    <button class="mobile-tab" onclick="mobileTab('events',this);event.stopPropagation()">📅 Events</button>
+    <button class="mobile-tab" onclick="mobileTab('places',this);event.stopPropagation()">📍 Places</button>
   </div>
   <div class="mobile-list" id="mobileList"></div>
 </div>
@@ -4960,25 +4938,11 @@ function flyTo(lng,lat,zoom=16){ map.flyTo({center:[lng,lat],zoom,duration:900,e
 
 // ── LOCATE ME ────────────────────────────────────────────────────
 function onLocateClick() {
-  const btn = document.getElementById('locateBtn');
-  if(userLat) {
-    map.flyTo({center:[userLng,userLat],zoom:15,duration:800,essential:true});
-    btn.classList.add('active');
-    setTimeout(()=>btn.classList.remove('active'),1500);
-    return;
+  // Button removed — Mapbox geolocate control handles location.
+  // This stub kept for any code still calling it.
+  try { geoControl.trigger(); } catch(e) {
+    if(userLat) map.flyTo({center:[userLng,userLat],zoom:15,duration:800,essential:true});
   }
-  btn.textContent = '⏳';
-  navigator.geolocation.getCurrentPosition(pos=>{
-    setUserMarker(pos.coords.latitude, pos.coords.longitude);
-    map.flyTo({center:[pos.coords.longitude,pos.coords.latitude],zoom:15,duration:800});
-    btn.textContent = '📍';
-    btn.classList.add('active');
-    setTimeout(()=>btn.classList.remove('active'),1500);
-    renderLocalIntel();
-  }, ()=>{
-    btn.textContent = '📍';
-    toast('Location access denied — enable it in browser settings.','warn');
-  }, {enableHighAccuracy:true, timeout:8000});
 }
 
 // ── UTILS ────────────────────────────────────────────────────────
@@ -5003,52 +4967,49 @@ function toast(msg, type='info', duration=3500) {
 }
 
 // ── MOBILE SHEET ─────────────────────────────────────────────────
-function toggleMobileSheet() {
-  const sheet = document.getElementById('mobileSheet');
-  if(!sheet) return;
-  sheet.classList.toggle('expanded');
-  sheet.classList.remove('hidden');
-}
 function expandMobileSheet() {
-  const sheet = document.getElementById('mobileSheet');
-  if(sheet) { sheet.classList.add('expanded'); sheet.classList.remove('hidden'); }
+  const s = document.getElementById('mobileSheet');
+  if(s) s.classList.add('expanded');
 }
 function collapseMobileSheet() {
-  const sheet = document.getElementById('mobileSheet');
-  if(sheet) { sheet.classList.remove('expanded'); sheet.classList.remove('hidden'); }
+  const s = document.getElementById('mobileSheet');
+  if(s) s.classList.remove('expanded');
 }
-window.toggleMobileSheet = toggleMobileSheet;
-window.expandMobileSheet = expandMobileSheet;
-window.collapseMobileSheet = collapseMobileSheet;
+function toggleMobileSheet() {
+  const s = document.getElementById('mobileSheet');
+  if(!s) return;
+  if(s.classList.contains('expanded')) collapseMobileSheet();
+  else expandMobileSheet();
+}
+window.expandMobileSheet=expandMobileSheet;
+window.collapseMobileSheet=collapseMobileSheet;
+window.toggleMobileSheet=toggleMobileSheet;
 
-// Drag-to-dismiss on mobile sheet
+// Drag on handle to expand/collapse
 (function(){
-  const sheet = document.getElementById('mobileSheet');
-  const peek  = document.getElementById('mobileSheetPeek');
-  if(!sheet || !peek) return;
+  const handle = document.getElementById('mobileSheetHandle');
+  const sheet  = document.getElementById('mobileSheet');
+  if(!handle||!sheet) return;
   let startY=0, startExpanded=false, dragging=false;
-  peek.addEventListener('pointerdown', e=>{
+  handle.addEventListener('pointerdown',e=>{
     dragging=true; startY=e.clientY;
     startExpanded=sheet.classList.contains('expanded');
-    peek.setPointerCapture(e.pointerId);
+    handle.setPointerCapture(e.pointerId);
     sheet.style.transition='none';
   });
-  document.addEventListener('pointermove', e=>{
+  document.addEventListener('pointermove',e=>{
     if(!dragging) return;
-    const dy = e.clientY - startY;
-    if(startExpanded && dy > 0) {
-      // dragging down from expanded — follow finger
-      sheet.style.transform = `translateY(${dy}px)`;
-    }
+    const dy=e.clientY-startY;
+    if(startExpanded && dy>0) sheet.style.transform=`translateY(${dy}px)`;
   });
-  document.addEventListener('pointerup', e=>{
+  document.addEventListener('pointerup',e=>{
     if(!dragging) return;
     dragging=false;
     sheet.style.transition='';
     sheet.style.transform='';
-    const dy = e.clientY - startY;
-    if(startExpanded && dy > 80) collapseMobileSheet();
-    else if(!startExpanded && dy < -40) expandMobileSheet();
+    const dy=e.clientY-startY;
+    if(startExpanded && dy>60) collapseMobileSheet();
+    else if(!startExpanded && dy<-40) expandMobileSheet();
   });
 })();
 
@@ -5058,11 +5019,12 @@ function mobileTab(layer, btn) {
   if(isActive){
     clearActiveLayer();
     const ml=document.getElementById('mobileList');
-    if(ml) ml.innerHTML='<div class="empty" style="padding:28px 16px"><div class="ei">MK</div><p>Select a layer to explore Milton Keynes.</p></div>';
+    if(ml) ml.innerHTML='';
     collapseMobileSheet();
     return;
   }
   btn.classList.add('active');
+  expandMobileSheet();
   setLayer(layer, document.getElementById('chip-'+layer), {force:true});
   // Mirror sidebar content into mobile list
   setTimeout(()=>{
@@ -6755,18 +6717,12 @@ map.on('load',()=>{
   // Init saved button badge
   const _sv = loadSavedPlaces();
   if(_sv.length) { const sb=document.getElementById('savedBtn'); if(sb) sb.textContent=`★ Saved (${_sv.length})`; }
-  const savedLayer = getSavedLayer();
-  const savedBtn = document.getElementById('chip-'+savedLayer);
-  try{ setLayer(savedLayer, savedBtn); }catch(e){ showFatal(e.message||'Layer init failed'); }
 
   try{ initTheme(); }catch(e){ showFatal(e.message||'Theme init failed'); }
-  // Don't collapse sidebar — show content immediately like Google Maps
   loadWeather();
-  // Auto-open sidebar to saved layer with content
-  setTimeout(() => {
-    const sb = document.getElementById('sidebar');
-    if(sb) sb.classList.remove('collapsed');
-  }, 400);
+  // Sidebar starts collapsed — user opens it by tapping a layer chip (Google Maps pattern)
+  const sb2 = document.getElementById('sidebar');
+  if(sb2) sb2.classList.add('collapsed');
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
