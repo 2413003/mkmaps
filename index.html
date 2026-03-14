@@ -451,6 +451,18 @@
     /* DISTANCE in card */
     .card-dist{font-size:10px;color:var(--blue);display:flex;align-items:center;gap:3px;}
 
+    /* MOBILE HAMBURGER */
+    .mobile-menu-btn{display:none;align-items:center;justify-content:center;width:38px;height:38px;background:var(--panel);border:1px solid var(--border);border-radius:8px;font-size:18px;cursor:pointer;flex-shrink:0;color:var(--text);}
+    .mobile-nav-drawer{display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:4000;}
+    .mobile-nav-backdrop{position:absolute;inset:0;background:rgba(0,0,0,0.45);}
+    .mobile-nav-panel{position:absolute;top:0;right:0;bottom:0;width:280px;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;box-shadow:-8px 0 32px rgba(0,0,0,0.25);overflow-y:auto;}
+    .mobile-nav-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .mobile-nav-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
+    .mobile-nav-close{background:none;border:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1;padding:0 2px;}
+    .mobile-nav-body{padding:12px;display:flex;flex-direction:column;gap:6px;}
+    .mobile-nav-item{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;font-size:13px;cursor:pointer;color:var(--text);border:1px solid var(--border);background:var(--panel);font-family:'DM Mono',monospace;transition:background 0.12s;}
+    .mobile-nav-item:hover,.mobile-nav-item:active{background:var(--panel2);}
+    .mobile-nav-divider{height:1px;background:var(--border);margin:4px 0;}
     /* MOBILE */
     @media(max-width:700px){
       .sidebar{display:none;}
@@ -459,6 +471,9 @@
       .weather-chip .weather-label{display:none;}
       .mobile-sheet{display:flex;}
       .route-header-btn span{display:none;}
+      .header-right{display:none;}
+      .mobile-menu-btn{display:flex;}
+      .search-wrap{max-width:none;}
     }
 
     /* SAVED PLACES PANEL */
@@ -742,6 +757,13 @@
     body:not(.theme-day) .weather-detail-title{color:#f0ede8;}
     body:not(.theme-day) .weather-row{border-bottom-color:#2e2e2e;color:#d0cdc8;}
     body:not(.theme-day) .weather-row-label{color:#888;}
+    body:not(.theme-day) .mobile-nav-panel{background:#1c1c1c;border-color:#2e2e2e;}
+    body:not(.theme-day) .mobile-nav-header{border-bottom-color:#2e2e2e;}
+    body:not(.theme-day) .mobile-nav-title{color:#f0ede8;}
+    body:not(.theme-day) .mobile-nav-item{background:#1c1c1c;border-color:#2e2e2e;color:#f0ede8;}
+    body:not(.theme-day) .mobile-nav-item:hover{background:#2a2a2a;}
+    body:not(.theme-day) .mobile-nav-divider{background:#2e2e2e;}
+    body:not(.theme-day) .mobile-menu-btn{background:#242424;border-color:#333;color:#f0ede8;}
     body:not(.theme-day) .toast{background:#242424;border-color:#3a3a3a;color:#f0ede8;}
 
   </style>
@@ -771,7 +793,29 @@
     </div>
     <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">🌙 Night</button>
   </div>
+  <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
 </header>
+
+<!-- MOBILE NAV DRAWER -->
+<div class="mobile-nav-drawer" id="mobileNavDrawer">
+  <div class="mobile-nav-backdrop" onclick="closeMobileNav()"></div>
+  <div class="mobile-nav-panel">
+    <div class="mobile-nav-header">
+      <div class="mobile-nav-title">MK <span style="color:var(--red)">Maps</span></div>
+      <button class="mobile-nav-close" onclick="closeMobileNav()">×</button>
+    </div>
+    <div class="mobile-nav-body">
+      <div class="mobile-nav-item" onclick="closeMobileNav();toggleLayerMenu()">🗂️ Layers</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();toggleRoutePanel()">🗺️ Directions</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();rrToggle()">🛤️ Redway Routes</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();toggleSavedPanel()">★ Saved Places</div>
+      <div class="mobile-nav-divider"></div>
+      <div class="mobile-nav-item" id="mobileWeatherItem" onclick="closeMobileNav();toggleWeatherDetail()">🌤️ <span id="mobileWeatherLabel">Weather</span></div>
+      <div class="mobile-nav-divider"></div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();toggleTheme()" id="mobileThemeItem">🌙 Toggle Night / Day</div>
+    </div>
+  </div>
+</div>
 
 <div class="layer-menu" id="layerMenu">
   <div class="layer-item" id="menu-issues" onclick="setLayer('issues',document.getElementById('btn-issues'));toggleLayerMenu(true)">⚠️ Issues</div>
@@ -854,8 +898,9 @@
     <div class="stats-row" id="statsRow">
       <div class="stat-item"><div class="stat-num" id="s1">—</div><div class="stat-label">Total</div></div>
       <div class="stat-item"><div class="stat-num" id="s2">—</div><div class="stat-label">Today</div></div>
-      <div class="stat-item"><div class="stat-num" id="s3">—</div><div class="stat-label">Confirmed</div></div>
+      <div class="stat-item"><div class="stat-num" id="s3">—</div><div class="stat-label">Upvotes</div></div>
     </div>
+    <div id="issuesTrustBar" style="display:none;padding:5px 12px;font-size:10px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--panel2);letter-spacing:0.3px;"></div>
     <div class="filter-bar" id="filterBar" style="display:none"></div>
     <div class="sort-row" id="transportControls" style="display:none">
       <span class="sort-label">Buses</span>
@@ -1185,17 +1230,34 @@ function setLayer(layer, btn, opts={}) {
 }
 
 // ── ISSUES ───────────────────────────────────────────────────────
+let issuesIsLive = false;
+let issuesLoadedAt = null;
+
 async function loadIssues() {
   try {
     const d=await db.get('reports');
-    data.issues=Array.isArray(d)?d.filter(r=>!r.resolved):[];
-    if(!Array.isArray(d)) data.issues=getSampleIssues();
+    if(Array.isArray(d) && d.length > 0) {
+      data.issues=d.filter(r=>!r.resolved);
+      issuesIsLive = true;
+      issuesLoadedAt = new Date();
+    } else if(Array.isArray(d) && d.length === 0) {
+      // Real DB connection but genuinely empty
+      data.issues=[];
+      issuesIsLive = true;
+      issuesLoadedAt = new Date();
+    } else {
+      data.issues=[];
+      issuesIsLive = false;
+      issuesLoadedAt = null;
+    }
     renderIssuesSidebar();
     renderIssueMarkers();
     renderLocalIntel();
   } catch(e){
     console.error(e);
-    data.issues=getSampleIssues();
+    data.issues=[];
+    issuesIsLive = false;
+    issuesLoadedAt = null;
     renderIssuesSidebar();
     renderIssueMarkers();
     renderLocalIntel();
@@ -1204,10 +1266,28 @@ async function loadIssues() {
 
 function renderIssuesSidebar() {
   const today=new Date().toDateString();
+  const totalUpvotes = data.issues.reduce((s,r)=>s+(r.upvotes||0),0);
   document.getElementById('s1').textContent=data.issues.length;
   document.getElementById('s2').textContent=data.issues.filter(r=>new Date(r.created_at).toDateString()===today).length;
-  document.getElementById('s3').textContent=data.issues.reduce((s,r)=>s+(r.upvotes||0),0);
+  document.getElementById('s3').textContent=totalUpvotes;
   document.getElementById('sidebarCount').textContent=data.issues.length;
+
+  // Trust signal bar
+  const trustEl = document.getElementById('issuesTrustBar');
+  if(trustEl) {
+    if(issuesIsLive) {
+      const ago = issuesLoadedAt ? Math.round((Date.now()-issuesLoadedAt)/1000) : 0;
+      const agoStr = ago < 60 ? 'just now' : ago < 3600 ? Math.round(ago/60)+'m ago' : Math.round(ago/3600)+'h ago';
+      const thisWeek = data.issues.filter(r=>{
+        const d=new Date(r.created_at); return (Date.now()-d)<7*24*60*60*1000;
+      }).length;
+      trustEl.innerHTML = `<span style="color:var(--green)">● Live</span> · Updated ${agoStr} · ${thisWeek} report${thisWeek!==1?'s':''} this week`;
+      trustEl.style.display='block';
+    } else {
+      trustEl.innerHTML = `<span style="color:var(--amber)">○ Offline</span> · Could not reach server`;
+      trustEl.style.display='block';
+    }
+  }
 
   // Filters
   const cats=[...new Set(data.issues.map(r=>r.category))].filter(Boolean);
@@ -1221,7 +1301,14 @@ function renderIssuesSidebar() {
   }
 
   const body=document.getElementById('sidebarBody');
-  if(!issues.length){body.innerHTML=`<div class="empty"><div class="ei">🛤️</div><p>No issues${f?' for '+f:''} yet.<br/>Tap + to be the first.</p></div>`;return;}
+  if(!issues.length){
+    if(!issuesIsLive) {
+      body.innerHTML=`<div class="empty"><div class="ei">⚠️</div><p style="color:var(--amber)">Could not connect to server.<br/><span style="color:var(--muted)">Check your connection and try again.</span></p></div>`;
+    } else {
+      body.innerHTML=`<div class="empty"><div class="ei">✅</div><p>No active issues${f?' for '+f:''} right now.<br/><span style="color:var(--muted)">Tap + to report something.</span></p></div>`;
+    }
+    return;
+  }
   body.innerHTML=issues.map(r=>`
     <div class="card" onclick="showIssueDetail(${r.id})">
       <div class="card-top">
@@ -1302,7 +1389,7 @@ function renderLocalIntel() {
   const quickEl = document.getElementById('quickTrips');
   quickEl.innerHTML = quickTrips.map(t=>`<button class="quick-chip" onclick="routeTo('${t.name.replace(/'/g,"\\'")}',${t.lat},${t.lng})">${t.icon} ${t.name}</button>`).join('');
 
-  if(!data.places || !data.places.length) data.places = getMKPlaces();
+  if(!data.places || !data.places.length) { /* places load async via loadPlaces() */ }
   const picksEl = document.getElementById('localPicks');
   const picks = getLocalPicks();
   picksEl.innerHTML = picks.map(p=>`<button class="quick-chip" onclick="showPlaceDetail(${p.id})">⭐ ${p.name}</button>`).join('');
@@ -1334,7 +1421,7 @@ function extractGridRoads(text) {
 }
 
 function getLocalPicks() {
-  const list = (data.places && data.places.length) ? data.places : getMKPlaces();
+  const list = (data.places && data.places.length) ? data.places : [];
   return [...list].sort((a,b)=> (b.rating||0) - (a.rating||0)).slice(0,4);
 }
 
@@ -1639,15 +1726,6 @@ async function loadEvents() {
   } catch(e){console.error(e);}
 }
 
-function getSampleIssues() {
-  return [
-    {id:101,category:'Lighting',title:'Dark underpass near CMK station',description:'Two lamps out under the Midsummer Blvd underpass.',latitude:52.0345,longitude:-0.7708,created_at:new Date(Date.now()-1000*60*45).toISOString(),upvotes:5},
-    {id:102,category:'Pothole',title:'H5 Portway surface damage by Shenley',description:'Large pothole on the left lane heading west.',latitude:52.0009,longitude:-0.8122,created_at:new Date(Date.now()-1000*60*180).toISOString(),upvotes:3},
-    {id:103,category:'Obstruction',title:'Redway blocked by fallen branch (Willen)',description:'Tree branch across the redway by Willen Lake footbridge.',latitude:52.0442,longitude:-0.7009,created_at:new Date(Date.now()-1000*60*420).toISOString(),upvotes:7},
-    {id:104,category:'Flooding',title:'V6 Grafton Street underpass flooded',description:'Water across the full width after heavy rain.',latitude:52.0356,longitude:-0.7288,created_at:new Date(Date.now()-1000*60*720).toISOString(),upvotes:4}
-  ];
-}
-
 function getSampleEvents() {
   return [
     {id:1,title:'Campbell Park Parkrun',description:'Free 5km run every Saturday morning. All abilities welcome. Register once at parkrun.org.uk.',category:'Sports',date:getNextDay(6),time:'09:00',venue:'Campbell Park',latitude:52.0489,longitude:-0.7401,free:true,created_at:new Date().toISOString()},
@@ -1747,13 +1825,14 @@ async function loadPlaces() {
 
   try {
     const osm = await fetchOSMPlaces();
-    if(osm && osm.length > 5) {
+    if(osm && osm.length > 0) {
       data.places = osm;
     } else {
-      data.places = getMKPlaces();
+      data.places = [];
     }
   } catch(e) {
-    data.places = getMKPlaces();
+    console.error('Places load failed', e);
+    data.places = [];
   }
 
   renderPlacesSidebar();
@@ -1762,8 +1841,8 @@ async function loadPlaces() {
   const open = data.places.filter(p=>p.open).length;
   document.getElementById('sidebarCount').textContent=data.places.length;
   document.getElementById('s1').textContent=data.places.length;
-  document.getElementById('s2').textContent=open+' open now';
-  document.getElementById('s3').textContent='OSM live';
+  document.getElementById('s2').textContent=open ? open+' open now' : '—';
+  document.getElementById('s3').textContent='OSM';
 }
 
 // OSM category mapping
@@ -1888,15 +1967,19 @@ async function fetchOSMPlaces() {
   // MK bounding box: south,west,north,east
   const BB = '51.90,-0.95,52.15,-0.55';
 
-  // Fetch nodes with useful amenity/shop/leisure/tourism tags
+  // Fetch both nodes AND ways — ways catch large POIs (shopping centres, hospitals, stadiums)
   const query = `[out:json][timeout:30];
 (
-  node["amenity"~"pub|bar|cafe|restaurant|fast_food|pharmacy|hospital|clinic|doctors|dentist|cinema|theatre|library|bank|atm|post_office|fuel|bus_station|nightclub|museum|place_of_worship|school|college|university"](${BB});
-  node["shop"~"supermarket|convenience|bakery|clothes|electronics|hardware|sports|butcher|florist|hairdresser|beauty"](${BB});
-  node["leisure"~"gym|fitness_centre|sports_centre|swimming_pool|golf_course|ice_rink|pitch"](${BB});
-  node["tourism"~"hotel|guest_house|attraction|museum|viewpoint"](${BB});
+  node["amenity"~"pub|bar|cafe|restaurant|fast_food|food_court|pharmacy|hospital|clinic|doctors|dentist|cinema|theatre|library|bank|atm|post_office|fuel|bus_station|nightclub|museum|place_of_worship|school|college|university|community_centre|social_facility|ice_cream"](${BB});
+  node["shop"~"supermarket|convenience|bakery|clothes|electronics|hardware|sports|butcher|florist|hairdresser|beauty|department_store|mall|books|toys|pet|bicycle|optician|jewellery|music|alcohol|garden_centre"](${BB});
+  node["leisure"~"gym|fitness_centre|sports_centre|swimming_pool|golf_course|ice_rink|pitch|bowling_alley|amusement_arcade|escape_game|miniature_golf"](${BB});
+  node["tourism"~"hotel|guest_house|hostel|attraction|museum|viewpoint|theme_park|zoo|aquarium"](${BB});
+  way["amenity"~"pub|bar|cafe|restaurant|fast_food|hospital|cinema|theatre|library|nightclub|museum|school|college|university|community_centre"](${BB});
+  way["shop"~"supermarket|department_store|mall|clothes|electronics|sports"](${BB});
+  way["leisure"~"sports_centre|swimming_pool|golf_course|ice_rink|fitness_centre|stadium|bowling_alley"](${BB});
+  way["tourism"~"hotel|attraction|theme_park"](${BB});
 );
-out body 300;`;
+out center body 400;`;
 
   const r = await fetch('https://overpass-api.de/api/interpreter', {
     method: 'POST',
@@ -1908,18 +1991,24 @@ out body 300;`;
 
   let idCounter = 100000;
   const places = d.elements
-    .filter(e => e.lat && e.lon && (e.tags.name || e.tags.brand))
+    .filter(e => {
+      // nodes need lat/lon directly; ways need center
+      const hasCoords = (e.type==='node' && e.lat && e.lon) || (e.type==='way' && e.center);
+      return hasCoords && (e.tags && (e.tags.name || e.tags.brand));
+    })
     .map(e => {
       const tags = e.tags || {};
       const meta = osmTagToMeta(tags);
       const openStatus = osmIsOpen(tags);
       const name = tags.name || tags.brand || tags['name:en'] || 'Unnamed';
+      const lat = e.type==='way' ? e.center.lat : e.lat;
+      const lng = e.type==='way' ? e.center.lon : e.lon;
       const addr = [tags['addr:housenumber'], tags['addr:street'], tags['addr:postcode']]
                     .filter(Boolean).join(' ') || tags['addr:full'] || '';
       const phone = tags.phone || tags['contact:phone'] || null;
       const website = tags.website || tags['contact:website'] || tags['url'] || null;
-      const desc = tags.description || tags['description:en'] || 
-                   [tags.cuisine && ('Cuisine: '+tags.cuisine), 
+      const desc = tags.description || tags['description:en'] ||
+                   [tags.cuisine && ('Cuisine: '+tags.cuisine),
                     tags.brand && tags.brand !== name && ('Part of '+tags.brand),
                     tags.operator && ('Operated by '+tags.operator)]
                    .filter(Boolean).join('. ') || meta.cat + ' in Milton Keynes.';
@@ -1929,9 +2018,8 @@ out body 300;`;
         category: meta.cat,
         emoji: meta.emoji,
         description: desc,
-        lat: e.lat,
-        lng: e.lon,
-        rating: null,   // OSM has no ratings
+        lat, lng,
+        rating: null,
         reviews: 0,
         open: openStatus,
         phone,
@@ -1943,7 +2031,7 @@ out body 300;`;
       };
     });
 
-  // Deduplicate by proximity (50m) — OSM sometimes has duplicate nodes
+  // Deduplicate by proximity (50m) and name
   const deduped = [];
   for(const p of places) {
     const dup = deduped.some(q => distKm(p.lat,p.lng,q.lat,q.lng) < 0.05 && q.name === p.name);
@@ -2379,50 +2467,6 @@ function isOpenFromHours(hours) {
   const closeMins = parseInt(m[3])*60 + parseInt(m[4]||'0');
   return cur >= openMins && cur < closeMins;
 }
-function getMKPlaces() {
-  const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  const tod=new Date().getDay();
-  const h=new Date().getHours();
-  const isOpen=(open,close)=>h>=open&&h<close; // legacy, not used below
-  return [
-    // Shopping
-    {id:1,name:'thecentre:mk',category:'Shopping',emoji:'🛍️',description:'Main shopping centre with 200+ stores including John Lewis, M&S, Apple and dozens of restaurants.',lat:52.0431,lng:-0.7571,rating:4.1,reviews:1842,open:null,phone:'01908 679800',website:'https://thecentremk.com',hours:{Mon:'9:00–21:00',Tue:'9:00–21:00',Wed:'9:00–21:00',Thu:'9:00–21:00',Fri:'9:00–21:00',Sat:'9:00–21:00',Sun:'11:00–17:00'},address:'Silbury Blvd, MK9 3ES'},
-    {id:2,name:'Midsummer Place',category:'Shopping',emoji:'🛍️',description:'Covered mall with NEXT, H&M, Boots, restaurants and a great food court. Connects to thecentre:mk.',lat:52.0438,lng:-0.7558,rating:4.0,reviews:892,open:null,phone:'01908 661166',website:'https://midsummerplace.co.uk',hours:{Mon:'9:00–20:00',Tue:'9:00–20:00',Wed:'9:00–20:00',Thu:'9:00–20:00',Fri:'9:00–21:00',Sat:'9:00–20:00',Sun:'11:00–17:00'},address:'Midsummer Blvd, MK9 3GB'},
-    // Culture
-    {id:3,name:'MK Gallery',category:'Art & Culture',emoji:'🎨',description:'Contemporary art gallery in the heart of CMK. Free entry Saturdays and for under 16s. Café on site.',lat:52.0423,lng:-0.7588,rating:4.6,reviews:623,open:null,phone:'01908 676900',website:'https://mkgallery.org',hours:{Mon:'Closed',Tue:'10:00–17:00',Wed:'10:00–17:00',Thu:'10:00–17:00',Fri:'10:00–17:00',Sat:'10:00–17:00',Sun:'12:00–17:00'},address:'900 Midsummer Blvd, MK9 3QA'},
-    {id:4,name:'MK Museum',category:'Art & Culture',emoji:'🏛️',description:"Local heritage and history of Milton Keynes from Roman times to the new city. Free entry.",lat:52.0441,lng:-0.7609,rating:4.4,reviews:412,open:null,phone:'01908 676960',website:'https://www.mkmuseum.org.uk',hours:{Mon:'Closed',Tue:'10:00–16:30',Wed:'10:00–16:30',Thu:'10:00–16:30',Fri:'10:00–16:30',Sat:'10:00–16:30',Sun:'Closed'},address:'McConnell Drive, Wolverton, MK12 5EL'},
-    {id:5,name:'Bletchley Park',category:'Art & Culture',emoji:'🏰',description:'Historic home of WWII codebreakers. Museum, tours, replica bombe machines and the story of Alan Turing.',lat:51.9978,lng:-0.7408,rating:4.8,reviews:8921,open:null,phone:'01908 640404',website:'https://bletchleypark.org.uk',hours:{Mon:'9:30–17:00',Tue:'9:30–17:00',Wed:'9:30–17:00',Thu:'9:30–17:00',Fri:'9:30–17:00',Sat:'9:30–17:00',Sun:'9:30–17:00'},address:'The Mansion, Bletchley Park, MK3 6EB'},
-    // Parks
-    {id:6,name:'Campbell Park',category:'Parks & Nature',emoji:'🌳',description:'260-acre park along the Ouzel Valley with sculptures, cycling paths, play areas and stunning views of CMK.',lat:52.0489,lng:-0.7401,rating:4.7,reviews:2341,open:true,phone:null,website:'https://www.theparkstrust.com/parks/campbell-park/',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Campbell Park, MK9'},
-    {id:7,name:'Willen Lake',category:'Parks & Nature',emoji:'💧',description:'North and South lakes with watersports centre, Redway cycling, café, Himalayan garden and peace pagoda.',lat:52.0583,lng:-0.7189,rating:4.6,reviews:3102,open:true,phone:null,website:'https://www.theparkstrust.com/parks/willen-lake/',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Willen Lake, MK15 0DS'},
-    {id:8,name:'Linford Wood',category:'Parks & Nature',emoji:'🌲',description:'Ancient woodland with marked trails, wildlife and picnic areas. Great for dog walking and mountain biking.',lat:52.0672,lng:-0.7601,rating:4.5,reviews:788,open:true,phone:null,website:'https://www.theparkstrust.com',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Linford Wood, MK14'},
-    {id:9,name:'Ouzel Valley Park',category:'Parks & Nature',emoji:'🦆',description:'Riverside park running through the heart of MK. Popular with cyclists, runners and families.',lat:52.0356,lng:-0.7489,rating:4.4,reviews:421,open:true,phone:null,website:'https://www.theparkstrust.com',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Ouzel Valley Park, MK'},
-    // Leisure
-    {id:10,name:'Xscape',category:'Leisure',emoji:'🎿',description:'Indoor ski slope, climbing wall, bowling, cinema, restaurants. One of MK\'s most popular leisure destinations.',lat:52.0045,lng:-0.7349,rating:4.3,reviews:4521,open:null,phone:'01908 736572',website:'https://www.xscape.co.uk/xscape-milton-keynes',hours:{Mon:'10:00–22:00',Tue:'10:00–22:00',Wed:'10:00–22:00',Thu:'10:00–22:00',Fri:'10:00–23:00',Sat:'9:00–23:00',Sun:'10:00–21:00'},address:'602 Marlborough Gate, MK9 2XS'},
-    {id:11,name:'MK Dons — Stadium MK',category:'Leisure',emoji:'⚽',description:'Home of MK Dons FC. 30,717 capacity. Also used for concerts and community events.',lat:52.0009,lng:-0.7331,rating:4.2,reviews:2103,open:false,phone:'01908 622922',website:'https://www.mkdons.com',hours:{Mon:'Office 9–5',Tue:'Office 9–5',Wed:'Office 9–5',Thu:'Office 9–5',Fri:'Office 9–5',Sat:'Match days only',Sun:'Match days only'},address:'Stadium Way West, MK1 1ST'},
-    {id:12,name:'The Stables',category:'Music & Nightlife',emoji:'🎵',description:'Award-winning live music venue in Wavendon. Covers jazz, folk, classical and pop. Consistently sells out.',lat:52.0197,lng:-0.6825,rating:4.8,reviews:891,open:false,phone:'01908 280800',website:'https://stables.org',hours:{Mon:'Closed',Tue:'Closed',Wed:'Box office 12–5pm',Thu:'Box office 12–5pm',Fri:'Box office 12–8pm',Sat:'Box office 12–8pm',Sun:'Box office 12–3pm'},address:'Stockwell Lane, Wavendon MK17 8LU'},
-    {id:13,name:'The Woughton Centre',category:'Leisure',emoji:'🏊',description:'Leisure centre with pool, gym and sports courts. One of MK\'s best-value facilities.',lat:52.0186,lng:-0.7283,rating:3.9,reviews:342,open:null,phone:'01908 667789',website:null,hours:{Mon:'6:30–22:00',Tue:'6:30–22:00',Wed:'6:30–22:00',Thu:'6:30–22:00',Fri:'6:30–22:00',Sat:'7:00–20:00',Sun:'8:00–20:00'},address:'Woughton on the Green, MK6 3EG'},
-    // Food & Drink
-    {id:14,name:'The Barge',category:'Pub & Food',emoji:'🍺',description:'Canalside pub in Cosgrove with waterside seating, great ales and hearty food. Dog friendly.',lat:52.1025,lng:-0.8272,rating:4.5,reviews:614,open:null,phone:'01908 562152',website:null,hours:{Mon:'12:00–23:00',Tue:'12:00–23:00',Wed:'12:00–23:00',Thu:'12:00–23:00',Fri:'12:00–23:00',Sat:'11:00–23:00',Sun:'12:00–22:30'},address:'Cosgrove, MK19 7JE'},
-    {id:15,name:'Nandos CMK',category:'Restaurant',emoji:'🍗',description:'Popular peri-peri chicken chain. Central MK location in The Hub. Often busy on weekends.',lat:52.0429,lng:-0.7567,rating:4.1,reviews:1243,open:null,phone:'01908 691291',website:'https://www.nandos.co.uk',hours:{Mon:'11:30–22:00',Tue:'11:30–22:00',Wed:'11:30–22:00',Thu:'11:30–22:00',Fri:'11:30–23:00',Sat:'11:00–23:00',Sun:'11:30–22:00'},address:'602 Marlborough Gate, CMK, MK9'},
-    {id:16,name:'Turtle Bay CMK',category:'Restaurant',emoji:'🍹',description:'Caribbean restaurant and bar with rum cocktails, jerk chicken and a lively atmosphere.',lat:52.0434,lng:-0.7562,rating:4.3,reviews:876,open:null,phone:'01908 230701',website:'https://www.turtlebay.co.uk',hours:{Mon:'12:00–23:00',Tue:'12:00–23:00',Wed:'12:00–23:00',Thu:'12:00–23:00',Fri:'12:00–00:00',Sat:'12:00–00:00',Sun:'12:00–23:00'},address:'Xscape, Marlborough Gate, MK9'},
-    // Transport
-    {id:17,name:'Milton Keynes Central Station',category:'Transport',emoji:'🚂',description:'Main railway station. Direct trains to London Euston (35 mins), Birmingham New Street, and Liverpool.',lat:52.0341,lng:-0.7717,rating:3.9,reviews:2841,open:true,phone:null,website:'https://www.nationalrail.co.uk/stations/mkc',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Elder Gate, MK9 1LT'},
-    {id:18,name:'CMK Bus Station',category:'Transport',emoji:'🚌',description:'Central Milton Keynes bus interchange. Hub for Arriva, Stagecoach and National Express services.',lat:52.0415,lng:-0.7596,rating:3.2,reviews:421,open:true,phone:null,website:null,hours:{Mon:'5:30–23:00',Tue:'5:30–23:00',Wed:'5:30–23:00',Thu:'5:30–23:00',Fri:'5:30–00:00',Sat:'5:30–00:00',Sun:'7:00–23:00'},address:'Midsummer Blvd, CMK, MK9 3EH'},
-    // Health
-    {id:19,name:'Milton Keynes University Hospital',category:'Health',emoji:'🏥',description:'Main NHS hospital for Milton Keynes. A&E, maternity, cancer centre and specialist care.',lat:52.0205,lng:-0.7331,rating:3.7,reviews:1892,open:true,phone:'01908 660033',website:'https://www.mkuh.nhs.uk',hours:{Mon:'Open 24hrs',Tue:'Open 24hrs',Wed:'Open 24hrs',Thu:'Open 24hrs',Fri:'Open 24hrs',Sat:'Open 24hrs',Sun:'Open 24hrs'},address:'Standing Way, MK6 5LD'},
-    // Education
-    {id:20,name:'The Open University',category:'Education',emoji:'🎓',description:'World-renowned distance learning university headquartered in Walton Hall. Campus open to visitors.',lat:52.0247,lng:-0.7089,rating:4.5,reviews:1102,open:null,phone:'01908 274066',website:'https://www.open.ac.uk',hours:{Mon:'8:00–17:00',Tue:'8:00–17:00',Wed:'8:00–17:00',Thu:'8:00–17:00',Fri:'8:00–17:00',Sat:'Closed',Sun:'Closed'},address:'Walton Hall, MK7 6AA'},
-    {id:21,name:'University of Buckingham',category:'Education',emoji:'🎓',description:'UK\'s only independent university. Small, research-focused campus in Buckingham town centre.',lat:51.9943,lng:-0.9869,rating:4.2,reviews:312,open:null,phone:'01280 814080',website:'https://www.buckingham.ac.uk',hours:{Mon:'8:00–18:00',Tue:'8:00–18:00',Wed:'8:00–18:00',Thu:'8:00–18:00',Fri:'8:00–18:00',Sat:'Closed',Sun:'Closed'},address:'Hunter Street, Buckingham MK18 1EG'},
-    // Community
-    {id:22,name:'The National Bowl',category:'Events Venue',emoji:'🎪',description:'Open-air amphitheatre hosting major concerts and festivals. Famous for huge summer headline events.',lat:52.0065,lng:-0.7445,rating:4.6,reviews:3421,open:false,phone:null,website:null,hours:{Mon:'Event days only',Tue:'Event days only',Wed:'Event days only',Thu:'Event days only',Fri:'Event days only',Sat:'Event days only',Sun:'Event days only'},address:'National Bowl, MK1'},
-    {id:23,name:'Middleton Hall CMK',category:'Community',emoji:'🏢',description:'Community hub in the heart of CMK with events space, café and local services.',lat:52.0420,lng:-0.7580,rating:4.0,reviews:231,open:null,phone:'01908 606060',website:null,hours:{Mon:'9:00–17:00',Tue:'9:00–17:00',Wed:'9:00–17:00',Thu:'9:00–17:00',Fri:'9:00–17:00',Sat:'10:00–16:00',Sun:'Closed'},address:'Middleton Hall, CMK, MK9'},
-    // Cafés
-    {id:24,name:'Coffee Corner CMK',category:'Café',emoji:'☕',description:'Independent coffee shop on Midsummer Boulevard. Known for specialty coffee and home-made cakes.',lat:52.0427,lng:-0.7573,rating:4.7,reviews:445,open:null,phone:null,website:null,hours:{Mon:'7:00–18:00',Tue:'7:00–18:00',Wed:'7:00–18:00',Thu:'7:00–18:00',Fri:'7:00–18:00',Sat:'8:00–17:00',Sun:'9:00–16:00'},address:'Midsummer Blvd, CMK'},
-    {id:25,name:'Patisserie Valerie CMK',category:'Café',emoji:'🥐',description:'French-style café and patisserie. Great breakfasts, cakes and lunches in a stylish setting.',lat:52.0435,lng:-0.7555,rating:4.2,reviews:562,open:null,phone:'01908 605252',website:'https://patisserie-valerie.co.uk',hours:{Mon:'8:00–20:00',Tue:'8:00–20:00',Wed:'8:00–20:00',Thu:'8:00–20:00',Fri:'8:00–20:00',Sat:'8:00–21:00',Sun:'9:00–18:00'},address:'Midsummer Place, MK9'},
-  ].map(p => ({...p, open: p.open !== null ? p.open : isOpenFromHours(p.hours)}));
-}
-
 function renderPlacesSidebar() {
   const body=document.getElementById('sidebarBody');
   const cats=[...new Set(data.places.map(p=>p.category))].filter(Boolean).sort();
@@ -2435,7 +2479,7 @@ function renderPlacesSidebar() {
     places=places.map(p=>({...p,_dist:distKm(userLat,userLng,p.lat,p.lng)})).sort((a,b)=>a._dist-b._dist);
   }
 
-  body.innerHTML=places.map(p=>{
+  body.innerHTML = places.length ? places.map(p=>{
     const openLabel = p.open===true?'Open':p.open===false?'Closed':'Hours unknown';
     const openColor = p.open===true?'var(--green)':p.open===false?'var(--red)':'var(--muted)';
     const ratingHtml = p.rating ? `<span class="stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span><span class="card-meta">${p.rating} · ${p.reviews.toLocaleString()} reviews</span>` : `<span class="card-meta" style="color:var(--muted);font-size:10px">Community data · OSM</span>`;
@@ -2450,7 +2494,7 @@ function renderPlacesSidebar() {
       <div class="card-sub">${(p.description||'').substring(0,80)}${p.description&&p.description.length>80?'...':''}</div>
       <div class="card-footer">${ratingHtml}${distHtml}</div>
     </div>`;
-  }).join('');
+  }).join('') : `<div class="empty"><div class="ei">📍</div><p>Loading places from OpenStreetMap…<br/><span style="color:var(--muted);font-size:10px">This may take a moment on first load.</span></p></div>`;
 }
 
 // Category colour palette for place markers
@@ -2964,7 +3008,7 @@ searchInput.addEventListener('input', () => {
     const raw = searchInput.value.trim();
     const q = raw.toLowerCase();
     if(!q) { searchResults.style.display='none'; return; }
-    if(!data.places.length) data.places=getMKPlaces();
+    if(!data.places.length) { /* places load on demand via Places layer */ }
     if(!data.transport.length) data.transport=getMKBusRoutes();
     if(!data.events.length) data.events=getSampleEvents();
 
@@ -3803,7 +3847,7 @@ function closeNearby() { document.getElementById('nearbyPanel').classList.remove
 
 function renderNearby() {
   const R=0.75; // km radius
-  if(!data.places.length) data.places=getMKPlaces();
+  if(!data.places.length) { /* places not yet loaded — nearby panel will show what's available */ }
   if(!data.events.length) data.events=getSampleEvents();
   if(!data.transport.length) data.transport=getMKBusRoutes();
 
@@ -3851,7 +3895,7 @@ function handleDeepLink() {
   const id = parseInt(params.get('id'));
   if(!view||!id) return;
   setTimeout(()=>{
-    if(view==='place'){data.places=getMKPlaces();showPlaceDetail(id);}
+    if(view==='place'){loadPlaces().then(()=>showPlaceDetail(id));}
     else if(view==='event'){loadEvents().then(()=>showEventDetail(id));}
     else if(view==='issue'){loadIssues().then(()=>showIssueDetail(id));}
   },800);
@@ -4687,6 +4731,8 @@ window.rrLoadRoute=rrLoadRoute;
 window.rrDeleteRoute=rrDeleteRoute;
 window.rrExportGPX=rrExportGPX;
 window.rrExportGPXById=rrExportGPXById;
+window.openMobileNav=openMobileNav;
+window.closeMobileNav=closeMobileNav;
 window.catChipClick=catChipClick;
 window.toggleSatellite=toggleSatellite;
 window.openStreetView=openStreetView;
@@ -4797,6 +4843,21 @@ function initTheme() {
   } else {
     document.getElementById('themeToggle').textContent = '🌤️ Day';
   }
+}
+
+function openMobileNav() {
+  const drawer = document.getElementById('mobileNavDrawer');
+  if(!drawer) return;
+  drawer.style.display = 'block';
+  // Update weather label in drawer
+  const wt = document.getElementById('weatherTemp');
+  const wi = document.getElementById('weatherIcon');
+  const ml = document.getElementById('mobileWeatherLabel');
+  if(ml && wt && wi) ml.textContent = wi.textContent + ' ' + wt.textContent;
+}
+function closeMobileNav() {
+  const drawer = document.getElementById('mobileNavDrawer');
+  if(drawer) drawer.style.display = 'none';
 }
 
 } // end initApp
