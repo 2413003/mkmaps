@@ -352,7 +352,7 @@
     /* ── MAP — fills entire viewport ────────────────────────── */
     .map-wrap{position:fixed;inset:0;overflow:hidden;}
     #map{position:absolute;inset:0;width:100%;height:100%;}
-    .map-hint{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:rgba(32,33,36,.88);backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.1);padding:8px 16px;border-radius:var(--r-xl);font-size:11px;color:#fff;z-index:200;pointer-events:none;white-space:nowrap;transition:opacity .8s;}
+    .map-hint{display:none!important;}
     /* FAB — report button: hidden by default, only shows on Issues layer */
     .fab{position:fixed;bottom:90px;right:14px;z-index:200;background:var(--red);color:white;border:none;width:48px;height:48px;border-radius:50%;font-size:20px;cursor:pointer;box-shadow:0 4px 16px rgba(232,58,47,.4);transition:transform .15s,box-shadow .15s,opacity .2s;display:none;align-items:center;justify-content:center;}
     .fab:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(232,58,47,.5);}
@@ -485,9 +485,9 @@
     .mapboxgl-ctrl-attrib-inner{display:none!important;}
     .mapboxgl-ctrl-attrib.mapboxgl-compact-show .mapboxgl-ctrl-attrib-inner{display:block!important;}
     .mapboxgl-ctrl-attrib-button{opacity:0.5;}
-    .mapboxgl-ctrl-logo{width:80px!important;height:22px!important;background-size:80px 22px!important;opacity:.55!important;margin:0 4px 4px 0!important;}
-    .mapboxgl-ctrl-logo:hover{opacity:.9!important;}
-    .mapboxgl-ctrl-bottom-left{display:flex;flex-direction:row;align-items:flex-end;gap:4px;padding:0 0 8px 8px;}
+    .mapboxgl-ctrl-logo{width:60px!important;height:18px!important;background-size:60px 18px!important;opacity:.3!important;margin:0 3px 3px 0!important;}
+    .mapboxgl-ctrl-logo:hover{opacity:.7!important;}
+    .mapboxgl-ctrl-bottom-left{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:0 0 6px 8px;}
     .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl{margin:0!important;}
     .p-cat{font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
     .p-title{font-size:13px;font-weight:500;margin-bottom:3px;}
@@ -497,10 +497,10 @@
     .p-btn:hover{border-color:var(--red);color:var(--red);}
 
     /* ── SATELLITE / USER ─────────────────────────────────────── */
-    .sat-toggle{position:fixed;bottom:110px;left:12px;z-index:300;width:60px;height:44px;border-radius:var(--r-sm);overflow:hidden;cursor:pointer;border:2px solid rgba(255,255,255,.9);box-shadow:var(--shadow-md);transition:all .15s;}
+    .sat-toggle{position:fixed;bottom:32px;left:8px;z-index:300;width:46px;height:34px;border-radius:var(--r-sm);overflow:hidden;cursor:pointer;border:1.5px solid rgba(255,255,255,.85);box-shadow:0 1px 5px rgba(0,0,0,0.25);transition:all .15s;}
     .sat-toggle:hover{border-color:white;transform:scale(1.04);}
     .sat-toggle img{width:100%;height:100%;object-fit:cover;display:block;}
-    .sat-toggle-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.6);color:white;font-size:8px;text-align:center;padding:2px 0;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.5px;}
+    .sat-toggle-label{position:absolute;bottom:0;left:0;right:0;background:rgba(0,0,0,.55);color:white;font-size:7px;text-align:center;padding:1px 0;font-family:'DM Mono',monospace;text-transform:uppercase;letter-spacing:.4px;}
     .sat-toggle.active{border-color:#1a73e8;}
     .near-me-btn{position:fixed;bottom:84px;right:20px;z-index:200;background:var(--panel);border:1px solid var(--border);color:var(--text);width:44px;height:44px;border-radius:50%;font-size:18px;cursor:pointer;box-shadow:var(--shadow-md);display:flex;align-items:center;justify-content:center;transition:all .15s;}
     .near-me-btn:hover{border-color:#1a73e8;color:#1a73e8;}
@@ -696,10 +696,9 @@
       .search-wrap{max-width:none;}
       /* FAB sits above mobile sheet peek (88px) */
       .fab{bottom:104px;}
-      .sat-toggle{bottom:108px;}
-      .map-hint{bottom:104px;}
+      .sat-toggle{bottom:32px;left:8px;}
       .mapboxgl-ctrl-bottom-right{bottom:94px!important;}
-      .mapboxgl-ctrl-bottom-left{bottom:94px!important;}
+      .mapboxgl-ctrl-bottom-left{bottom:8px!important;}
       .header-top{padding:6px 10px;}
       .layer-row{padding:6px 8px 8px;gap:4px;}
       .layer-chip{padding:6px 11px;font-size:10px;box-shadow:0 1px 4px rgba(0,0,0,.14);}
@@ -1091,15 +1090,15 @@
       </div>
     </div>
   </div>
-  <!-- Layer chips row — float over map. Roadworks & Photos moved to burger menu. -->
+  <!-- Layer chips row — only MK-unique features shown here -->
   <div class="layer-row" id="layerRow">
-    <button class="layer-chip issues" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
-    <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
     <button class="layer-chip events" id="chip-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
-    <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
     <button class="layer-chip parking" id="chip-parking" onclick="setLayer('parking',this)"><span class="layer-dot"></span>Parking</button>
     <button class="layer-chip redways" id="chip-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
     <!-- Hidden stubs — IDs used by JS but chips not shown in row -->
+    <button class="layer-chip issues" id="chip-issues" onclick="setLayer('issues',this)" style="display:none"></button>
+    <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)" style="display:none"></button>
+    <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)" style="display:none"></button>
     <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)" style="display:none"></button>
     <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)" style="display:none"></button>
   </div>
@@ -1121,6 +1120,9 @@
     <button class="app-menu-item" onclick="closeAppMenu();rrToggle()">🛤️ Redway Routes</button>
     <div class="app-menu-divider"></div>
     <div class="app-menu-section-label">Layers</div>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('issues',document.getElementById('chip-issues'))">⚠️ Report an Issue</button>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('transport',document.getElementById('chip-transport'))">🚌 Public Transport</button>
+    <button class="app-menu-item" onclick="closeAppMenu();setLayer('places',document.getElementById('chip-places'))">📍 Places</button>
     <button class="app-menu-item" onclick="closeAppMenu();setLayer('roadworks',document.getElementById('chip-roadworks'))">🚧 Roadworks</button>
     <button class="app-menu-item" onclick="closeAppMenu();togglePhotoLayer(document.getElementById('chip-photos'))">📷 Community Photos</button>
     <div class="app-menu-divider"></div>
@@ -1732,7 +1734,7 @@ map.addControl(new mapboxgl.ScaleControl({maxWidth:120,unit:'metric'}),'bottom-l
 geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords.longitude); }catch(err){} });
 
 // State
-let activeLayer = 'issues';
+let activeLayer = 'none';
 let data = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
 let markers = {issues:[],transport:[],events:[],places:[],parking:[],roadworks:[]};
 let pendingMarker = null, pendingLat = null, pendingLng = null;
@@ -3157,42 +3159,65 @@ let _parkingLaneCacheTime = 0;
 const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
 
 async function loadParkingLaneLayer() {
-  // ── STEP 1: Base road overlay using Mapbox vector tiles ──────────
-  // Covers the ENTIRE MK road network (except motorways/trunk/primary which
-  // you can't park on anyway) in neutral grey = "no specific data yet".
-  // The OSM data layer sits on top and overrides with real colours where available.
-  const EXCLUDED_HW_CLASSES = ['motorway','motorway_link','trunk','trunk_link',
-                                'primary','primary_link','path','pedestrian',
-                                'golf','ferry','aerialway'];
+  // ── STEP 1: Base road overlay using Mapbox vector tiles ──────────────────────
+  // Covers the ENTIRE MK road network instantly (no API call).
+  // Residential/service/living_street = green (parking almost always free in MK)
+  // Secondary/tertiary = amber (may have restrictions)
+  // Motorway/trunk/primary = excluded (you can't park on them)
+  // This gives the map immediate visual coverage, OSM data overrides where available.
+  const EXCL_CLASSES = ['motorway','motorway_link','trunk','trunk_link',
+                         'primary','primary_link','path','pedestrian',
+                         'golf','ferry','aerialway'];
+
   if(!map.getLayer('parking-road-base')) {
     try {
+      // Green base for residential/service/living streets
       map.addLayer({
-        id:'parking-road-base',
-        type:'line',
-        source:'composite',
-        'source-layer':'road',
-        filter:['!',['match',['get','class'], EXCLUDED_HW_CLASSES, true, false]],
-        layout:{'line-join':'round','line-cap':'round'},
-        paint:{
-          'line-color':'#94a3b8',
-          'line-width':['interpolate',['linear'],['zoom'],11,1,14,3,17,5],
-          'line-opacity':0.55
+        id: 'parking-road-base-free',
+        type: 'line',
+        source: 'composite',
+        'source-layer': 'road',
+        filter: ['match', ['get','class'],
+          ['residential','living_street','service','track','unclassified'], true, false],
+        layout: {'line-join':'round','line-cap':'round'},
+        paint: {
+          'line-color': '#22c55e',
+          'line-width': ['interpolate',['linear'],['zoom'], 11,1, 14,2.5, 17,5],
+          'line-opacity': 0.55
         }
-      },'road-label');
+      }, 'road-label');
+      // Amber base for secondary/tertiary (more likely to have restrictions)
+      map.addLayer({
+        id: 'parking-road-base',
+        type: 'line',
+        source: 'composite',
+        'source-layer': 'road',
+        filter: ['match', ['get','class'],
+          ['secondary','secondary_link','tertiary','tertiary_link'], true, false],
+        layout: {'line-join':'round','line-cap':'round'},
+        paint: {
+          'line-color': '#f59e0b',
+          'line-width': ['interpolate',['linear'],['zoom'], 11,1, 14,2, 17,4],
+          'line-opacity': 0.45
+        }
+      }, 'road-label');
     } catch(_) {}
   }
-  map.setLayoutProperty('parking-road-base','visibility','visible');
+  try {
+    map.setLayoutProperty('parking-road-base-free','visibility','visible');
+    map.setLayoutProperty('parking-road-base','visibility','visible');
+  } catch(_) {}
 
-  // Return early if OSM layer already loaded and fresh
+  // Return early if OSM override layer already loaded and fresh
   if(map.getLayer('parking-lanes') && _parkingLaneCache && (Date.now()-_parkingLaneCacheTime) < PARKING_LANE_TTL) {
     map.setLayoutProperty('parking-lanes','visibility','visible');
     return;
   }
-  // If source exists but is stale, keep it visible while we refetch
   if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','visible');
 
-  // ── STEP 2: Fetch OSM parking tag data ───────────────────────────
-  // Exclude motorway/trunk/primary from the query itself so they never appear
+  // ── STEP 2: Fetch OSM parking tag data for explicit overrides ────────────────
+  // These roads have been explicitly tagged with parking rules — they override the base.
+  // Motorway/trunk/primary excluded so they never appear.
   const bbox = '51.90,-0.95,52.15,-0.55';
   const query = `[out:json][timeout:90];
 (
@@ -3222,12 +3247,12 @@ out geom tags qt;`;
 
   // Convert to GeoJSON FeatureCollection
   const features = [];
-  const EXCL_HW = new Set(['motorway','motorway_link','trunk','trunk_link','primary','primary_link']);
+  const _EXCL_HW = new Set(['motorway','motorway_link','trunk','trunk_link','primary','primary_link']);
   for(const way of d.elements) {
     if(!way.geometry || way.geometry.length < 2) continue;
     const t = way.tags || {};
-    // Skip roads you can't park on — the base layer already hides these
-    if(t.highway && EXCL_HW.has(t.highway)) continue;
+    // Skip roads you can't park on
+    if(t.highway && _EXCL_HW.has(t.highway)) continue;
     const coords = way.geometry.map(p=>[p.lon,p.lat]);
 
     // Parse parking status for left and right sides
@@ -3375,6 +3400,7 @@ function hideParkingLaneLayer() {
     if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','none');
     if(map.getLayer('parking-lanes-hit')) map.setLayoutProperty('parking-lanes-hit','visibility','none');
     if(map.getLayer('parking-road-base')) map.setLayoutProperty('parking-road-base','visibility','none');
+    if(map.getLayer('parking-road-base-free')) map.setLayoutProperty('parking-road-base-free','visibility','none');
   } catch(_) {}
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
@@ -3382,31 +3408,33 @@ function hideParkingLaneLayer() {
 
 // Re-add parking lane layers after style change
 map.on('style.load', () => {
-  // Re-add base road overlay (uses composite source, must be re-added after style reload)
-  if(activeLayer === 'parking') {
+  if(activeLayer !== 'parking') return;
+  setTimeout(() => {
     try {
+      // Re-add base road coverage layers (use composite source, must recreate after style load)
       const EXCL = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link','path','pedestrian','golf','ferry','aerialway'];
-      if(!map.getLayer('parking-road-base')) {
-        map.addLayer({id:'parking-road-base',type:'line',source:'composite','source-layer':'road',
-          filter:['!',['match',['get','class'],EXCL,true,false]],
+      if(!map.getLayer('parking-road-base-free')) {
+        map.addLayer({id:'parking-road-base-free',type:'line',source:'composite','source-layer':'road',
+          filter:['match',['get','class'],['residential','living_street','service','track','unclassified'],true,false],
           layout:{'line-join':'round','line-cap':'round'},
-          paint:{'line-color':'#94a3b8','line-width':['interpolate',['linear'],['zoom'],11,1,14,3,17,5],'line-opacity':0.55}
+          paint:{'line-color':'#22c55e','line-width':['interpolate',['linear'],['zoom'],11,1,14,2.5,17,5],'line-opacity':0.55}
         },'road-label');
       }
+      if(!map.getLayer('parking-road-base')) {
+        map.addLayer({id:'parking-road-base',type:'line',source:'composite','source-layer':'road',
+          filter:['match',['get','class'],['secondary','secondary_link','tertiary','tertiary_link'],true,false],
+          layout:{'line-join':'round','line-cap':'round'},
+          paint:{'line-color':'#f59e0b','line-width':['interpolate',['linear'],['zoom'],11,1,14,2,17,4],'line-opacity':0.45}
+        },'road-label');
+      }
+      // Re-add OSM override layer if cached
+      if(_parkingLaneCache && !map.getSource('parking-lanes')) {
+        map.addSource('parking-lanes',{type:'geojson',data:_parkingLaneCache});
+        map.addLayer({id:'parking-lanes-hit',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':16,'line-opacity':0,'line-color':'#000'}});
+        map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],'line-opacity':0.9,'line-color':['match',['get','status'],'free','#22c55e','limited','#f59e0b','permit','#8b5cf6','none','#ef4444','#94a3b8']}});
+      }
     } catch(_) {}
-  }
-  if(_parkingLaneCache) {
-    // Re-add source and layers after style reload
-    setTimeout(() => {
-      try {
-        if(!map.getSource('parking-lanes')) {
-          map.addSource('parking-lanes',{type:'geojson',data:_parkingLaneCache});
-          map.addLayer({id:'parking-lanes-hit',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':16,'line-opacity':0,'line-color':'#000'}});
-          map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],'line-opacity':0.85,'line-color':['match',['get','status'],'free','#22c55e','limited','#f59e0b','permit','#8b5cf6','none','#ef4444','#94a3b8']}});
-        }
-      } catch(_) {}
-    }, 300);
-  }
+  }, 300);
 });
 
 // Parking cache — avoids refetching on every tap
@@ -7734,17 +7762,7 @@ map.on('load',()=>{
   const sb2 = document.getElementById('sidebar');
   if(sb2) sb2.classList.add('collapsed');
 
-  // Auto-load place markers in the background so the map shows POIs immediately
-  setTimeout(async () => {
-    try {
-      const osm = await fetchOSMPlaces();
-      if(osm && osm.length > 0 && activeLayer !== 'places') {
-        data.places = osm;
-        renderPlaceMarkers();
-        setTimeout(prewarmPlacePhotos, 1000);
-      }
-    } catch(e) { /* silent */ }
-  }, 1500);
+  // Places markers are only loaded when explicitly switching to Places layer (via burger menu)
 
   // Pre-fetch Redways GeoJSON in the background so first toggle is instant
   setTimeout(async () => {
