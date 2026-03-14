@@ -1710,31 +1710,146 @@ function showTransportDetail(id) {
 }
 
 // ── EVENTS ───────────────────────────────────────────────────────
-async function loadEvents() {
+const TM_KEY = 'jQcZcdi5PfGXdChjAf5rVZgWAbhzZCvH';
+const MK_LAT = 52.0406, MK_LNG = -0.7594;
+let eventsFromTM = false;
+
+async function fetchTicketmasterEvents() {
   try {
-    let d=await db.get('events').catch(()=>[]);
-    if(!Array.isArray(d)||!d.length) d=getSampleEvents();
-    data.events=d;
+    // Fetch up to 50 events within 15 miles of MK centre, next 90 days
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 90);
+    const endStr = endDate.toISOString().split('.')[0] + 'Z';
+    const url = `https://app.ticketmaster.com/discovery/v2/events.json`
+      + `?apikey=${TM_KEY}`
+      + `&latlong=${MK_LAT},${MK_LNG}`
+      + `&radius=15&unit=miles`
+      + `&countryCode=GB`
+      + `&size=50`
+      + `&sort=date,asc`
+      + `&endDateTime=${encodeURIComponent(endStr)}`;
+    const r = await fetch(url);
+    if (!r.ok) return [];
+    const d = await r.json();
+    const events = d?._embedded?.events || [];
+    let idCounter = 200000;
+    return events.map(e => {
+      // Classification → our category
+      const seg = e.classifications?.[0]?.segment?.name || '';
+      const genre = e.classifications?.[0]?.genre?.name || '';
+      const cat = tmCat(seg, genre);
+      // Venue coords
+      const venue = e._embedded?.venues?.[0];
+      const lat = parseFloat(venue?.location?.latitude) || null;
+      const lng = parseFloat(venue?.location?.longitude) || null;
+      const venueName = venue?.name || 'Milton Keynes';
+      // Date/time
+      const date = e.dates?.start?.localDate || '';
+      const time = e.dates?.start?.localTime?.substring(0,5) || '';
+      // Price
+      const price = e.priceRanges?.[0];
+      const free = price ? price.min === 0 : false;
+      const priceStr = price ? (price.min === 0 ? 'Free' : `From £${price.min.toFixed(0)}`) : null;
+      // Image — prefer 4:3 ratio at ~300px wide
+      const img = e.images?.find(i => i.ratio === '4_3' && i.width > 200)
+               || e.images?.find(i => i.width > 200)
+               || e.images?.[0];
+      return {
+        id: idCounter++,
+        title: e.name,
+        description: e.info || e.pleaseNote || '',
+        category: cat,
+        date,
+        time,
+        venue: venueName,
+        latitude: lat,
+        longitude: lng,
+        free,
+        priceStr,
+        ticketUrl: e.url || null,
+        imageUrl: img?.url || null,
+        source: 'ticketmaster',
+        tm_id: e.id,
+        created_at: new Date().toISOString(),
+      };
+    }).filter(e => e.latitude && e.longitude); // drop events with no coords
+  } catch(err) {
+    console.warn('Ticketmaster fetch failed:', err);
+    return [];
+  }
+}
+
+function tmCat(segment, genre) {
+  const s = (segment + ' ' + genre).toLowerCase();
+  if (s.includes('sport') || s.includes('football') || s.includes('rugby') || s.includes('cricket')) return 'Sports';
+  if (s.includes('music') || s.includes('concert') || s.includes('festival') || s.includes('jazz') || s.includes('classical') || s.includes('rock') || s.includes('pop')) return 'Music';
+  if (s.includes('art') || s.includes('theatre') || s.includes('comedy') || s.includes('dance') || s.includes('film') || s.includes('exhibit')) return 'Arts';
+  if (s.includes('family') || s.includes('children') || s.includes('kids')) return 'Family';
+  if (s.includes('food') || s.includes('dining') || s.includes('drink')) return 'Food';
+  if (s.includes('community') || s.includes('charity') || s.includes('fair')) return 'Community';
+  return 'Entertainment';
+}
+
+async function loadEvents() {
+  showSkeletons(3);
+  try {
+    // Fetch both sources in parallel
+    const [tmEvents, communityRaw] = await Promise.allSettled([
+      fetchTicketmasterEvents(),
+      db.get('events').catch(() => [])
+    ]);
+
+    const tm = tmEvents.status === 'fulfilled' ? (tmEvents.value || []) : [];
+    const community = (communityRaw.status === 'fulfilled' && Array.isArray(communityRaw.value))
+      ? communityRaw.value : [];
+
+    eventsFromTM = tm.length > 0;
+
+    // Merge: community events first (user-submitted), then TM, deduplicate by title proximity
+    const merged = [...community];
+    tm.forEach(te => {
+      const dup = merged.some(ce =>
+        ce.title?.toLowerCase() === te.title?.toLowerCase() ||
+        (ce.date === te.date && distKm(ce.latitude||0, ce.longitude||0, te.latitude, te.longitude) < 0.2)
+      );
+      if (!dup) merged.push(te);
+    });
+
+    // Sort by date ascending
+    merged.sort((a,b) => new Date(a.date) - new Date(b.date));
+    data.events = merged;
+
     renderEventsSidebar();
     renderEventMarkers();
     renderLocalIntel();
-    document.getElementById('sidebarTitle').textContent="What's On";
-    document.getElementById('sidebarCount').textContent=data.events.length;
-    document.getElementById('s1').textContent=data.events.length;
-    document.getElementById('s2').textContent=data.events.filter(e=>isToday(e.date)).length+' today';
-    document.getElementById('s3').textContent=data.events.filter(e=>e.free).length+' free';
-  } catch(e){console.error(e);}
-}
 
-function getSampleEvents() {
-  return [
-    {id:1,title:'Campbell Park Parkrun',description:'Free 5km run every Saturday morning. All abilities welcome. Register once at parkrun.org.uk.',category:'Sports',date:getNextDay(6),time:'09:00',venue:'Campbell Park',latitude:52.0489,longitude:-0.7401,free:true,created_at:new Date().toISOString()},
-    {id:2,title:'MK Dons vs Charlton Athletic',description:'Sky Bet League One fixture. Arrive early — car parks fill up fast.',category:'Sports',date:getNextDay(6),time:'15:00',venue:'Stadium MK',latitude:52.0009,longitude:-0.7331,free:false,created_at:new Date().toISOString()},
-    {id:3,title:'MK Gallery: Open Exhibition',description:'Contemporary art gallery. Free entry on Saturdays and for under 16s.',category:'Arts',date:new Date().toISOString().split('T')[0],time:'10:00',venue:'MK Gallery, CMK',latitude:52.0423,longitude:-0.7588,free:true,created_at:new Date().toISOString()},
-    {id:4,title:'CMK Saturday Market',description:'Weekly market with local produce, street food, artisan crafts and more.',category:'Market',date:getNextDay(6),time:'08:00',venue:'Midsummer Place',latitude:52.0431,longitude:-0.7571,free:true,created_at:new Date().toISOString()},
-    {id:5,title:'The Stables: Live Jazz Evening',description:'Intimate jazz performance in the studio space. Book in advance — sells out.',category:'Music',date:getNextDay(5),time:'19:30',venue:'The Stables, Wavendon',latitude:52.0197,longitude:-0.6825,free:false,created_at:new Date().toISOString()},
-    {id:6,title:'Willen Lake Triathlon',description:'Open water swim, cycle and run around Willen Lake. All abilities welcome.',category:'Sports',date:getNextDay(0),time:'07:30',venue:'Willen Lake',latitude:52.0583,longitude:-0.7189,free:false,created_at:new Date().toISOString()},
-  ];
+    const todayCount = data.events.filter(e => isToday(e.date)).length;
+    const freeCount = data.events.filter(e => e.free).length;
+    document.getElementById('sidebarTitle').textContent = "What's On";
+    document.getElementById('sidebarCount').textContent = data.events.length;
+    document.getElementById('s1').textContent = data.events.length;
+    document.getElementById('s2').textContent = todayCount + ' today';
+    document.getElementById('s3').textContent = freeCount + ' free';
+
+    // Trust bar — reuse issuesTrustBar pattern via a shared element
+    const trustEl = document.getElementById('issuesTrustBar');
+    if (trustEl && activeLayer === 'events') {
+      if (eventsFromTM) {
+        trustEl.innerHTML = `<span style="color:var(--green)">● Live</span> · Ticketmaster · ${tm.length} events loaded`;
+        trustEl.style.display = 'block';
+      } else if (community.length) {
+        trustEl.innerHTML = `<span style="color:var(--amber)">○</span> Community events only · Ticketmaster unavailable`;
+        trustEl.style.display = 'block';
+      } else {
+        trustEl.innerHTML = `<span style="color:var(--amber)">○ No events found</span> · Check back soon`;
+        trustEl.style.display = 'block';
+      }
+    }
+  } catch(e) {
+    console.error('loadEvents failed:', e);
+    data.events = [];
+    renderEventsSidebar();
+  }
 }
 
 function getNextDay(day){const d=new Date();d.setDate(d.getDate()+(day-d.getDay()+7)%7||7);return d.toISOString().split('T')[0];}
@@ -1749,22 +1864,32 @@ function renderEventsSidebar() {
   const f=activeFilters['events'];
   if(f) events=events.filter(e=>e.category===f);
   if(activeSort==='near'&&userLat) {
-    events=events.map(e=>({...e,_dist:distKm(userLat,userLng,e.latitude,e.longitude)})).sort((a,b)=>a._dist-b._dist);
+    events=events.map(e=>({...e,_dist:distKm(userLat,userLng,e.latitude||MK_LAT,e.longitude||MK_LNG)})).sort((a,b)=>a._dist-b._dist);
   }
 
-  body.innerHTML=events.map(e=>`
+  if(!events.length) {
+    body.innerHTML=`<div class="empty"><div class="ei">📅</div><p>No events found${f?' for '+f:''} right now.<br/><span style="color:var(--muted)">Tap + to add one, or check back soon.</span></p></div>`;
+    return;
+  }
+
+  body.innerHTML=events.map(e=>{
+    const priceLabel = e.free ? '🆓 Free' : (e.priceStr ? `🎟️ ${e.priceStr}` : '🎟️ Ticketed');
+    const srcBadge = e.source==='ticketmaster' ? `<span style="font-size:9px;color:var(--muted2);margin-left:auto">TM</span>` : '';
+    return `
     <div class="card" onclick="showEventDetail(${e.id})">
       <div class="card-top">
         <span class="card-tag" style="background:rgba(245,166,35,0.12);color:var(--amber)">${evEmoji(e.category)} ${e.category}</span>
         <span class="card-time">${fmtDate(e.date)}</span>
       </div>
-      <div class="card-title">${e.title}</div>
-      <div class="card-sub">${e.venue}${e.time?' · '+e.time:''}</div>
+      <div class="card-title">${escHtml(e.title)}</div>
+      <div class="card-sub">${escHtml(e.venue)}${e.time?' · '+e.time:''}</div>
       <div class="card-footer">
-        <span class="card-meta">${e.free?'🆓 Free':'🎟️ Ticketed'}</span>
+        <span class="card-meta">${priceLabel}</span>
         ${e._dist!==undefined?`<span class="card-dist">📍 ${fmtDist(e._dist)}</span>`:''}
+        ${srcBadge}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 function renderEventMarkers() {
@@ -1783,24 +1908,32 @@ function showEventDetail(id) {
   const e=data.events.find(x=>x.id===id);
   if(!e) return;
   updateURL('event',id);
-  flyTo(e.longitude,e.latitude);
+  if(e.longitude && e.latitude) flyTo(e.longitude,e.latitude);
+  const priceLabel = e.free ? '🆓 Free entry' : (e.priceStr ? `🎟️ ${e.priceStr}` : '🎟️ Ticketed');
+  const heroImg = e.imageUrl
+    ? `<img src="${e.imageUrl}" alt="${escHtml(e.title)}" style="width:100%;height:140px;object-fit:cover;border-radius:10px;margin-bottom:12px;display:block;">`
+    : '';
   document.getElementById('detailScroll').innerHTML=`
-    <div class="place-hero">
+    ${heroImg}
+    <div class="place-hero" style="${heroImg?'margin-top:0':''}">
       <div class="place-icon-big" style="background:rgba(245,166,35,0.12)">${evEmoji(e.category)}</div>
       <div style="flex:1">
-        <div class="place-name" style="font-size:16px">${e.title}</div>
-        <div class="place-cat">${e.category} · ${e.venue}</div>
-        <span class="open-badge open">${e.free?'🆓 Free entry':'🎟️ Ticketed'}</span>
+        <div class="place-name" style="font-size:16px">${escHtml(e.title)}</div>
+        <div class="place-cat">${e.category} · ${escHtml(e.venue)}</div>
+        <span class="open-badge open">${priceLabel}</span>
       </div>
     </div>
     <div class="action-row">
-      <button class="action-btn" onclick="flyTo(${e.longitude},${e.latitude})">
+      ${e.longitude && e.latitude ? `<button class="action-btn" onclick="flyTo(${e.longitude},${e.latitude})">
         <span class="action-btn-icon">📍</span><span class="action-btn-label">View on map</span>
-      </button>
-      <a class="action-btn" href="https://www.google.com/maps/dir/?api=1&destination=${e.latitude},${e.longitude}" target="_blank">
+      </button>` : ''}
+      ${e.longitude && e.latitude ? `<a class="action-btn" href="https://www.google.com/maps/dir/?api=1&destination=${e.latitude},${e.longitude}" target="_blank">
         <span class="action-btn-icon">🚗</span><span class="action-btn-label">Directions</span>
-      </a>
-      <button class="action-btn" onclick="shareEvent('${e.title}',${e.id})">
+      </a>` : ''}
+      ${e.ticketUrl ? `<a class="action-btn" href="${escHtml(e.ticketUrl)}" target="_blank" rel="noopener">
+        <span class="action-btn-icon">🎟️</span><span class="action-btn-label">Get tickets</span>
+      </a>` : ''}
+      <button class="action-btn" onclick="shareEvent('${escJs(e.title)}',${e.id})">
         <span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span>
       </button>
     </div>
@@ -1808,14 +1941,15 @@ function showEventDetail(id) {
       <div class="detail-section-title">Details</div>
       <div style="font-size:12px;line-height:1.8">
         <div style="margin-bottom:6px">📅 <strong>${fmtDate(e.date)}</strong>${e.time?' at '+e.time:''}</div>
-        <div style="margin-bottom:6px">📍 ${e.venue}</div>
-        ${e.description?`<div style="color:var(--muted);margin-top:8px;line-height:1.7">${e.description}</div>`:''}
+        <div style="margin-bottom:6px">📍 ${escHtml(e.venue)}</div>
+        ${e.description?`<div style="color:var(--muted);margin-top:8px;line-height:1.7">${escHtml(e.description)}</div>`:''}
       </div>
-    </div>`;
+    </div>
+    ${e.source==='ticketmaster'?`<div style="font-size:10px;color:var(--muted2);padding:8px 0 4px;text-align:right">via Ticketmaster</div>`:''}`;
   openDetail();
 }
 
-function evEmoji(c){return{Sports:'⚽',Arts:'🎨',Music:'🎵',Market:'🛍️',Food:'🍕',Community:'👥',Leisure:'🎿'}[c]||'📅';}
+function evEmoji(c){return{Sports:'⚽',Arts:'🎨',Music:'🎵',Market:'🛍️',Food:'🍕',Community:'👥',Leisure:'🎿',Family:'👨‍👩‍👧',Entertainment:'🎪'}[c]||'📅';}
 
 // ── PLACES ───────────────────────────────────────────────────────
 async function loadPlaces() {
@@ -3010,7 +3144,7 @@ searchInput.addEventListener('input', () => {
     if(!q) { searchResults.style.display='none'; return; }
     if(!data.places.length) { /* places load on demand via Places layer */ }
     if(!data.transport.length) data.transport=getMKBusRoutes();
-    if(!data.events.length) data.events=getSampleEvents();
+    if(!data.events.length) { /* events load on demand via What's On layer */ }
 
     const isPostcode = UK_POSTCODE_RE.test(raw.trim());
 
@@ -3848,7 +3982,7 @@ function closeNearby() { document.getElementById('nearbyPanel').classList.remove
 function renderNearby() {
   const R=0.75; // km radius
   if(!data.places.length) { /* places not yet loaded — nearby panel will show what's available */ }
-  if(!data.events.length) data.events=getSampleEvents();
+  if(!data.events.length) { /* events load on demand */ }
   if(!data.transport.length) data.transport=getMKBusRoutes();
 
   const nearPlaces=data.places.map(p=>({...p,_d:distKm(userLat,userLng,p.lat,p.lng)})).filter(p=>p._d<=R*2).sort((a,b)=>a._d-b._d).slice(0,6);
