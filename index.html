@@ -159,8 +159,12 @@
     .main{display:flex;flex:1;overflow:hidden;position:relative;}
 
     /* ── SIDEBAR ─────────────────────────────────────────────── */
-    .sidebar{position:absolute;top:8px;left:12px;bottom:12px;width:340px;flex-shrink:0;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;z-index:1500;transition:transform .25s cubic-bezier(.4,0,.2,1),opacity .2s;box-shadow:var(--shadow-lg);}
+    .sidebar{position:absolute;top:8px;left:12px;bottom:12px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);display:flex;flex-direction:column;overflow:hidden;z-index:1500;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;box-shadow:var(--shadow-lg);}
     .sidebar.collapsed{transform:translateX(calc(-340px - 20px));opacity:0;pointer-events:none;}
+    @media(max-width:700px){
+      .sidebar{top:auto;left:0;right:0;bottom:0;width:100%;border-radius:var(--r-lg) var(--r-lg) 0 0;border:none;border-top:1px solid var(--border);max-height:58vh;transform:translateY(0);opacity:1;z-index:600;transition:transform .32s cubic-bezier(.34,1.1,.64,1);}
+      .sidebar.collapsed{transform:translateY(100%);opacity:1;pointer-events:none;}
+    }
     .sidebar-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .sidebar-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;letter-spacing:-.3px;}
     .sidebar-count{font-size:10px;color:var(--muted);background:var(--panel2);padding:2px 8px;border-radius:10px;border:1px solid var(--border);}
@@ -232,8 +236,12 @@
     .fab:hover{transform:scale(1.06);box-shadow:0 6px 20px rgba(232,58,47,.5);}
 
     /* ── DETAIL PANEL ────────────────────────────────────────── */
-    .detail-panel{will-change:transform;position:absolute;top:8px;left:12px;bottom:12px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);z-index:2000;transform:translateX(calc(-340px - 20px));opacity:0;transition:transform .3s cubic-bezier(.4,0,.2,1),opacity .2s;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;}
+    .detail-panel{will-change:transform;position:absolute;top:8px;left:364px;bottom:12px;width:340px;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);z-index:2000;transform:translateX(calc(-380px));opacity:0;transition:transform .3s cubic-bezier(.34,1.26,.64,1),opacity .22s;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;}
     .detail-panel.open{transform:translateX(0);opacity:1;}
+    @media(max-width:700px){
+      .detail-panel{top:auto;left:0;right:0;bottom:0;width:100%;border-radius:var(--r-lg) var(--r-lg) 0 0;border:none;border-top:1px solid var(--border);max-height:75vh;transform:translateY(100%);opacity:1;z-index:700;transition:transform .32s cubic-bezier(.34,1.1,.64,1);}
+      .detail-panel.open{transform:translateY(0);}
+    }
     .detail-drag{display:none;}
     .detail-handle{display:none;}
     .detail-close{position:absolute;top:12px;right:12px;background:rgba(0,0,0,.06);border:none;color:var(--muted);width:32px;height:32px;border-radius:50%;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:10;flex-shrink:0;transition:background .15s;backdrop-filter:blur(4px);}
@@ -825,6 +833,43 @@
 
     /* ── SEARCH PIN ──────────────────────────────────────────── */
     .search-pin{width:18px;height:18px;background:white;border-radius:50%;border:3px solid #1a73e8;box-shadow:0 2px 8px rgba(26,115,232,.4);}
+
+    /* ── MOBILE BOTTOM SHEET DRAG HANDLE ──────────────────────── */
+    .sidebar-drag-handle{display:none;padding:10px;text-align:center;cursor:pointer;touch-action:none;flex-shrink:0;}
+    .sidebar-handle-bar{width:40px;height:4px;background:var(--border);border-radius:2px;display:inline-block;}
+    @media(max-width:700px){.sidebar-drag-handle{display:block;}}
+
+    /* ── FLOATING DIRECTIONS PILL ────────────────────────────── */
+    .dir-pill{position:absolute;bottom:90px;left:50%;transform:translateX(-50%);z-index:600;background:#1a73e8;color:white;border:none;border-radius:var(--r-xl);padding:12px 24px;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px rgba(26,115,232,.45);display:none;align-items:center;gap:8px;transition:all .2s cubic-bezier(.34,1.26,.64,1);white-space:nowrap;}
+    .dir-pill.show{display:flex;}
+    .dir-pill:hover{transform:translateX(-50%) scale(1.03);box-shadow:0 6px 24px rgba(26,115,232,.55);}
+    body:not(.theme-day) .dir-pill{background:#1a56b0;}
+    @media(max-width:700px){.dir-pill{bottom:175px;}}
+
+    /* ── ROUTE NAVIGATION BANNER ─────────────────────────────── */
+    .nav-banner{position:absolute;bottom:0;left:0;right:0;z-index:800;background:var(--panel);border-top:2px solid #1a73e8;padding:12px 16px;display:none;align-items:center;gap:12px;box-shadow:0 -4px 20px rgba(0,0,0,.12);}
+    .nav-banner.show{display:flex;}
+    .nav-banner-icon{font-size:24px;flex-shrink:0;}
+    .nav-banner-body{flex:1;min-width:0;}
+    .nav-banner-next{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nav-banner-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .nav-banner-dist{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;color:#1a73e8;flex-shrink:0;text-align:right;}
+    .nav-banner-dist-lbl{font-size:9px;color:var(--muted);text-align:right;}
+    .nav-banner-close{background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;padding:0 4px;flex-shrink:0;}
+    @media(max-width:700px){
+      .nav-banner{padding:10px 14px;}
+      .nav-banner-next{font-size:13px;}
+    }
+
+    /* ── ROUTE PANEL IMPROVEMENTS ────────────────────────────── */
+    .route-panel{position:absolute;top:8px;left:12px;z-index:300;background:var(--panel);border:1px solid var(--border);border-radius:var(--r-lg);padding:0;width:300px;box-shadow:var(--shadow-lg);display:none;flex-direction:column;overflow:hidden;}
+    .route-panel.open{display:flex;}
+    .route-panel-header{padding:14px 16px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .route-panel-title-text{font-family:'Syne',sans-serif;font-size:13px;font-weight:800;}
+    .route-panel-body{padding:14px 16px;overflow-y:auto;max-height:calc(100vh - 180px);}
+    .route-panel-body::-webkit-scrollbar{width:3px;}
+    .route-panel-body::-webkit-scrollbar-thumb{background:var(--border);}
+    @media(max-width:700px){.route-panel{top:auto;left:0;right:0;bottom:0;width:100%;border-radius:var(--r-lg) var(--r-lg) 0 0;border:none;border-top:1px solid var(--border);max-height:70vh;z-index:800;}}
   </style>
 </head>
 <body>
@@ -988,6 +1033,7 @@
 
 <div class="main">
   <div class="sidebar collapsed" id="sidebar">
+    <div class="sidebar-drag-handle" id="sidebarDragHandle"><span class="sidebar-handle-bar"></span></div>
     <div class="sidebar-header">
       <div class="sidebar-title" id="sidebarTitle">Live Issues</div>
       <span class="sidebar-count" id="sidebarCount">0</span>
@@ -1023,7 +1069,7 @@
       <div class="quick-chips" id="localPicks"></div>
     </div>
     <div class="sidebar-body" id="sidebarBody">
-      <div class="empty"><div class="ei">⏳</div><p>Loading...</p></div>
+      <div class="empty"><div class="ei" style="font-size:28px">⏳</div><p style="font-size:13px">Loading live data…</p></div>
     </div>
   </div>
 
@@ -1032,6 +1078,25 @@
     <div class="map-hint" id="mapHint">Click map to report an issue</div>
     <button class="fab" id="fab" onclick="onFabClick()">＋</button>
     <button class="locate-btn" id="locateBtn" onclick="onLocateClick()" title="Go to my location">📍</button>
+
+    <!-- FLOATING DIRECTIONS PILL — appears when a place/result is selected -->
+    <button class="dir-pill" id="dirPill" onclick="onDirPillClick()">
+      <span>🗺️</span><span id="dirPillLabel">Directions</span>
+    </button>
+
+    <!-- NAVIGATION BANNER — shows first turn after route is drawn -->
+    <div class="nav-banner" id="navBanner">
+      <div class="nav-banner-icon" id="navBannerIcon">↑</div>
+      <div class="nav-banner-body">
+        <div class="nav-banner-next" id="navBannerNext">Head north</div>
+        <div class="nav-banner-sub" id="navBannerSub">Continue for 0.3 km</div>
+      </div>
+      <div>
+        <div class="nav-banner-dist" id="navBannerEta">—</div>
+        <div class="nav-banner-dist-lbl">ETA</div>
+      </div>
+      <button class="nav-banner-close" onclick="closeNavBanner()" title="Clear route">×</button>
+    </div>
     <div class="sat-toggle" id="satToggle" onclick="toggleSatellite()" title="Toggle satellite view">
       <img src="https://api.mapbox.com/styles/v1/mapbox/satellite-v9/static/-0.7594,52.0406,12,0/60x44?access_token=pk.eyJ1IjoibWtjaGVzcyIsImEiOiJjbWt5YjM0ejMwNmt6M2RzNm9sZmdoZGM4In0.FBGsSGKuCtYzLoDNbZx51Q" alt="Satellite" onerror="this.style.background='#1a3a5c';this.style.display='block'"/>
       <div class="sat-toggle-label" id="satLabel">Satellite</div>
@@ -1039,7 +1104,11 @@
 
     <!-- ROUTE PANEL -->
     <div class="route-panel" id="routePanel">
-      <div class="route-panel-title">Get Directions <button class="route-close" onclick="toggleRoutePanel()">×</button></div>
+      <div class="route-panel-header">
+        <div class="route-panel-title-text">Directions</div>
+        <button class="route-close" onclick="toggleRoutePanel()" style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1">×</button>
+      </div>
+      <div class="route-panel-body">
       <div id="routeStops" style="position:relative">
         <div class="route-stop-row" data-idx="0">
           <span class="route-stop-dot" style="background:var(--green)"></span>
@@ -1064,6 +1133,7 @@
       </div>
       <button class="route-btn" onclick="getDirections()">Get Directions →</button>
       <div class="route-result" id="routeResult"></div>
+      </div><!-- /route-panel-body -->
     </div>
 
     <!-- DETAIL PANEL -->
@@ -1365,8 +1435,9 @@
       <div class="settings-about">
         <strong>MK Maps</strong><br>
         The local map for Milton Keynes.<br>
-        Build 2026-03-13A · <span id="settingsBuildDate"></span><br><br>
-        Data: OpenStreetMap · Supabase · TransportAPI · Ticketmaster · Open-Meteo · BODS<br><br>
+        Build 2026-03-14 · <span id="settingsBuildDate"></span><br><br>
+        Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" style="color:var(--blue)">OpenStreetMap contributors</a><br>
+        Data: Supabase · TransportAPI · Ticketmaster · Open-Meteo · BODS<br><br>
         <span style="color:var(--muted2);font-size:9px">Not affiliated with Milton Keynes City Council.</span>
       </div>
     </div>
@@ -1424,7 +1495,7 @@ const map = new mapboxgl.Map({
 map.addControl(new mapboxgl.NavigationControl({showCompass:true, visualizePitch:true}),'bottom-right');
 const geoControl = new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
 map.addControl(geoControl,'bottom-right');
-map.addControl(new mapboxgl.AttributionControl({compact:true}),'bottom-right');
+map.addControl(new mapboxgl.AttributionControl({compact:false, customAttribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'}),'bottom-right');
 map.addControl(new mapboxgl.ScaleControl({maxWidth:120,unit:'metric'}),'bottom-left');
 geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords.longitude); }catch(err){} });
 
@@ -1563,7 +1634,8 @@ function setLayer(layer, btn, opts={}) {
   // Also activate by chip id in case btn is the old element
   const chipEl = document.getElementById('chip-'+layer);
   if(chipEl && chipEl !== btn) chipEl.classList.add('active');
-  document.getElementById('sidebar').classList.remove('collapsed');
+  const _sb = document.getElementById('sidebar');
+  if(_sb) { _sb.classList.remove('collapsed'); }
   document.getElementById('transportControls').style.display = layer==='transport' ? 'flex' : 'none';
   document.getElementById('sortRow').style.display = layer==='issues' ? 'flex' : 'none';
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
@@ -1883,6 +1955,7 @@ function showIssueDetail(id) {
       </a>
     </div>`;
   openDetail();
+  showDirPill(r.title, r.latitude, r.longitude);
   // Reverse-geocode location
   reverseGeocode(r.latitude, r.longitude).then(addr => {
     const el = document.getElementById('issueDetailAddr');
@@ -2183,6 +2256,7 @@ async function showTransportDetail(id) {
       </div>
     </div>`;
   openDetail();
+  showDirPill(r.name, r.lat, r.lng);
 
   // Now fetch real departures
   const live = await fetchStopDepartures(r.lat, r.lng);
@@ -2528,6 +2602,7 @@ function showEventDetail(id) {
     </div>
   `;
   openDetail();
+  if(e.latitude && e.longitude) showDirPill(e.title, e.latitude, e.longitude);
 }
 
 function evEmoji(c){return{Sports:'⚽',Arts:'🎨',Music:'🎵',Market:'🛍️',Food:'🍕',Community:'👥',Leisure:'🎿',Family:'👨‍👩‍👧',Entertainment:'🎪'}[c]||'📅';}
@@ -2983,6 +3058,7 @@ function showParkingZoneDetail(props, lngLat){
     '</div>'+
     '<div class="detail-section"><div class="detail-section-title">Notes</div><div style="font-size:12px;color:var(--muted)">'+escHtml(props.notes||'Community digitized zone')+'</div></div>';
   openDetail();
+  showDirPill(name, lat, lng);
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
   const verifyBtn = document.getElementById(base+'_verify');
@@ -3120,6 +3196,7 @@ function showParkingDetail(p){
     '<div class="detail-section"><div class="detail-section-title">Rules</div><div style="font-size:12px;color:var(--muted)">'+escHtml(p.notes||p.limit||'Check signage')+'</div></div>'+
     '<div class="detail-section"><div class="detail-section-title">Location</div></div>';
   openDetail();
+  showDirPill(name, lat, lng);
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
   const copyBtn = document.getElementById(base+'_copy');
@@ -3358,6 +3435,7 @@ async function showPlaceDetail(id) {
       <div style="font-size:12px;color:var(--muted);padding:8px 0"><span style="animation:pulse 1.2s infinite;display:inline-block">⏳ Loading reviews…</span></div>
     </div>`;
   openDetail();
+  showDirPill(p.name, p.lat, p.lng);
   window._pendingPhotoPlaceId = id;
   const svPlaceBtn = document.querySelector('.sv-place-btn');
   if(svPlaceBtn) svPlaceBtn.onclick = () => openStreetView(p.lat, p.lng, p.name);
@@ -3776,6 +3854,7 @@ function showSearchDetail(f){
       '<button class="action-btn" id="'+base+'_share"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>'+
     '</div>';
   openDetail();
+  showDirPill(name, lat, lng);
   const dirBtn = document.getElementById(base+'_dir');
   if(dirBtn) dirBtn.onclick = ()=>routeTo(name, lat, lng);
   const copyBtn = document.getElementById(base+'_copy');
@@ -4719,27 +4798,12 @@ function toggleDetailPeek(){
 }
 function openDetail(){
   setDetailState('open');
-  // Slide sidebar out of the way on desktop so detail panel takes its slot
-  if(window.innerWidth > 700) {
-    const sb = document.getElementById('sidebar');
-    if(sb && !sb.classList.contains('collapsed')) {
-      sb.style.transform = 'translateX(-120%)';
-      sb.style.opacity = '0';
-      sb.style.pointerEvents = 'none';
-      sb.dataset.hiddenByDetail = '1';
-    }
-  }
+  // On desktop: keep sidebar visible — show detail panel beside it (Google Maps style)
+  // On mobile: detail is a bottom sheet above the sidebar bottom sheet
 }
 function closeDetail(){
   setDetailState('closed');
-  // Restore sidebar if we hid it
-  const sb = document.getElementById('sidebar');
-  if(sb && sb.dataset.hiddenByDetail === '1') {
-    sb.style.transform = '';
-    sb.style.opacity = '';
-    sb.style.pointerEvents = '';
-    delete sb.dataset.hiddenByDetail;
-  }
+  hideDirPill();
 }
 
 const detailDragEl = document.getElementById('detailDrag');
@@ -6529,6 +6593,12 @@ window.closeStreetView=closeStreetView;
 window.savedItemClick=savedItemClick;
 window.removeSaved=removeSaved;
 window.onLocateClick=onLocateClick;
+window.showDirPill=showDirPill;
+window.hideDirPill=hideDirPill;
+window.onDirPillClick=onDirPillClick;
+window.showNavBanner=showNavBanner;
+window.closeNavBanner=closeNavBanner;
+
 
 // ── START ────────────────────────────────────────────────────────
 setTimeout(()=>{document.getElementById('mapHint').style.opacity='0';},5000);
@@ -6542,8 +6612,13 @@ map.on('load',()=>{
   try{ setLayer(savedLayer, savedBtn); }catch(e){ showFatal(e.message||'Layer init failed'); }
 
   try{ initTheme(); }catch(e){ showFatal(e.message||'Theme init failed'); }
-  document.getElementById('sidebar').classList.add('collapsed');
+  // Don't collapse sidebar — show content immediately like Google Maps
   loadWeather();
+  // Auto-open sidebar to saved layer with content
+  setTimeout(() => {
+    const sb = document.getElementById('sidebar');
+    if(sb) sb.classList.remove('collapsed');
+  }, 400);
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
@@ -7163,11 +7238,16 @@ async function getDirections() {
     map.fitBounds(coords.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(coords[0],coords[0])),{padding:{top:60,bottom:60,left:330,right:40},duration:800});
     checkRouteHazards(coords);
 
+    // Show nav banner with first step
+    const allSteps = route.legs.flatMap(l=>l.steps);
+    showNavBanner(allSteps, etaStr);
+
   } catch(e) { result.innerHTML=`<div class="route-summary">Error: ${e.message}</div>`; }
 }
 
 // routeTo: offer "add as stop" if route is already active
 function routeTo(name,lat,lng) {
+  hideDirPill();
   const panel=document.getElementById('routePanel');
   const hasRoute=document.getElementById('routeResult')?.innerHTML.includes('route-summary')&&document.getElementById('routeResult')?.innerHTML.length>100;
   const toInput=document.getElementById('routeTo');
@@ -7185,6 +7265,73 @@ function routeTo(name,lat,lng) {
   document.getElementById('routeHeaderBtn').classList.add('active');
   if(userLat) getDirections();
 }
+
+
+// ── DIRECTIONS PILL ────────────────────────────────────────────────────────
+let _dirPillTarget = null; // {name, lat, lng}
+
+function showDirPill(name, lat, lng) {
+  _dirPillTarget = {name, lat, lng};
+  const pill = document.getElementById('dirPill');
+  const label = document.getElementById('dirPillLabel');
+  if(!pill) return;
+  const shortName = name.length > 22 ? name.substring(0,20) + '…' : name;
+  label.textContent = 'Directions to ' + shortName;
+  pill.classList.add('show');
+}
+
+function hideDirPill() {
+  const pill = document.getElementById('dirPill');
+  if(pill) pill.classList.remove('show');
+  _dirPillTarget = null;
+}
+
+function onDirPillClick() {
+  if(!_dirPillTarget) return;
+  hideDirPill();
+  routeTo(_dirPillTarget.name, _dirPillTarget.lat, _dirPillTarget.lng);
+}
+window.onDirPillClick = onDirPillClick;
+
+// ── NAV BANNER ─────────────────────────────────────────────────────────────
+let _navSteps = [];
+let _navStepIdx = 0;
+
+function showNavBanner(steps, etaStr) {
+  _navSteps = steps || [];
+  _navStepIdx = 0;
+  if(!_navSteps.length) return;
+  const banner = document.getElementById('navBanner');
+  if(!banner) return;
+  _renderNavStep(_navStepIdx, etaStr);
+  banner.classList.add('show');
+}
+
+function _renderNavStep(idx, etaStr) {
+  const step = _navSteps[idx];
+  if(!step) return;
+  const icons = {depart:'▶',arrive:'🏁',turn:'↪',roundabout:'↺',merge:'↗','on ramp':'↗','off ramp':'↘',continue:'↑'};
+  const icon = icons[step.maneuver?.type] || '→';
+  const dist = step.distance >= 1000 ? (step.distance/1000).toFixed(1)+'km' : Math.round(step.distance)+'m';
+  document.getElementById('navBannerIcon').textContent = icon;
+  document.getElementById('navBannerNext').textContent = step.maneuver?.instruction || step.name || 'Continue';
+  document.getElementById('navBannerSub').textContent = dist + (idx < _navSteps.length-1 ? ` · step ${idx+1} of ${_navSteps.length}` : ' · Arriving');
+  if(etaStr) document.getElementById('navBannerEta').textContent = etaStr;
+}
+
+function closeNavBanner() {
+  const banner = document.getElementById('navBanner');
+  if(banner) banner.classList.remove('show');
+  _navSteps = [];
+  // Also clear route from map
+  try {
+    if(map.getLayer('route')) map.removeLayer('route');
+    if(map.getLayer('route-case')) map.removeLayer('route-case');
+    if(map.getSource('route')) map.removeSource('route');
+  } catch(e) {}
+  lastRouteGeo = null;
+}
+window.closeNavBanner = closeNavBanner;
 
 window.addRouteStop=addRouteStop;
 window.removeRouteStop=removeRouteStop;
@@ -7204,13 +7351,21 @@ function checkFirstRun() {
 function welcomeGo() {
   try { localStorage.setItem('mkmaps_welcomed','1'); } catch(e) {}
   document.getElementById('welcomeOverlay').style.display = 'none';
-  // Request location and centre map
   if(navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(pos => {
       setUserMarker(pos.coords.latitude, pos.coords.longitude);
       map.flyTo({center:[pos.coords.longitude, pos.coords.latitude], zoom:14, duration:900});
-      setTimeout(renderNearmeCard, 800);
-    }, () => {});
+      setTimeout(() => {
+        renderNearmeCard();
+        // Auto-load nearby transport as the most immediately useful layer
+        const chip = document.getElementById('chip-transport');
+        if(chip && activeLayer !== 'transport') {
+          // Don't force-switch — just show near-me card
+        }
+      }, 800);
+    }, () => {
+      toast('Location access denied. You can enable it later in settings.', 'warn', 5000);
+    });
   }
 }
 
@@ -7491,6 +7646,56 @@ map.once('idle', () => {
   initLayerBarScroll();
 });
 
+
+// ── MOBILE SIDEBAR BOTTOM SHEET DRAG ─────────────────────────────────────
+(function(){
+  const handle = document.getElementById('sidebarDragHandle');
+  const sidebar = document.getElementById('sidebar');
+  if(!handle || !sidebar) return;
+  
+  let dragActive = false;
+  let dragStartY = 0;
+  let dragStartH = 0;
+  
+  handle.addEventListener('pointerdown', e => {
+    if(window.innerWidth > 700) return;
+    dragActive = true;
+    dragStartY = e.clientY;
+    dragStartH = sidebar.getBoundingClientRect().height;
+    handle.setPointerCapture(e.pointerId);
+    sidebar.style.transition = 'none';
+  });
+  
+  document.addEventListener('pointermove', e => {
+    if(!dragActive) return;
+    const delta = dragStartY - e.clientY;
+    // Expanding upward (negative delta = dragging down = dismiss)
+    const newH = Math.min(Math.max(dragStartH + delta, 80), window.innerHeight * 0.85);
+    sidebar.style.maxHeight = newH + 'px';
+  });
+  
+  document.addEventListener('pointerup', e => {
+    if(!dragActive) return;
+    dragActive = false;
+    sidebar.style.transition = '';
+    const h = sidebar.getBoundingClientRect().height;
+    if(h < 120) {
+      // Dismiss
+      sidebar.classList.add('collapsed');
+      sidebar.style.maxHeight = '';
+    } else {
+      sidebar.style.maxHeight = '';
+    }
+  });
+  
+  // Tap handle to toggle between peek and full
+  handle.addEventListener('click', () => {
+    if(window.innerWidth > 700) return;
+    if(sidebar.classList.contains('collapsed')) {
+      sidebar.classList.remove('collapsed');
+    }
+  });
+})();
 window.welcomeGo=welcomeGo;
 window.welcomeSkip=welcomeSkip;
 window.closeNearmeCard=closeNearmeCard;
