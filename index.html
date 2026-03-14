@@ -76,17 +76,18 @@
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
 
 
-    /* CATEGORY CHIPS */
-    .cat-chips{position:absolute;top:72px;left:50%;transform:translateX(-50%);display:none;gap:6px;align-items:center;z-index:1100;white-space:nowrap;flex-wrap:nowrap;padding:0 8px;}
-    .cat-chips.visible{display:flex;}
-    .cat-chip{display:flex;align-items:center;gap:5px;padding:7px 14px;border-radius:999px;font-size:11px;cursor:pointer;border:1.5px solid var(--border);color:var(--text);background:var(--panel);font-family:'DM Mono',monospace;white-space:nowrap;transition:all 0.15s;box-shadow:0 4px 12px rgba(15,23,42,0.08);flex-shrink:0;backdrop-filter:blur(10px);}
-    .cat-chip:hover{border-color:var(--muted2);box-shadow:0 6px 18px rgba(15,23,42,0.13);}
-    .cat-chip.active{color:white;border-color:transparent;}
-    body:not(.theme-day) .cat-chip{background:#242424;border-color:#3a3a3a;color:#d0cdc8;}
-    body:not(.theme-day) .cat-chip:hover{border-color:#555;}
+    /* CATEGORY CHIPS — inside search dropdown */
+    .search-cat-row{display:flex;gap:6px;padding:10px 10px 6px;flex-wrap:wrap;border-bottom:1px solid var(--border);}
+    .search-cat-chip{display:flex;align-items:center;gap:4px;padding:6px 12px;border-radius:999px;font-size:11px;cursor:pointer;border:1.5px solid var(--border);color:var(--text);background:var(--panel);font-family:'DM Mono',monospace;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
+    .search-cat-chip:hover{border-color:var(--muted2);}
+    .search-cat-chip.active{color:white;border-color:transparent;}
+    .search-recents-label{padding:6px 14px 2px;font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);}
+    /* legacy cat-chips floating bar — now unused */
+    .cat-chips{display:none!important;}
+    .cat-chip{display:none!important;}
 
     /* LAYER BAR */
-    .layer-bar{position:absolute;top:72px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);border:1px solid var(--border);border-radius:999px;display:flex;gap:6px;align-items:center;padding:6px;z-index:1200;box-shadow:0 12px 30px rgba(15,23,42,0.10);transition:opacity 0.15s;}
+    .layer-bar{position:absolute;top:72px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);border:1px solid var(--border);border-radius:999px;display:flex;gap:6px;align-items:center;padding:6px;z-index:1200;box-shadow:0 12px 30px rgba(15,23,42,0.10);}
     .layer-bar::-webkit-scrollbar{display:none;}
     .layer-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;font-family:'DM Mono',monospace;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
     .layer-btn:hover{color:var(--text);border-color:var(--muted2);}
@@ -318,6 +319,18 @@
     .mapboxgl-ctrl-icon{filter:invert(0.7);}
     .mapboxgl-ctrl-attrib{font-size:9px!important;background:rgba(10,10,10,0.7)!important;}
     .mapboxgl-ctrl-attrib a{color:var(--muted)!important;}
+    /* Make Mapbox logo compact — sits inline with scale bar, not a huge separate block */
+    .mapboxgl-ctrl-logo{
+      width:85px!important;
+      height:23px!important;
+      background-size:85px 23px!important;
+      opacity:0.6!important;
+      transition:opacity 0.2s;
+      margin:0 4px 4px 0!important;
+    }
+    .mapboxgl-ctrl-logo:hover{opacity:1!important;}
+    .mapboxgl-ctrl-bottom-left{display:flex;flex-direction:row;align-items:flex-end;gap:4px;padding:0 0 6px 6px;}
+    .mapboxgl-ctrl-bottom-left .mapboxgl-ctrl{margin:0!important;}
     .p-cat{font-size:9px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;}
     .p-title{font-size:13px;font-weight:500;margin-bottom:3px;}
     .p-sub{font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.4;}
@@ -830,16 +843,7 @@
   <button class="layer-btn redways" id="btn-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
 </div>
 
-<!-- CATEGORY QUICK CHIPS -->
-<div class="cat-chips" id="catChips">
-  <button class="cat-chip" onclick="catChipClick(this,'eat')" data-cat="eat">🍽️ Eat & Drink</button>
-  <button class="cat-chip" onclick="catChipClick(this,'pubs')" data-cat="pubs">🍺 Pubs</button>
-  <button class="cat-chip" onclick="catChipClick(this,'cafes')" data-cat="cafes">☕ Cafés</button>
-  <button class="cat-chip" onclick="catChipClick(this,'parks')" data-cat="parks">🌳 Parks</button>
-  <button class="cat-chip" onclick="catChipClick(this,'health')" data-cat="health">💊 Health</button>
-  <button class="cat-chip" onclick="catChipClick(this,'shopping')" data-cat="shopping">🛍️ Shopping</button>
-  <button class="cat-chip" onclick="catChipClick(this,'leisure')" data-cat="leisure">🏊 Leisure</button>
-</div>
+<!-- cat-chips now live inside the search dropdown -->
 
 <div class="main">
   <div class="sidebar collapsed" id="sidebar">
@@ -3031,16 +3035,54 @@ searchInput.addEventListener('keydown', (e)=>{
 });
 
 searchInput.addEventListener('focus', ()=>{
-  if(searchInput.value.trim()) return;
-  if(!recentSearches.length) return;
-  const recents = recentSearches.map(r=>({
-    icon:'⏱',
-    name:r.text||r.place_name,
-    sub:r.place_name||'Recent search',
-    onClick:()=>selectGeocodeResult(r)
-  }));
-  renderSearchResults(recents);
+  showSearchDropdown();
 });
+
+function showSearchDropdown() {
+  if(searchInput.value.trim()) return; // let the input handler manage live results
+  const cats = [
+    {cat:'eat',   label:'🍽️ Eat & Drink', color:'#f97316'},
+    {cat:'pubs',  label:'🍺 Pubs',         color:'#b45309'},
+    {cat:'cafes', label:'☕ Cafés',         color:'#a16207'},
+    {cat:'parks', label:'🌳 Parks',         color:'#16a34a'},
+    {cat:'health',label:'💊 Health',        color:'#06b6d4'},
+    {cat:'shopping',label:'🛍️ Shopping',   color:'#8b5cf6'},
+    {cat:'leisure',label:'🏊 Leisure',      color:'#10b981'},
+  ];
+  const chipsHtml = '<div class="search-cat-row">' +
+    cats.map(c => {
+      const isActive = activeCatChip === c.cat;
+      const bg = isActive ? `background:${c.color};border-color:${c.color};color:white;` : '';
+      return `<button class="search-cat-chip${isActive?' active':''}" style="${bg}" data-cat="${c.cat}" id="scc_${c.cat}">${c.label}</button>`;
+    }).join('') +
+  '</div>';
+  let recentsHtml = '';
+  if(recentSearches.length) {
+    recentsHtml = '<div class="search-recents-label">Recent</div>' +
+      recentSearches.map((_,i)=>
+        `<div class="sr" id="srf${i}"><span class="sr-icon">⏱</span><div><div class="sr-name">${escHtml(_.text||_.place_name)}</div><div class="sr-sub">${escHtml(_.place_name||'Recent search')}</div></div></div>`
+      ).join('');
+  }
+  searchResults.innerHTML = chipsHtml + recentsHtml;
+  searchResults.style.display = 'block';
+  // Wire chip clicks
+  cats.forEach(c => {
+    const el = document.getElementById('scc_' + c.cat);
+    if(el) el.addEventListener('mousedown', (e) => {
+      e.preventDefault(); // prevent input blur before click fires
+      catChipClick(el, c.cat);
+    });
+  });
+  // Wire recent clicks
+  recentSearches.forEach((_,i) => {
+    const el = document.getElementById('srf'+i);
+    if(el) el.addEventListener('mousedown', (e) => {
+      e.preventDefault();
+      selectGeocodeResult(_);
+      searchResults.style.display='none';
+    });
+  });
+}
 
 searchClear.addEventListener('click', ()=>{
   searchInput.value='';
@@ -4471,45 +4513,29 @@ const CAT_CHIP_COLORS = {
 };
 let activeCatChip = null;
 
-function showCatChips() {
-  document.getElementById('catChips').classList.add('visible');
-}
-function hideCatChips() {
-  // Don't hide if a chip is active
-  if(!activeCatChip) document.getElementById('catChips').classList.remove('visible');
-}
+function showCatChips() { /* no-op: chips now live inside search dropdown */ }
+function hideCatChips() { /* no-op */ }
 
 async function catChipClick(btn, cat) {
   // Toggle off if already active
   if(activeCatChip === cat) {
     activeCatChip = null;
-    btn.classList.remove('active');
-    btn.style.background = '';
-    // If places layer was auto-enabled, clear filter
     if(activeLayer === 'places') {
       activeFilters['places'] = null;
       renderPlacesSidebar();
       renderPlaceMarkers();
     }
-    hideCatChips();
+    searchResults.style.display = 'none';
     return;
   }
-  // Deactivate any other chip
-  document.querySelectorAll('.cat-chip').forEach(c=>{c.classList.remove('active');c.style.background='';});
   activeCatChip = cat;
-  btn.classList.add('active');
-  btn.style.background = CAT_CHIP_COLORS[cat] || 'var(--green)';
-
   // Switch to places layer and filter by category
   const placeBtn = document.getElementById('btn-places');
   if(activeLayer !== 'places') {
     setLayer('places', placeBtn);
-    // Wait for places to load
     await new Promise(r => setTimeout(r, 600));
   }
-  // Apply filter
   const cats = CAT_CHIP_MAP[cat] || [];
-  // Find which category string matches our data
   if(data.places.length) {
     const match = cats.find(c => data.places.some(p=>p.category===c));
     if(match) {
@@ -4518,29 +4544,11 @@ async function catChipClick(btn, cat) {
       renderPlaceMarkers();
     }
   }
+  searchResults.style.display = 'none';
+  searchInput.blur();
 }
 
-// Show chips when search is focused (like Google Maps)
-// Also hide the layer-bar to avoid overlap — matches Google Maps behaviour
-const layerBarEl = document.querySelector('.layer-bar');
-document.getElementById('searchInput').addEventListener('focus', () => {
-  showCatChips();
-  if(layerBarEl) { layerBarEl.style.opacity = '0'; layerBarEl.style.pointerEvents = 'none'; }
-});
-document.getElementById('searchInput').addEventListener('blur', () => {
-  setTimeout(() => {
-    if(!activeCatChip) {
-      hideCatChips();
-      if(layerBarEl) { layerBarEl.style.opacity = ''; layerBarEl.style.pointerEvents = ''; }
-    }
-  }, 150);
-});
-document.addEventListener('click', e => {
-  if(!e.target.closest('#catChips') && !e.target.closest('.search-wrap')) {
-    hideCatChips();
-    if(layerBarEl) { layerBarEl.style.opacity = ''; layerBarEl.style.pointerEvents = ''; }
-  }
-});
+// No separate listener needed — chips are wired in showSearchDropdown
 // Always keep chips visible once a chip is active
 
 
