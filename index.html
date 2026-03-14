@@ -469,7 +469,23 @@
     /* MOBILE */
     @media(max-width:700px){
       .sidebar{display:none;}
-      .layer-bar{display:none;}
+      .layer-bar{
+        left:0;right:0;transform:none;border-radius:0;
+        top:auto;bottom:64px;
+        overflow-x:auto;overflow-y:hidden;
+        -webkit-overflow-scrolling:touch;
+        padding:6px 10px;
+        width:100%;
+        justify-content:flex-start;
+        border-radius:0;
+        border:none;
+        border-top:1px solid var(--border);
+        background:var(--panel);
+        gap:6px;
+        display:flex;
+        box-shadow:0 -4px 20px rgba(15,23,42,0.08);
+      }
+      .layer-bar::-webkit-scrollbar{display:none;}
       .route-panel{width:calc(100vw - 24px);}
       .weather-chip .weather-label{display:none;}
       .mobile-sheet{display:flex;}
@@ -477,6 +493,11 @@
       .header-right{display:none;}
       .mobile-menu-btn{display:flex;}
       .search-wrap{max-width:none;}
+      .fab{bottom:130px;}
+      .sat-toggle{bottom:150px;}
+      .map-hint{bottom:130px;}
+      .mapboxgl-ctrl-bottom-right{bottom:125px!important;}
+      .mapboxgl-ctrl-bottom-left{bottom:125px!important;}
     }
 
     /* SAVED PLACES PANEL */
@@ -769,6 +790,229 @@
     body:not(.theme-day) .mobile-menu-btn{background:#242424;border-color:#333;color:#f0ede8;}
     body:not(.theme-day) .toast{background:#242424;border-color:#3a3a3a;color:#f0ede8;}
 
+    /* ── REDWAY SEARCH ROUTER ─────────────────────────────────── */
+    .rr-search-box{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px;margin-bottom:10px;}
+    .rr-search-label{font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--muted);margin-bottom:6px;}
+    .rr-search-row{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+    .rr-search-row:last-of-type{margin-bottom:0;}
+    .rr-search-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .rr-search-input{flex:1;background:var(--panel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;outline:none;}
+    .rr-search-input:focus{border-color:var(--redway);}
+    .rr-search-go{background:var(--redway);color:white;border:none;padding:9px 14px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;font-weight:500;white-space:nowrap;transition:opacity 0.15s;}
+    .rr-search-go:hover{opacity:0.85;}
+    .rr-search-divider{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+    .rr-search-divider::before,.rr-search-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+    .rr-search-results{position:absolute;left:10px;right:10px;background:var(--panel);border:1px solid var(--border);border-radius:8px;z-index:9999;max-height:180px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);display:none;}
+    .rr-sr{padding:9px 12px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);}
+    .rr-sr:last-child{border-bottom:none;}
+    .rr-sr:hover{background:var(--panel2);}
+    .rr-sr-name{font-weight:500;}
+    .rr-sr-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+    .rr-panel{position:relative;}
+
+    /* ── COMMUNITY PHOTOS ─────────────────────────────────────── */
+    .photo-layer-btn{display:flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;font-size:11px;cursor:pointer;border:1px solid var(--border);color:var(--muted);background:transparent;font-family:'DM Mono',monospace;white-space:nowrap;transition:all 0.15s;flex-shrink:0;}
+    .photo-layer-btn:hover{color:var(--text);border-color:var(--muted2);}
+    .photo-layer-btn.active{background:var(--purple);border-color:var(--purple);color:white;}
+    .photo-modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9000;display:none;align-items:center;justify-content:center;}
+    .photo-modal-overlay.open{display:flex;}
+    .photo-modal{background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:20px;max-width:420px;width:calc(100% - 32px);position:relative;}
+    .photo-modal-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:800;margin-bottom:14px;}
+    .photo-modal-close{position:absolute;top:14px;right:14px;background:var(--panel2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+    .photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+    .photo-thumb{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;cursor:pointer;transition:opacity 0.15s;}
+    .photo-thumb:hover{opacity:0.85;}
+    .photo-pin-hint{font-size:11px;color:var(--muted);margin-bottom:12px;padding:8px;background:var(--panel2);border-radius:6px;line-height:1.5;}
+    .photo-marker{width:36px;height:36px;border-radius:50%;background:var(--purple);border:2.5px solid white;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;box-shadow:0 4px 12px rgba(167,139,250,0.45);}
+    .photo-lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:10000;display:none;align-items:center;justify-content:center;flex-direction:column;}
+    .photo-lightbox.open{display:flex;}
+    .photo-lightbox img{max-width:90vw;max-height:80vh;border-radius:10px;object-fit:contain;}
+    .photo-lightbox-close{position:absolute;top:20px;right:20px;color:white;font-size:28px;cursor:pointer;background:rgba(0,0,0,0.5);border:none;border-radius:50%;width:40px;height:40px;display:flex;align-items:center;justify-content:center;}
+    .photo-lightbox-cap{color:rgba(255,255,255,0.7);font-size:12px;margin-top:10px;text-align:center;}
+
+    /* ── MULTI-MODAL JOURNEY PLANNER ──────────────────────────── */
+    .route-mode.mkjourney{font-size:11px;padding:6px 10px;letter-spacing:0;}
+    .mkjourney-result{font-size:12px;line-height:1.65;}
+    .mkjourney-leg{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);}
+    .mkjourney-leg:last-child{border-bottom:none;}
+    .mkjourney-leg-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+    .mkjourney-leg-body{flex:1;min-width:0;}
+    .mkjourney-leg-title{font-weight:500;margin-bottom:2px;}
+    .mkjourney-leg-sub{font-size:10px;color:var(--muted);}
+    .mkjourney-leg-time{font-size:12px;color:var(--green);font-weight:600;flex-shrink:0;}
+    .mkjourney-summary{background:var(--panel2);border-radius:8px;padding:10px;margin-bottom:10px;display:flex;gap:12px;align-items:center;}
+    .mkjourney-summary-stat{text-align:center;}
+    .mkjourney-summary-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;}
+    .mkjourney-summary-label{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:0.5px;}
+
+    /* ── SETTINGS PANEL ───────────────────────────────────────── */
+    .settings-panel{
+      position:fixed;top:0;right:0;bottom:0;width:320px;
+      background:var(--panel);border-left:1px solid var(--border);
+      z-index:4000;display:flex;flex-direction:column;
+      transform:translateX(100%);opacity:0;
+      transition:transform 0.28s cubic-bezier(0.32,0.72,0,1),opacity 0.2s ease;
+      box-shadow:-12px 0 40px rgba(15,23,42,0.12);
+    }
+    .settings-panel.open{transform:translateX(0);opacity:1;}
+    @media(max-width:700px){
+      .settings-panel{width:100%;border-left:none;border-top:1px solid var(--border);top:auto;height:85vh;border-radius:16px 16px 0 0;transform:translateY(100%);box-shadow:0 -10px 40px rgba(15,23,42,0.18);}
+      .settings-panel.open{transform:translateY(0);}
+    }
+    .settings-header{padding:16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+    .settings-title{font-family:'Syne',sans-serif;font-size:15px;font-weight:800;}
+    .settings-close{background:var(--panel2);border:1px solid var(--border);color:var(--muted);width:28px;height:28px;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;}
+    .settings-close:hover{color:var(--text);}
+    .settings-body{flex:1;overflow-y:auto;padding:12px;}
+    .settings-body::-webkit-scrollbar{width:3px;}
+    .settings-body::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .settings-section{margin-bottom:20px;}
+    .settings-section-title{font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:8px;padding-bottom:5px;border-bottom:1px solid var(--border);}
+    .settings-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);}
+    .settings-row:last-child{border-bottom:none;}
+    .settings-row-label{font-size:12px;font-weight:500;}
+    .settings-row-sub{font-size:10px;color:var(--muted);margin-top:1px;}
+    .settings-toggle{position:relative;width:40px;height:22px;flex-shrink:0;}
+    .settings-toggle input{opacity:0;width:0;height:0;position:absolute;}
+    .settings-toggle-track{position:absolute;inset:0;border-radius:11px;background:var(--border);cursor:pointer;transition:background 0.2s;}
+    .settings-toggle input:checked ~ .settings-toggle-track{background:var(--red);}
+    .settings-toggle-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:white;transition:transform 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.25);}
+    .settings-toggle input:checked ~ .settings-toggle-track .settings-toggle-thumb{transform:translateX(18px);}
+    .settings-select{background:var(--panel2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-family:'DM Mono',monospace;font-size:11px;outline:none;cursor:pointer;}
+    .settings-theme-btns{display:flex;gap:4px;}
+    .settings-theme-btn{padding:5px 10px;border-radius:6px;font-size:11px;font-family:'DM Mono',monospace;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:var(--panel);transition:all 0.15s;}
+    .settings-theme-btn.active{background:var(--red);border-color:var(--red);color:white;}
+    .settings-theme-btn:hover:not(.active){border-color:var(--muted2);color:var(--text);}
+    .settings-about{background:var(--panel2);border-radius:10px;padding:12px;font-size:11px;color:var(--muted);line-height:1.7;}
+    .settings-about strong{color:var(--text);font-size:12px;}
+    .settings-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.3);z-index:3999;display:none;backdrop-filter:blur(2px);}
+    .settings-backdrop.open{display:block;}
+    .settings-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--panel);border:1px solid var(--border);border-radius:999px;font-size:11px;cursor:pointer;color:var(--muted);transition:all 0.15s;font-family:'DM Mono',monospace;}
+    .settings-btn:hover{color:var(--text);border-color:var(--muted2);}
+    .settings-btn.active{color:var(--text);border-color:var(--muted2);}
+    /* Know Before You Go card */
+    .kbyg-card{background:linear-gradient(135deg,rgba(74,158,255,0.08),rgba(76,175,125,0.08));border:1px solid rgba(74,158,255,0.2);border-radius:10px;padding:12px;margin-bottom:14px;}
+    .kbyg-title{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--blue);margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+    .kbyg-item{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--muted);line-height:1.5;margin-bottom:4px;}
+    .kbyg-item:last-child{margin-bottom:0;}
+    /* Quick visits */
+    .qv-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:4px;}
+    .qv-chip{display:flex;align-items:center;gap:4px;padding:5px 9px;border-radius:999px;font-size:10px;border:1px solid var(--border);background:var(--panel);cursor:pointer;color:var(--text);transition:all 0.15s;}
+    .qv-chip:hover{border-color:var(--muted2);}
+
+    body:not(.theme-day) .settings-panel{box-shadow:-12px 0 40px rgba(0,0,0,0.6);}
+    body:not(.theme-day) .settings-about{background:#1c1c1c;}
+    body:not(.theme-day) .settings-select{background:#242424;}
+
+    /* ── FIRST-RUN WELCOME ────────────────────────────────────── */
+    .welcome-overlay{position:fixed;inset:0;z-index:8500;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:20px;}
+    .welcome-card{background:var(--panel);border:1px solid var(--border);border-radius:20px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,0.5);animation:slideUp 0.35s cubic-bezier(0.32,0.72,0,1);}
+    @keyframes slideUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    .welcome-logo{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+    .welcome-logo-icon{width:40px;height:40px;background:var(--red);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+    .welcome-logo-text{font-family:'Syne',sans-serif;font-size:20px;font-weight:900;letter-spacing:-0.5px;}
+    .welcome-logo-text span{color:var(--red);}
+    .welcome-tagline{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px;}
+    .welcome-features{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:22px;}
+    .welcome-feature{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:11px;}
+    .welcome-feature-icon{font-size:18px;margin-bottom:4px;}
+    .welcome-feature-title{font-weight:500;margin-bottom:2px;}
+    .welcome-feature-sub{font-size:9px;color:var(--muted);line-height:1.4;}
+    .welcome-btn{width:100%;background:var(--red);color:white;border:none;padding:13px;border-radius:10px;font-family:'Syne',sans-serif;font-size:14px;font-weight:800;cursor:pointer;transition:opacity 0.15s;margin-bottom:8px;}
+    .welcome-btn:hover{opacity:0.9;}
+    .welcome-skip{width:100%;background:none;border:none;color:var(--muted);font-family:'DM Mono',monospace;font-size:11px;cursor:pointer;padding:4px;}
+    .welcome-skip:hover{color:var(--text);}
+
+    /* ── NEAR-ME SUMMARY CARD ─────────────────────────────────── */
+    .nearme-card{position:absolute;bottom:20px;left:16px;z-index:400;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 8px 24px rgba(15,23,42,0.15);width:280px;overflow:hidden;display:none;animation:slideUp 0.25s ease;}
+    .nearme-card.visible{display:block;}
+    .nearme-card-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+    .nearme-card-title{font-family:'Syne',sans-serif;font-size:12px;font-weight:800;display:flex;align-items:center;gap:6px;}
+    .nearme-card-close{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0;line-height:1;}
+    .nearme-row{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background 0.1s;font-size:11px;}
+    .nearme-row:last-child{border-bottom:none;}
+    .nearme-row:hover{background:var(--panel2);}
+    .nearme-row-icon{font-size:16px;flex-shrink:0;width:22px;text-align:center;}
+    .nearme-row-body{flex:1;min-width:0;}
+    .nearme-row-name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .nearme-row-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+    .nearme-row-dist{font-size:10px;color:var(--blue);flex-shrink:0;}
+    @media(max-width:700px){.nearme-card{bottom:140px;left:12px;width:calc(100vw - 24px);}}
+
+    /* ── RICH SEARCH RESULTS ──────────────────────────────────── */
+    .sr-open-badge{display:inline-block;padding:1px 5px;border-radius:4px;font-size:8px;text-transform:uppercase;letter-spacing:0.5px;font-weight:500;margin-left:4px;}
+    .sr-open-badge.open{background:rgba(76,175,125,0.15);color:var(--green);}
+    .sr-open-badge.closed{background:rgba(232,58,47,0.1);color:var(--red);}
+    .sr-dist{font-size:9px;color:var(--blue);margin-left:4px;}
+    .sr-color-strip{width:3px;flex-shrink:0;border-radius:2px;align-self:stretch;min-height:28px;}
+
+    /* ── PLACE PHOTO STRIP ────────────────────────────────────── */
+    .place-photo-strip{display:flex;gap:6px;overflow-x:auto;margin:-16px -16px 14px;height:160px;background:var(--panel2);}
+    .place-photo-strip::-webkit-scrollbar{display:none;}
+    .place-photo-strip img{height:160px;min-width:200px;object-fit:cover;flex-shrink:0;}
+    .place-photo-strip img:first-child{min-width:100%;}
+
+    /* ── LAYER BAR SCROLL INDICATOR ───────────────────────────── */
+    .layer-bar-wrap{position:absolute;top:72px;left:50%;transform:translateX(-50%);z-index:1200;display:flex;align-items:center;}
+    .layer-bar-fade{position:absolute;top:0;bottom:0;width:24px;pointer-events:none;z-index:1;}
+    .layer-bar-fade-left{left:0;background:linear-gradient(to right,rgba(255,255,255,0.92),transparent);}
+    .layer-bar-fade-right{right:0;background:linear-gradient(to left,rgba(255,255,255,0.92),transparent);}
+    body:not(.theme-day) .layer-bar-fade-left{background:linear-gradient(to right,rgba(20,20,20,0.95),transparent);}
+    body:not(.theme-day) .layer-bar-fade-right{background:linear-gradient(to left,rgba(20,20,20,0.95),transparent);}
+
+    /* ── CONTEXT MENU (right-click / long-press on map) ───────── */
+    .map-context-menu{position:fixed;z-index:5000;background:var(--panel);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,0.4);min-width:180px;overflow:hidden;display:none;}
+    .map-context-menu.open{display:block;}
+    .map-context-item{display:flex;align-items:center;gap:10px;padding:10px 14px;font-size:12px;cursor:pointer;border-bottom:1px solid var(--border);color:var(--text);transition:background 0.1s;}
+    .map-context-item:last-child{border-bottom:none;}
+    .map-context-item:hover{background:var(--panel2);}
+    .map-context-icon{font-size:14px;flex-shrink:0;width:20px;text-align:center;}
+    .map-context-coords{padding:6px 14px;font-size:9px;color:var(--muted);border-bottom:1px solid var(--border);font-family:'DM Mono',monospace;}
+
+    /* ── SHARE BUTTON POLISH ──────────────────────────────────── */
+    .share-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--dark);border-radius:999px;padding:8px 16px;font-size:11px;z-index:9999;white-space:nowrap;opacity:0;transition:opacity 0.2s;pointer-events:none;}
+    .share-toast.show{opacity:1;}
+
+    /* ── EMPTY STATE IMPROVEMENTS ─────────────────────────────── */
+    .empty-cta{margin-top:10px;display:inline-block;padding:7px 14px;border-radius:6px;background:var(--red);color:white;font-size:11px;cursor:pointer;border:none;font-family:'DM Mono',monospace;}
+
+    /* ── HEADER polish: dark mode fix ────────────────────────── */
+    body:not(.theme-day) header{background:rgba(18,18,18,0.95);}
+    body:not(.theme-day) .layer-bar{background:rgba(20,20,20,0.97);border-color:#2a2a2a;}
+    body:not(.theme-day) .nearme-card{background:#1c1c1c;}
+
+    /* ── MULTI-STOP ROUTE PLANNER ─────────────────────────────── */
+    .route-stop-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;position:relative;}
+    .route-stop-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+    .route-stop-line{width:1px;height:14px;background:var(--border);margin-left:4px;margin-bottom:2px;}
+    .route-stop-autocomplete{position:absolute;top:calc(100% + 2px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;z-index:9999;max-height:200px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.4);}
+    .route-stop-ac-item{padding:9px 12px;cursor:pointer;font-size:11px;border-bottom:1px solid var(--border);}
+    .route-stop-ac-item:last-child{border-bottom:none;}
+    .route-stop-ac-item:hover{background:var(--panel2);}
+    .route-stop-ac-name{font-weight:500;}
+    .route-stop-ac-sub{font-size:9px;color:var(--muted);margin-top:1px;}
+    .route-add-stop{background:none;border:1px dashed var(--border);color:var(--muted);padding:5px 10px;border-radius:6px;font-size:11px;font-family:'DM Mono',monospace;cursor:pointer;transition:all 0.15s;}
+    .route-add-stop:hover{border-color:var(--muted2);color:var(--text);}
+    .route-via-row{display:flex;align-items:center;gap:6px;margin-bottom:6px;animation:fadeIn 0.2s ease;}
+    .route-via-remove{background:none;border:none;color:var(--muted);font-size:14px;cursor:pointer;padding:0 2px;flex-shrink:0;line-height:1;}
+    .route-via-remove:hover{color:var(--red);}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+
+    /* ── ROUTE HAZARD ALERT ───────────────────────────────────── */
+    .route-hazard-bar{background:rgba(245,166,35,0.12);border:1px solid rgba(245,166,35,0.3);border-radius:8px;padding:10px 12px;margin-bottom:8px;font-size:11px;}
+    .route-hazard-title{color:var(--amber);font-weight:500;margin-bottom:6px;display:flex;align-items:center;gap:5px;}
+    .route-hazard-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:999px;font-size:10px;border:1px solid rgba(245,166,35,0.3);cursor:pointer;margin:2px 2px 0 0;color:var(--text);background:var(--panel);}
+    .route-hazard-chip:hover{border-color:var(--amber);}
+
+    /* ── OPEN NOW FILTER ──────────────────────────────────────── */
+    .open-now-toggle{display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;font-size:11px;font-family:'DM Mono',monospace;border:1px solid var(--border);cursor:pointer;color:var(--muted);background:var(--panel);transition:all 0.15s;flex-shrink:0;}
+    .open-now-toggle.active{background:rgba(76,175,125,0.15);border-color:var(--green);color:var(--green);}
+    .open-now-toggle:hover:not(.active){border-color:var(--muted2);color:var(--text);}
+    .open-now-dot{width:6px;height:6px;border-radius:50%;background:var(--green);}
+
+    /* ── LANDMARK CALLOUT in route steps ─────────────────────── */
+    .route-step-landmark{font-size:9px;color:var(--blue);margin-top:1px;}
+
   </style>
 </head>
 <body>
@@ -794,7 +1038,7 @@
       <span class="weather-temp" id="weatherTemp">—°C</span>
       <span class="weather-label" id="weatherDesc"></span>
     </div>
-    <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="Toggle theme">🌙 Night</button>
+    <button class="settings-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️ Settings</button>
   </div>
   <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
 </header>
@@ -816,7 +1060,7 @@
       <div class="mobile-nav-divider"></div>
       <div class="mobile-nav-item" id="mobileWeatherItem" onclick="closeMobileNav();toggleWeatherDetail()">🌤️ <span id="mobileWeatherLabel">Weather</span></div>
       <div class="mobile-nav-divider"></div>
-      <div class="mobile-nav-item" onclick="closeMobileNav();toggleTheme()" id="mobileThemeItem">🌙 Toggle Night / Day</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();openSettings()">⚙️ Settings</div>
     </div>
   </div>
 </div>
@@ -845,6 +1089,25 @@
       <button class="rr-tab" id="rrTabSaved" onclick="rrShowTab('saved')">📁 Saved</button>
     </div>
     <div id="rrBuildTab">
+      <div class="rr-search-box" style="position:relative">
+        <div class="rr-search-label">Route from A to B on redways</div>
+        <div class="rr-search-row">
+          <div class="rr-search-dot" style="background:#4caf7d"></div>
+          <input class="rr-search-input" id="rrFromInput" placeholder="Start — place or address in MK" autocomplete="off"
+                 oninput="rrSearchDebounce('from',this.value)" onfocus="rrSearchDebounce('from',this.value)"/>
+        </div>
+        <div class="rr-search-row">
+          <div class="rr-search-dot" style="background:#cc2200"></div>
+          <input class="rr-search-input" id="rrToInput" placeholder="End — place or address in MK" autocomplete="off"
+                 oninput="rrSearchDebounce('to',this.value)" onfocus="rrSearchDebounce('to',this.value)"/>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px;">
+          <button class="rr-search-go" onclick="rrRouteBetween()" style="flex:1">🛤️ Find Redway Route →</button>
+          <button class="rr-btn" onclick="rrUseMyLocation()" title="Use my location as start" style="padding:9px 10px;">📍</button>
+        </div>
+        <div class="rr-search-results" id="rrSearchDropdown"></div>
+      </div>
+      <div class="rr-search-divider">or click map to add waypoints</div>
       <div class="rr-build-hint">Enable Redways then click any point on the map to add waypoints. Your route snaps to the Redway network.</div>
       <div class="rr-stats">
         <div class="rr-stat"><div class="rr-stat-val" id="rrDist">0.0</div><div class="rr-stat-label">km</div></div>
@@ -891,6 +1154,8 @@
   <button class="layer-btn roadworks" id="btn-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
   <div class="layer-divider"></div>
   <button class="layer-btn redways" id="btn-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
+  <div class="layer-divider"></div>
+  <button class="photo-layer-btn" id="btn-photos" onclick="togglePhotoLayer(this)" title="Community Photos">📷 Photos</button>
 </div>
 
 <!-- cat-chips now live inside the search dropdown -->
@@ -948,12 +1213,27 @@
     <!-- ROUTE PANEL -->
     <div class="route-panel" id="routePanel">
       <div class="route-panel-title">Get Directions <button class="route-close" onclick="toggleRoutePanel()">×</button></div>
-      <input class="route-input" id="routeFrom" placeholder="From (or use 📍 for your location)"/>
-      <input class="route-input" id="routeTo" placeholder="To — address or place in MK"/>
+      <div id="routeStops" style="position:relative">
+        <div class="route-stop-row" data-idx="0">
+          <span class="route-stop-dot" style="background:var(--green)"></span>
+          <input class="route-input" id="routeFrom" placeholder="From (or 📍 your location)" autocomplete="off" oninput="routeStopSearch(this,0)" onfocus="routeStopSearch(this,0)"/>
+        </div>
+        <div id="routeViaList"></div>
+        <div class="route-stop-row" data-idx="dest">
+          <span class="route-stop-dot" style="background:var(--red)"></span>
+          <input class="route-input" id="routeTo" placeholder="To — address or place in MK" autocomplete="off" oninput="routeStopSearch(this,'dest')" onfocus="routeStopSearch(this,'dest')"/>
+        </div>
+        <div class="route-stop-autocomplete" id="routeStopAC" style="display:none"></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <button class="route-add-stop" onclick="addRouteStop()" id="addStopBtn">＋ Add stop</button>
+        <span id="routeStopCount" style="font-size:9px;color:var(--muted)"></span>
+      </div>
       <div class="route-modes">
         <button class="route-mode active" data-mode="driving" onclick="setRouteMode(this)" title="Driving">🚗</button>
         <button class="route-mode" data-mode="walking" onclick="setRouteMode(this)" title="Walking">🚶</button>
         <button class="route-mode" data-mode="cycling" onclick="setRouteMode(this)" title="Cycling">🚴</button>
+        <button class="route-mode mkjourney" data-mode="mkjourney" onclick="setRouteMode(this)" title="MK Multi-modal: Bus + Redway">🚌+🛤️</button>
       </div>
       <button class="route-btn" onclick="getDirections()">Get Directions →</button>
       <div class="route-result" id="routeResult"></div>
@@ -1043,6 +1323,220 @@
       <button class="modal-x" onclick="closeModal('parkingZoneModal')">×</button>
     </div>
     <div class="modal-body" id="parkingZoneBody"></div>
+  </div>
+</div>
+
+<!-- COMMUNITY PHOTO MODAL -->
+<div class="photo-modal-overlay" id="photoModal">
+  <div class="photo-modal">
+    <div class="photo-modal-title">📷 Community Photos</div>
+    <button class="photo-modal-close" onclick="closePhotoModal()">×</button>
+    <div id="photoModalLocation" style="font-size:11px;color:var(--muted);margin-bottom:12px;"></div>
+    <div class="photo-grid" id="photoModalGrid"></div>
+    <div class="photo-pin-hint">📍 Tap a spot on the map while Photos is active to pin a photo there.</div>
+    <div style="margin-bottom:8px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:6px;">Add a photo here</label>
+      <div id="placePhotoPreview" style="display:none;margin-bottom:8px;">
+        <img id="placePhotoThumb" style="width:100%;max-height:140px;object-fit:cover;border-radius:8px;display:block;"/>
+        <button onclick="clearPlacePhoto()" style="margin-top:4px;background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;padding:0;">✕ Remove</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted);" for="placePhotoFile">
+        📷 Take photo or choose from gallery
+      </label>
+      <input type="file" id="placePhotoFile" accept="image/*" capture="environment" style="display:none;" onchange="previewPlacePhoto(this)"/>
+    </div>
+    <input id="placePhotoCaption" placeholder="Caption (optional)" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:var(--text);font-family:'DM Mono',monospace;font-size:11px;outline:none;margin-bottom:10px;"/>
+    <button class="btn-primary" style="width:100%;margin-top:0" onclick="submitPlacePhoto()">Pin Photo →</button>
+  </div>
+</div>
+
+<!-- PHOTO LIGHTBOX -->
+<div class="photo-lightbox" id="photoLightbox" onclick="closePhotoLightbox()">
+  <button class="photo-lightbox-close" onclick="closePhotoLightbox()">×</button>
+  <img id="photoLightboxImg" src="" alt=""/>
+  <div class="photo-lightbox-cap" id="photoLightboxCap"></div>
+</div>
+
+<!-- FIRST-RUN WELCOME -->
+<div class="welcome-overlay" id="welcomeOverlay" style="display:none">
+  <div class="welcome-card">
+    <div class="welcome-logo">
+      <div class="welcome-logo-icon">📍</div>
+      <div class="welcome-logo-text">MK <span>Maps</span></div>
+    </div>
+    <div class="welcome-tagline">The map built <em>for</em> Milton Keynes residents — live issues, real bus times, redway routes, local events and free parking. All in one place.</div>
+    <div class="welcome-features">
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">⚠️</div>
+        <div class="welcome-feature-title">Live Issues</div>
+        <div class="welcome-feature-sub">Potholes, flooding & closures reported by residents</div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🛤️</div>
+        <div class="welcome-feature-title">Redway Router</div>
+        <div class="welcome-feature-sub">A-to-B routing on MK's unique cycle network</div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🚌</div>
+        <div class="welcome-feature-title">Live Buses</div>
+        <div class="welcome-feature-sub">Real departure times for every MK stop</div>
+      </div>
+      <div class="welcome-feature">
+        <div class="welcome-feature-icon">🅿️</div>
+        <div class="welcome-feature-title">Free Parking</div>
+        <div class="welcome-feature-sub">OSM + council data for free spots near you</div>
+      </div>
+    </div>
+    <button class="welcome-btn" onclick="welcomeGo()">📍 Enable Location &amp; Explore</button>
+    <button class="welcome-skip" onclick="welcomeSkip()">Skip — just show me the map</button>
+  </div>
+</div>
+
+<!-- MAP CONTEXT MENU (right-click / long-press) -->
+<div class="map-context-menu" id="mapContextMenu">
+  <div class="map-context-coords" id="mapContextCoords"></div>
+  <div class="map-context-item" onclick="ctxDirectionsTo()"><span class="map-context-icon">🗺️</span>Directions to here</div>
+  <div class="map-context-item" onclick="ctxDirectionsFrom()"><span class="map-context-icon">🚗</span>Directions from here</div>
+  <div class="map-context-item" onclick="ctxReportIssue()"><span class="map-context-icon">⚠️</span>Report an issue here</div>
+  <div class="map-context-item" onclick="ctxPinPhoto()"><span class="map-context-icon">📷</span>Pin a photo here</div>
+  <div class="map-context-item" onclick="ctxCopyCoords()"><span class="map-context-icon">📋</span>Copy coordinates</div>
+</div>
+
+<!-- NEAR-ME SUMMARY CARD -->
+<div class="nearme-card" id="nearmeCard">
+  <div class="nearme-card-header">
+    <div class="nearme-card-title">📍 Near You</div>
+    <button class="nearme-card-close" onclick="closeNearmeCard()">×</button>
+  </div>
+  <div id="nearmeCardBody"></div>
+</div>
+
+<!-- SETTINGS BACKDROP -->
+<div class="settings-backdrop" id="settingsBackdrop" onclick="closeSettings()"></div>
+
+<!-- SETTINGS PANEL -->
+<div class="settings-panel" id="settingsPanel">
+  <div class="settings-header">
+    <div class="settings-title">⚙️ Settings</div>
+    <button class="settings-close" onclick="closeSettings()">×</button>
+  </div>
+  <div class="settings-body">
+
+    <div class="settings-section">
+      <div class="settings-section-title">Appearance</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Theme</div>
+          <div class="settings-row-sub">Auto follows London sunrise/sunset</div>
+        </div>
+        <div class="settings-theme-btns">
+          <button class="settings-theme-btn" id="themeAuto" onclick="setThemeMode('auto')">Auto</button>
+          <button class="settings-theme-btn" id="themeLight" onclick="setThemeMode('light')">☀️</button>
+          <button class="settings-theme-btn" id="themeDark" onclick="setThemeMode('dark')">🌙</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Map</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Default layer on open</div>
+          <div class="settings-row-sub">Which layer loads when you first open MK Maps</div>
+        </div>
+        <select class="settings-select" id="settingsDefaultLayer" onchange="saveSettingDefaultLayer(this.value)">
+          <option value="issues">Issues</option>
+          <option value="transport">Transport</option>
+          <option value="events">What's On</option>
+          <option value="places">Places</option>
+          <option value="parking">Free Parking</option>
+          <option value="roadworks">Roadworks</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Show MK landmark labels</div>
+          <div class="settings-row-sub">Pinned labels for key MK locations</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsPOI" onchange="saveSettingPOI(this.checked)" checked/>
+          <div class="settings-toggle-track"><div class="settings-toggle-thumb"></div></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Redway issue badges</div>
+          <div class="settings-row-sub">Show surface/lighting issues on redway layer</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsRedwayBadges" onchange="saveSettingRedwayBadges(this.checked)" checked/>
+          <div class="settings-toggle-track"><div class="settings-toggle-thumb"></div></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Units &amp; Display</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Distance units</div>
+        </div>
+        <select class="settings-select" id="settingsUnits" onchange="saveSettingUnits(this.value)">
+          <option value="km">km</option>
+          <option value="miles">miles</option>
+        </select>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">"Know Before You Go" tips</div>
+          <div class="settings-row-sub">Contextual tips on place detail panels</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsKBYG" onchange="saveSettingKBYG(this.checked)" checked/>
+          <div class="settings-toggle-track"><div class="settings-toggle-thumb"></div></div>
+        </label>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Quick visits bar</div>
+          <div class="settings-row-sub">Show your frequently visited places</div>
+        </div>
+        <label class="settings-toggle">
+          <input type="checkbox" id="settingsQuickVisits" onchange="saveSettingQuickVisits(this.checked)" checked/>
+          <div class="settings-toggle-track"><div class="settings-toggle-thumb"></div></div>
+        </label>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Data &amp; Privacy</div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Clear visit history</div>
+          <div class="settings-row-sub">Resets your quick visits suggestions</div>
+        </div>
+        <button class="settings-theme-btn" onclick="clearVisitHistory()" style="white-space:nowrap">Clear</button>
+      </div>
+      <div class="settings-row">
+        <div>
+          <div class="settings-row-label">Clear all local data</div>
+          <div class="settings-row-sub">Resets saved places, routes, preferences</div>
+        </div>
+        <button class="settings-theme-btn" onclick="clearAllLocalData()" style="white-space:nowrap;color:var(--red)">Reset</button>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">About</div>
+      <div class="settings-about">
+        <strong>MK Maps</strong><br>
+        The local map for Milton Keynes.<br>
+        Build 2026-03-13A · <span id="settingsBuildDate"></span><br><br>
+        Data: OpenStreetMap · Supabase · TransportAPI · Ticketmaster · Open-Meteo · BODS<br><br>
+        <span style="color:var(--muted2);font-size:9px">Not affiliated with Milton Keynes City Council.</span>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2762,9 +3256,23 @@ function renderPlacesSidebar() {
   const cats=[...new Set(data.places.map(p=>p.category))].filter(Boolean).sort();
   renderFilterBar(cats);
 
+  // Open Now toggle — inject after filter bar
+  let filterBar = document.getElementById('filterBar');
+  if(filterBar && !document.getElementById('openNowToggle')) {
+    const btn = document.createElement('button');
+    btn.id = 'openNowToggle';
+    btn.className = 'open-now-toggle' + (placesOpenNow ? ' active' : '');
+    btn.innerHTML = '<span class="open-now-dot"></span> Open now';
+    btn.onclick = toggleOpenNow;
+    filterBar.parentNode.insertBefore(btn, filterBar.nextSibling);
+  } else if(document.getElementById('openNowToggle')) {
+    document.getElementById('openNowToggle').className = 'open-now-toggle' + (placesOpenNow ? ' active' : '');
+  }
+
   let places=[...data.places];
   const f=activeFilters['places'];
   if(f) places=places.filter(p=>p.category===f);
+  if(placesOpenNow) places=places.filter(p=>p.open===true);
   if(activeSort==='near'&&userLat) {
     places=places.map(p=>({...p,_dist:distKm(userLat,userLng,p.lat,p.lng)})).sort((a,b)=>a._dist-b._dist);
   }
@@ -2784,7 +3292,7 @@ function renderPlacesSidebar() {
       <div class="card-sub">${(p.description||'').substring(0,80)}${p.description&&p.description.length>80?'...':''}</div>
       <div class="card-footer">${ratingHtml}${distHtml}</div>
     </div>`;
-  }).join('') : `<div class="empty"><div class="ei">📍</div><p>Loading places from OpenStreetMap…<br/><span style="color:var(--muted);font-size:10px">This may take a moment on first load.</span></p></div>`;
+  }).join('') : `<div class="empty"><div class="ei">${placesOpenNow?'🕐':'📍'}</div><p>${placesOpenNow?'No places open right now match this filter.<br/><span style="color:var(--muted);font-size:10px">Try turning off "Open now".</span>':'Loading places from OpenStreetMap…<br/><span style="color:var(--muted);font-size:10px">This may take a moment on first load.</span>'}</p></div>`;
 }
 
 // Category colour palette for place markers
@@ -2866,8 +3374,11 @@ async function showPlaceDetail(id) {
   if(!p) return;
   updateURL('place',id);
   flyTo(p.lng,p.lat);
+  // Record this visit for Quick Visits
+  recordVisit(p.id, p.name, p.lat, p.lng, p.emoji);
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today=days[new Date().getDay()];
+  const kbygHtml = buildKBYGCard(p);
 
   // Show skeleton while reviews load
   document.getElementById('detailScroll').innerHTML=`
@@ -2889,6 +3400,7 @@ async function showPlaceDetail(id) {
       <button class="action-btn sv-place-btn"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
       <button class="action-btn" onclick="sharePlace('${escJs(p.name)}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
     </div>
+    ${kbygHtml}
     ${p.description?`<div class="detail-section"><div class="detail-section-title">About</div><div style="font-size:12px;color:var(--muted);line-height:1.7">${escHtml(p.description)}</div></div>`:''}
     ${Object.keys(p.hours||{}).length ? `
     <div class='detail-section'>
@@ -4507,6 +5019,11 @@ async function getDirections() {
     const toCoords = await geocodeMK(to);
     if(!fromCoords||!toCoords){result.innerHTML='<div class="route-summary">Could not find one of the locations.</div>';return;}
 
+    // MK Journey mode
+    if(routeMode === 'mkjourney') {
+      return await getDirectionsMKJourney(fromCoords, toCoords);
+    }
+
     const profile = routeMode==='cycling'?'mapbox/cycling':routeMode==='walking'?'mapbox/walking':'mapbox/driving';
     const r = await fetch(`https://api.mapbox.com/directions/v5/${profile}/${fromCoords.join(',')};${toCoords.join(',')}?steps=true&geometries=geojson&banner_instructions=true&access_token=${mapboxgl.accessToken}`);
     const d = await r.json();
@@ -5433,6 +5950,495 @@ map.on('style.load', () => {
   setTimeout(addPOILayer, 100);
 });
 
+// ── REDWAY SEARCH ROUTER ─────────────────────────────────────────────────
+
+let rrSearchActive = null; // 'from' or 'to'
+let rrFromCoords = null;   // [lng, lat]
+let rrToCoords   = null;   // [lng, lat]
+let rrSearchTimer = null;
+
+function rrSearchDebounce(field, val) {
+  rrSearchActive = field;
+  clearTimeout(rrSearchTimer);
+  const drop = document.getElementById('rrSearchDropdown');
+  if(!val || val.length < 2) { if(drop) drop.style.display='none'; return; }
+  rrSearchTimer = setTimeout(() => rrDoSearch(field, val), 200);
+}
+
+async function rrDoSearch(field, val) {
+  const drop = document.getElementById('rrSearchDropdown');
+  if(!drop) return;
+  try {
+    // Local places first
+    const lq = val.toLowerCase();
+    const localHits = data.places
+      .filter(p => p.name.toLowerCase().includes(lq))
+      .slice(0,3)
+      .map(p => ({name:p.name, sub: p.category+' · MK', coords:[p.lng,p.lat]}));
+
+    // Quicktrips
+    const qtHits = quickTrips
+      .filter(t => t.name.toLowerCase().includes(lq))
+      .map(t => ({name:t.name, sub:'Quick trip', coords:[t.lng,t.lat]}));
+
+    // Geocode
+    const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?proximity=-0.7594,52.0406&bbox=-1.05,51.85,-0.55,52.2&country=gb&limit=5&types=poi,address,postcode,place,neighborhood&access_token=${mapboxgl.accessToken}`);
+    const d = await r.json();
+    const geoHits = (d.features||[]).map(f=>({
+      name: f.text||f.place_name,
+      sub: (f.place_name||'').replace((f.text||'')+', ','').substring(0,50),
+      coords: f.center
+    }));
+
+    const all = [...qtHits, ...localHits, ...geoHits].slice(0,6);
+    if(!all.length) { drop.style.display='none'; return; }
+
+    drop.innerHTML = all.map((r,i)=>`
+      <div class="rr-sr" id="rrsr_${i}">
+        <div class="rr-sr-name">${escHtml(r.name)}</div>
+        <div class="rr-sr-sub">${escHtml(r.sub)}</div>
+      </div>`).join('');
+
+    all.forEach((res,i) => {
+      document.getElementById('rrsr_'+i).addEventListener('mousedown', (e)=>{
+        e.preventDefault();
+        rrSelectResult(field, res.name, res.coords);
+        drop.style.display='none';
+      });
+    });
+    drop.style.display='block';
+  } catch(e) { if(drop) drop.style.display='none'; }
+}
+
+document.addEventListener('click', e => {
+  const drop = document.getElementById('rrSearchDropdown');
+  if(drop && !e.target.closest('#rrSearchDropdown') && !e.target.closest('.rr-search-input')) {
+    drop.style.display = 'none';
+  }
+});
+
+function rrSelectResult(field, name, coords) {
+  if(field === 'from') {
+    rrFromCoords = coords;
+    const el = document.getElementById('rrFromInput');
+    if(el) el.value = name;
+  } else {
+    rrToCoords = coords;
+    const el = document.getElementById('rrToInput');
+    if(el) el.value = name;
+  }
+}
+
+async function rrUseMyLocation() {
+  if(userLat) {
+    rrFromCoords = [userLng, userLat];
+    const el = document.getElementById('rrFromInput');
+    if(el) el.value = 'Your location';
+    return;
+  }
+  toast('Getting location…','info',2000);
+  navigator.geolocation.getCurrentPosition(pos => {
+    setUserMarker(pos.coords.latitude, pos.coords.longitude);
+    rrFromCoords = [userLng, userLat];
+    const el = document.getElementById('rrFromInput');
+    if(el) el.value = 'Your location';
+    toast('Location set as start.','success');
+  }, () => toast('Location denied — tap the map instead.','warn'));
+}
+
+async function rrRouteBetween() {
+  if(!rrFromCoords) {
+    // Try geocoding from input text
+    const fromVal = document.getElementById('rrFromInput')?.value.trim();
+    if(!fromVal) { toast('Enter a start location.','warn'); return; }
+    if(fromVal.toLowerCase().includes('your location') && userLat) {
+      rrFromCoords = [userLng, userLat];
+    } else {
+      const c = await geocodeMK(fromVal);
+      if(!c) { toast('Could not find start location.','warn'); return; }
+      rrFromCoords = c;
+    }
+  }
+  if(!rrToCoords) {
+    const toVal = document.getElementById('rrToInput')?.value.trim();
+    if(!toVal) { toast('Enter a destination.','warn'); return; }
+    const c = await geocodeMK(toVal);
+    if(!c) { toast('Could not find destination.','warn'); return; }
+    rrToCoords = c;
+  }
+
+  // Clear existing waypoints
+  rrClear();
+
+  // Add two waypoints from the coords
+  rrWaypoints.push({lat:rrFromCoords[1], lng:rrFromCoords[0], label: document.getElementById('rrFromInput')?.value || 'Start'});
+  rrWaypoints.push({lat:rrToCoords[1],   lng:rrToCoords[0],   label: document.getElementById('rrToInput')?.value || 'End'});
+
+  // Make sure redways are on
+  if(!redwaysVisible) {
+    const rwBtn = document.getElementById('btn-redways');
+    if(rwBtn) toggleRedways(rwBtn);
+    await new Promise(r=>setTimeout(r,400));
+  }
+
+  toast('Building redway route…','info',2000);
+  await rrRebuildRoute();
+  rrRenderWaypoints();
+  rrUpdateStats();
+
+  // Fit map to the route
+  if(rrRouteCoords.length > 1) {
+    const bounds = rrRouteCoords.reduce((b,c)=>b.extend(c), new mapboxgl.LngLatBounds(rrRouteCoords[0],rrRouteCoords[0]));
+    map.fitBounds(bounds,{padding:80,duration:900});
+  }
+
+  const km = rrCalcDistance();
+  if(km > 0) {
+    toast(`✅ Redway route: ${km.toFixed(1)} km · ${Math.round(km/0.083)} min walk · ${Math.round(km/0.25)} min cycle`,'success',5000);
+  } else {
+    toast('No redway path found between these points — try points closer to the network.','warn',5000);
+  }
+}
+
+// ── COMMUNITY PHOTOS ────────────────────────────────────────────────────────
+
+let photoLayerActive = false;
+let photoMarkers = [];
+let photoPinMode = false;
+let photoPinLat = null, photoPinLng = null;
+let currentPhotoLat = null, currentPhotoLng = null;
+let photosCache = null;
+
+async function togglePhotoLayer(btn) {
+  photoLayerActive = !photoLayerActive;
+  btn.classList.toggle('active', photoLayerActive);
+
+  if(photoLayerActive) {
+    toast('📷 Photos active — click the map to pin a photo anywhere.','info',4000);
+    photoPinMode = true;
+    await loadAndRenderPhotoMarkers();
+  } else {
+    photoPinMode = false;
+    photoMarkers.forEach(m=>m.remove());
+    photoMarkers = [];
+  }
+}
+
+async function loadAndRenderPhotoMarkers() {
+  try {
+    if(!photosCache || Date.now() - photosCache.ts > 60000) {
+      const d = await db.get('place_photos','&resolved=eq.false');
+      if(Array.isArray(d)) photosCache = {data: d, ts: Date.now()};
+    }
+    const photos = photosCache?.data || [];
+    photoMarkers.forEach(m=>m.remove());
+    photoMarkers = [];
+    photos.forEach(p => {
+      if(!p.lat || !p.lng) return;
+      const el = document.createElement('div');
+      el.className = 'photo-marker';
+      el.textContent = '📷';
+      el.onclick = () => openPhotoModal(p.lat, p.lng, false);
+      const m = new mapboxgl.Marker({element:el}).setLngLat([p.lng,p.lat]).addTo(map);
+      photoMarkers.push(m);
+    });
+  } catch(e) {
+    console.warn('Could not load community photos:', e);
+  }
+}
+
+// Map click handler for photo pin mode
+map.on('click', async (e) => {
+  if(!photoPinMode || !photoLayerActive) return;
+  // Don't intercept if another mode is capturing the click
+  if(rrActive || digitizeMode || parkingReportMode || activeLayer==='issues' || activeLayer==='events') return;
+  const {lat, lng} = e.lngLat;
+  photoPinLat = lat;
+  photoPinLng = lng;
+  openPhotoModal(lat, lng, true);
+});
+
+async function openPhotoModal(lat, lng, isNew) {
+  currentPhotoLat = lat;
+  currentPhotoLng = lng;
+  const modal = document.getElementById('photoModal');
+  const grid = document.getElementById('photoModalGrid');
+  const locEl = document.getElementById('photoModalLocation');
+
+  // Show location
+  locEl.textContent = '⏳ Getting address…';
+  reverseGeocode(lat, lng).then(addr => { locEl.textContent = '📍 ' + addr; });
+
+  // Show/hide add-photo form based on whether we're creating or browsing
+  const addSection = modal.querySelectorAll('[id="placePhotoPreview"],[id="placePhotoFile"],[id="placePhotoCaption"],label[for="placePhotoFile"],.btn-primary');
+  // Always show the form
+
+  // Load photos near this point
+  grid.innerHTML = '<div style="font-size:11px;color:var(--muted);grid-column:1/-1">⏳ Loading photos…</div>';
+  modal.classList.add('open');
+
+  try {
+    const d = await db.get('place_photos', `&order=created_at.desc`);
+    const nearby = (Array.isArray(d) ? d : []).filter(p => distKm(lat,lng,p.lat,p.lng) < 0.15);
+    if(!nearby.length) {
+      grid.innerHTML = '<div style="font-size:11px;color:var(--muted);grid-column:1/-1">No photos here yet — be the first!</div>';
+    } else {
+      grid.innerHTML = nearby.map(p=>`
+        <img class="photo-thumb" src="${escHtml(p.photo_url)}"
+             alt="${escHtml(p.caption||'')}"
+             onclick="openPhotoLightbox('${escJs(p.photo_url)}','${escJs(p.caption||'')}')">
+      `).join('');
+    }
+  } catch(e) {
+    grid.innerHTML = '<div style="font-size:11px;color:var(--muted);grid-column:1/-1">Could not load photos.</div>';
+  }
+}
+
+function closePhotoModal() {
+  document.getElementById('photoModal').classList.remove('open');
+  clearPlacePhoto();
+  document.getElementById('placePhotoCaption').value = '';
+}
+
+function previewPlacePhoto(input) {
+  const file = input.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('placePhotoThumb').src = e.target.result;
+    document.getElementById('placePhotoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPlacePhoto() {
+  const input = document.getElementById('placePhotoFile');
+  if(input) input.value = '';
+  document.getElementById('placePhotoPreview').style.display = 'none';
+  document.getElementById('placePhotoThumb').src = '';
+}
+
+async function submitPlacePhoto() {
+  const input = document.getElementById('placePhotoFile');
+  const caption = document.getElementById('placePhotoCaption')?.value.trim() || '';
+  const lat = currentPhotoLat, lng = currentPhotoLng;
+
+  if(!input?.files?.length) { toast('Please choose a photo first.','warn'); return; }
+  if(!lat || !lng) { toast('No location set.','warn'); return; }
+
+  const btn = document.querySelector('#photoModal .btn-primary');
+  btn.disabled = true; btn.textContent = 'Uploading…';
+
+  try {
+    const file = input.files[0];
+    const ext = file.name.split('.').pop() || 'jpg';
+    const filename = `place_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const res = await fetch(`${SB_URL}/storage/v1/object/issue-photos/${filename}`, {
+      method: 'POST',
+      headers: { apikey:SB_KEY, Authorization:`Bearer ${SB_KEY}`, 'Content-Type': file.type||'image/jpeg', 'x-upsert':'true' },
+      body: file
+    });
+    if(!res.ok) throw new Error('Upload failed');
+    const photo_url = `${SB_URL}/storage/v1/object/public/issue-photos/${filename}`;
+
+    await db.post('place_photos', { lat, lng, photo_url, caption, resolved:false });
+
+    toast('📷 Photo pinned — live on the map!','success');
+    closePhotoModal();
+    photosCache = null; // invalidate cache
+    if(photoLayerActive) loadAndRenderPhotoMarkers();
+  } catch(e) {
+    toast('Could not upload photo: ' + e.message,'error');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Pin Photo →';
+  }
+}
+
+function openPhotoLightbox(url, caption) {
+  document.getElementById('photoLightboxImg').src = url;
+  document.getElementById('photoLightboxCap').textContent = caption;
+  document.getElementById('photoLightbox').classList.add('open');
+}
+
+function closePhotoLightbox() {
+  document.getElementById('photoLightbox').classList.remove('open');
+}
+
+// ── MULTI-MODAL JOURNEY PLANNER ──────────────────────────────────────────────
+// Combines: walk to bus stop → bus to CMK → redway cycle/walk to destination
+
+// Key MK bus interchange stops (CMK area)
+const MK_INTERCHANGES = [
+  {name:'CMK Bus Station', lat:52.0415, lng:-0.7596, atco:'0430ASX20101'},
+  {name:'Central MK Station', lat:52.0341, lng:-0.7717, atco:'0430ASX21001'},
+  {name:'Midsummer Place', lat:52.0432, lng:-0.7573, atco:'0430ASX20201'},
+];
+
+async function getMKJourney(fromCoords, toCoords) {
+  const [fromLng, fromLat] = fromCoords;
+  const [toLng, toLat] = toCoords;
+
+  // Find nearest interchange to destination — that's where bus gets you
+  const nearest = MK_INTERCHANGES.map(i => ({...i, distToEnd: distKm(toLat,toLng,i.lat,i.lng)}))
+                                  .sort((a,b)=>a.distToEnd-b.distToEnd)[0];
+
+  // Leg 1: walk from origin to nearest bus stop (via TransportAPI places)
+  let busStop = null;
+  let walkToStopMins = 0;
+  let walkToStopKm = 0;
+  let busDepartures = [];
+
+  try {
+    const nearUrl = `https://transportapi.com/v3/uk/places.json?app_id=${TAPI_ID}&app_key=${TAPI_KEY}&lat=${fromLat}&lon=${fromLng}&rpp=1&type=bus_stop`;
+    const nearRes = await fetch(nearUrl);
+    if(nearRes.ok) {
+      const nearData = await nearRes.json();
+      busStop = nearData?.member?.[0];
+    }
+  } catch(e) {}
+
+  if(busStop) {
+    walkToStopKm = distKm(fromLat, fromLng, parseFloat(busStop.latitude), parseFloat(busStop.longitude));
+    walkToStopMins = Math.round(walkToStopKm / 0.083);
+    // Fetch departures
+    try {
+      const depUrl = `https://transportapi.com/v3/uk/bus/stop/${busStop.atcocode}/live.json?app_id=${TAPI_ID}&app_key=${TAPI_KEY}&group=no&nextbuses=yes&limit=5`;
+      const depRes = await fetch(depUrl);
+      if(depRes.ok) {
+        const depData = await depRes.json();
+        const deps = depData?.departures?.all || [];
+        busDepartures = deps.slice(0,3).map(d => ({
+          line: d.line || d.line_name || '?',
+          direction: d.direction || d.destination_name || '',
+          minsAway: calcMinsAway(d.expected_departure_time || d.aimed_departure_time || ''),
+          aimed: d.aimed_departure_time || ''
+        }));
+      }
+    } catch(e) {}
+  }
+
+  // Leg 2: estimate bus journey to interchange (rough: 2km/min average in MK)
+  const busJourneyKm = distKm(busStop?.latitude||fromLat, busStop?.longitude||fromLng, nearest.lat, nearest.lng);
+  const busMins = Math.max(5, Math.round(busJourneyKm / 0.5)); // ~30km/h
+
+  // Leg 3: redway/walk from interchange to destination
+  const redwayKm = distKm(nearest.lat, nearest.lng, toLat, toLng);
+  const redwayCycleMins = Math.round(redwayKm / 0.25); // ~15km/h cycling
+  const redwayWalkMins  = Math.round(redwayKm / 0.083);
+
+  // Total time (bus wait assumed = first departure mins or 5)
+  const busWaitMins = busDepartures[0]?.minsAway ?? 5;
+  const totalCycleMins = walkToStopMins + busWaitMins + busMins + redwayCycleMins;
+  const totalWalkMins  = walkToStopMins + busWaitMins + busMins + redwayWalkMins;
+
+  return {
+    legs: [
+      {
+        type: 'walk',
+        icon: '🚶',
+        title: `Walk to ${busStop?.name || 'nearest bus stop'}`,
+        sub: `${fmtDist(walkToStopKm)} · ${walkToStopMins} min walk`,
+        mins: walkToStopMins,
+        color: '#4caf7d'
+      },
+      {
+        type: 'bus',
+        icon: '🚌',
+        title: `Bus towards ${nearest.name}`,
+        sub: busDepartures.length
+          ? `Next: ${busDepartures.map(d=>`${d.line} in ${d.minsAway??'?'} min`).join(' · ')}`
+          : `${Math.round(busJourneyKm)} km · ~${busMins} min`,
+        mins: busWaitMins + busMins,
+        color: '#4a9eff',
+        departures: busDepartures
+      },
+      {
+        type: 'redway',
+        icon: '🛤️',
+        title: `Redway from ${nearest.name}`,
+        sub: `${fmtDist(redwayKm)} · ${redwayCycleMins} min cycling / ${redwayWalkMins} min walking`,
+        mins: redwayCycleMins,
+        color: '#cc2200'
+      }
+    ],
+    totalCycleMins,
+    totalWalkMins,
+    busStop: busStop?.name,
+    interchange: nearest.name,
+    redwayKm
+  };
+}
+
+async function getDirectionsMKJourney(fromCoords, toCoords) {
+  const result = document.getElementById('routeResult');
+  result.className = 'route-result show';
+  result.innerHTML = '<div class="route-summary">Planning your MK journey…</div>';
+
+  const journey = await getMKJourney(fromCoords, toCoords);
+
+  const legsHtml = journey.legs.map(l => `
+    <div class="mkjourney-leg">
+      <div class="mkjourney-leg-icon" style="background:${l.color}20">${l.icon}</div>
+      <div class="mkjourney-leg-body">
+        <div class="mkjourney-leg-title">${escHtml(l.title)}</div>
+        <div class="mkjourney-leg-sub">${escHtml(l.sub)}</div>
+      </div>
+      <div class="mkjourney-leg-time">${l.mins} min</div>
+    </div>`).join('');
+
+  result.innerHTML = `
+    <div class="mkjourney-summary">
+      <div class="mkjourney-summary-stat">
+        <div class="mkjourney-summary-val">🚌+🚴 ${journey.totalCycleMins}</div>
+        <div class="mkjourney-summary-label">min (cycling)</div>
+      </div>
+      <div class="mkjourney-summary-stat">
+        <div class="mkjourney-summary-val">🚌+🚶 ${journey.totalWalkMins}</div>
+        <div class="mkjourney-summary-label">min (walking)</div>
+      </div>
+    </div>
+    <div class="mkjourney-result">${legsHtml}</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:8px;line-height:1.5">
+      🛤️ Final leg follows MK's redway network. Enable the 🛤️ Routes tool to plan the exact path.
+      ${journey.busStop ? `<br>🚌 Bus stop: ${escHtml(journey.busStop)}` : ''}
+    </div>`;
+
+  // Draw redway section on map (interchange → destination)
+  const interchangeCoords = MK_INTERCHANGES.find(i=>i.name===journey.interchange);
+  if(interchangeCoords) {
+    const redwayLine = {type:'Feature',properties:{},geometry:{type:'LineString',coordinates:[[interchangeCoords.lng,interchangeCoords.lat],[toCoords[0],toCoords[1]]]}};
+    if(map.getSource('route')) {
+      map.getSource('route').setData(redwayLine);
+    } else {
+      map.addSource('route',{type:'geojson',data:redwayLine});
+      map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#cc2200','line-width':4,'line-dasharray':[2,2],'line-opacity':0.8}});
+    }
+    const bounds = new mapboxgl.LngLatBounds(fromCoords,fromCoords).extend(toCoords).extend([interchangeCoords.lng,interchangeCoords.lat]);
+    map.fitBounds(bounds,{padding:80});
+  }
+}
+
+window.openSettings=openSettings;
+window.closeSettings=closeSettings;
+window.setThemeMode=setThemeMode;
+window.saveSettingDefaultLayer=saveSettingDefaultLayer;
+window.saveSettingPOI=saveSettingPOI;
+window.saveSettingRedwayBadges=saveSettingRedwayBadges;
+window.saveSettingUnits=saveSettingUnits;
+window.saveSettingKBYG=saveSettingKBYG;
+window.saveSettingQuickVisits=saveSettingQuickVisits;
+window.clearVisitHistory=clearVisitHistory;
+window.clearAllLocalData=clearAllLocalData;
+window.togglePhotoLayer=togglePhotoLayer;
+window.closePhotoModal=closePhotoModal;
+window.previewPlacePhoto=previewPlacePhoto;
+window.clearPlacePhoto=clearPlacePhoto;
+window.submitPlacePhoto=submitPlacePhoto;
+window.openPhotoLightbox=openPhotoLightbox;
+window.closePhotoLightbox=closePhotoLightbox;
+window.rrRouteBetween=rrRouteBetween;
+window.rrUseMyLocation=rrUseMyLocation;
+window.rrSearchDebounce=rrSearchDebounce;
 // ── EXPOSE GLOBALS ───────────────────────────────────────────────
 window.setLayer=setLayer;
 window.toggleRedways=toggleRedways;
@@ -5585,33 +6591,848 @@ map.on('style.load',()=>{
   }catch(e){ showFatal(e.message||'Style load failed'); }
 });
 
-function toggleTheme() {
+// ── SETTINGS SYSTEM ──────────────────────────────────────────────────────────
+
+// Settings store
+const SETTINGS_KEY = 'mkmaps_settings_v2';
+let appSettings = {
+  themeMode: 'auto',   // 'auto' | 'light' | 'dark'
+  defaultLayer: 'issues',
+  showPOI: true,
+  redwayBadges: true,
+  units: 'km',
+  kbyg: true,
+  quickVisits: true,
+};
+
+function loadSettings() {
+  try {
+    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+    appSettings = {...appSettings, ...s};
+  } catch(e) {}
+}
+
+function saveSettings() {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(appSettings)); } catch(e) {}
+}
+
+// ── Auto theme: London sunrise/sunset ────────────────────────────────────────
+// Approximate London sunrise/sunset by month (civil twilight)
+const LONDON_SUN = [
+  [8,0,  16,30], // Jan
+  [7,30, 17,15], // Feb
+  [6,30, 18,0 ], // Mar
+  [6,30, 20,0 ], // Apr  (BST starts)
+  [5,15, 20,45], // May
+  [4,45, 21,15], // Jun
+  [5,0,  21,0 ], // Jul
+  [5,45, 20,15], // Aug
+  [6,30, 19,15], // Sep
+  [7,15, 18,0 ], // Oct  (GMT returns)
+  [7,15, 16,15], // Nov
+  [8,0,  16,0 ], // Dec
+];
+
+function londonIsDaytime() {
+  // Use UTC+0 (GMT) or UTC+1 (BST) approximation based on month
+  const now = new Date();
+  const month = now.getUTCMonth(); // 0-indexed
+  const isBST = month >= 2 && month <= 9; // rough: Mar–Oct
+  const localH = now.getUTCHours() + (isBST ? 1 : 0);
+  const localM = now.getUTCMinutes();
+  const mins = localH * 60 + localM;
+  const [srH, srM, ssH, ssM] = LONDON_SUN[month];
+  const sunrise = srH * 60 + srM;
+  const sunset  = ssH * 60 + ssM;
+  return mins >= sunrise && mins < sunset;
+}
+
+function resolveTheme() {
+  if(appSettings.themeMode === 'auto') return londonIsDaytime() ? 'day' : 'dark';
+  return appSettings.themeMode === 'light' ? 'day' : 'dark';
+}
+
+function applyTheme(theme) {
   const body = document.body;
-  const on = body.classList.toggle('theme-day');
-  try{ localStorage.setItem('mkmaps_theme', on ? 'day' : 'dark'); }catch(e){}
-  document.getElementById('themeToggle').textContent = on ? '🌙 Night' : '🌤️ Day';
-  // If satellite is active, update preSatStyle but don't change map
-  if(satelliteActive) { preSatStyle = on ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11'; return; }
-  map.setStyle(on ? 'mapbox://styles/mapbox/light-v11' : 'mapbox://styles/mapbox/dark-v11');
+  const isDark = theme === 'dark';
+  body.classList.toggle('theme-day', !isDark);
+  // Update map style
+  if(typeof satelliteActive !== 'undefined' && satelliteActive) {
+    preSatStyle = isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11';
+  } else {
+    try { map.setStyle(isDark ? 'mapbox://styles/mapbox/dark-v11' : 'mapbox://styles/mapbox/light-v11'); } catch(e) {}
+  }
+}
+
+// Legacy toggleTheme kept for any inline calls
+function toggleTheme() {
+  // Cycle: if currently auto, go light; if light go dark; if dark go auto
+  const cur = appSettings.themeMode;
+  const next = cur === 'auto' ? 'light' : cur === 'light' ? 'dark' : 'auto';
+  setThemeMode(next);
+}
+
+function setThemeMode(mode) {
+  appSettings.themeMode = mode;
+  saveSettings();
+  applyTheme(resolveTheme());
+  // Update settings panel buttons
+  ['auto','light','dark'].forEach(m => {
+    const btn = document.getElementById('theme' + m.charAt(0).toUpperCase() + m.slice(1));
+    if(btn) btn.classList.toggle('active', m === mode);
+  });
 }
 
 function initTheme() {
-  let theme = 'day';
-  try{ theme = localStorage.getItem('mkmaps_theme') || 'day'; }catch(e){}
-  if(theme==='day') {
-    document.body.classList.add('theme-day');
-    document.getElementById('themeToggle').textContent = '🌙 Night';
-    map.setStyle('mapbox://styles/mapbox/light-v11');
-  } else {
-    document.getElementById('themeToggle').textContent = '🌤️ Day';
+  loadSettings();
+  applyTheme(resolveTheme());
+  // Sync settings UI
+  const dl = document.getElementById('settingsDefaultLayer');
+  if(dl) dl.value = appSettings.defaultLayer;
+  const poi = document.getElementById('settingsPOI');
+  if(poi) poi.checked = appSettings.showPOI;
+  const rb = document.getElementById('settingsRedwayBadges');
+  if(rb) rb.checked = appSettings.redwayBadges;
+  const un = document.getElementById('settingsUnits');
+  if(un) un.value = appSettings.units;
+  const kb = document.getElementById('settingsKBYG');
+  if(kb) kb.checked = appSettings.kbyg;
+  const qv = document.getElementById('settingsQuickVisits');
+  if(qv) qv.checked = appSettings.quickVisits;
+  ['auto','light','dark'].forEach(m => {
+    const btn = document.getElementById('theme' + m.charAt(0).toUpperCase() + m.slice(1));
+    if(btn) btn.classList.toggle('active', m === appSettings.themeMode);
+  });
+  // Build date
+  const bd = document.getElementById('settingsBuildDate');
+  if(bd) bd.textContent = 'Updated ' + new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  // Auto-theme re-check every minute
+  setInterval(() => {
+    if(appSettings.themeMode === 'auto') applyTheme(resolveTheme());
+  }, 60000);
+}
+
+// ── Individual setting savers ────────────────────────────────────────────────
+function saveSettingDefaultLayer(v) { appSettings.defaultLayer = v; saveSettings(); }
+function saveSettingPOI(v) {
+  appSettings.showPOI = v;
+  saveSettings();
+  const src = map.getSource && map.getSource('poi-labels');
+  if(src) {
+    try {
+      map.setLayoutProperty('poi-label-icons','visibility', v ? 'visible' : 'none');
+    } catch(e) {}
   }
 }
+function saveSettingRedwayBadges(v) {
+  appSettings.redwayBadges = v;
+  saveSettings();
+  if(redwaysVisible) renderRedwayIssueBadges();
+}
+function saveSettingUnits(v) {
+  appSettings.units = v;
+  saveSettings();
+  toast('Distance unit set to ' + v + '.','info');
+}
+function saveSettingKBYG(v) { appSettings.kbyg = v; saveSettings(); }
+function saveSettingQuickVisits(v) { appSettings.quickVisits = v; saveSettings(); renderQuickVisitsBar(); }
+
+function clearVisitHistory() {
+  try { localStorage.removeItem('mkmaps_visit_history'); } catch(e) {}
+  toast('Visit history cleared.','success');
+  renderQuickVisitsBar();
+}
+function clearAllLocalData() {
+  if(!confirm('Clear all MK Maps local data? This will reset saved places, routes and preferences.')) return;
+  try {
+    ['mkmaps_voted','mkmaps_saved','mkmaps_rr_routes','mkmaps_recent',
+     'mkmaps_layer','mkmaps_theme','mkmaps_settings_v2','mkmaps_visit_history'].forEach(k=>{
+      localStorage.removeItem(k);
+    });
+  } catch(e) {}
+  toast('All local data cleared. Reloading…','info');
+  setTimeout(()=>location.reload(), 1200);
+}
+
+// ── Settings panel open/close ────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById('settingsPanel').classList.add('open');
+  document.getElementById('settingsBackdrop').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settingsPanel').classList.remove('open');
+  document.getElementById('settingsBackdrop').classList.remove('open');
+}
+
+// ── Distance formatting with units setting ───────────────────────────────────
+function fmtDistSetting(km) {
+  if(appSettings.units === 'miles') {
+    const mi = km * 0.621371;
+    return mi < 0.1 ? Math.round(mi * 1760) + ' yd' : mi.toFixed(1) + ' mi';
+  }
+  return km < 1 ? Math.round(km * 1000) + 'm' : km.toFixed(1) + 'km';
+}
+
+// ── Know Before You Go (KBYG) ────────────────────────────────────────────────
+function buildKBYGCard(place) {
+  if(!appSettings.kbyg) return '';
+  const tips = [];
+
+  // Redway access — is there a redway within 300m?
+  if(rrRedwayGraph && rrRedwayGraph.nodes.length) {
+    const nearest = rrNearestNode(rrRedwayGraph, place.lat, place.lng);
+    if(nearest) {
+      const d = rrHaversine(place.lat, place.lng, nearest.lat, nearest.lng);
+      if(d < 0.3) tips.push({icon:'🛤️', text:`Redway access ~${Math.round(d*1000)}m away`});
+    }
+  }
+
+  // Nearby issues
+  const nearbyIssues = (data.issues||[]).filter(r=>distKm(place.lat,place.lng,r.latitude,r.longitude)<0.2);
+  if(nearbyIssues.length) {
+    const cats = [...new Set(nearbyIssues.map(r=>r.category))].slice(0,2).join(', ');
+    tips.push({icon:'⚠️', text:`${nearbyIssues.length} nearby report${nearbyIssues.length>1?'s':''}: ${cats}`});
+  }
+
+  // Free parking nearby
+  const nearParking = (data.parking||[]).filter(p=>distKm(place.lat,place.lng,p.lat,p.lng)<0.3);
+  if(nearParking.length) {
+    tips.push({icon:'🅿️', text:`Free parking: ${nearParking[0].name} (${Math.round(distKm(place.lat,place.lng,nearParking[0].lat,nearParking[0].lng)*1000)}m)`});
+  }
+
+  // Open status
+  if(place.open === true) tips.push({icon:'✅', text:'Open now'});
+  else if(place.open === false) tips.push({icon:'🔴', text:'Currently closed — check opening hours'});
+
+  if(!tips.length) return '';
+  return `
+    <div class="kbyg-card">
+      <div class="kbyg-title">💡 Know Before You Go</div>
+      ${tips.map(t=>`<div class="kbyg-item"><span>${t.icon}</span><span>${escHtml(t.text)}</span></div>`).join('')}
+    </div>`;
+}
+
+// ── Quick Visits (frequent places from localStorage) ─────────────────────────
+function recordVisit(placeId, name, lat, lng, emoji) {
+  if(!appSettings.quickVisits) return;
+  try {
+    const hist = JSON.parse(localStorage.getItem('mkmaps_visit_history')||'{}');
+    const key = String(placeId);
+    if(!hist[key]) hist[key] = {name,lat,lng,emoji,count:0};
+    hist[key].count++;
+    hist[key].ts = Date.now();
+    localStorage.setItem('mkmaps_visit_history', JSON.stringify(hist));
+  } catch(e) {}
+}
+
+function getFrequentPlaces(limit=5) {
+  try {
+    const hist = JSON.parse(localStorage.getItem('mkmaps_visit_history')||'{}');
+    return Object.values(hist)
+      .sort((a,b)=>b.count-a.count)
+      .slice(0,limit);
+  } catch(e) { return []; }
+}
+
+function renderQuickVisitsBar() {
+  // Inject into the local intel section quick trips
+  const el = document.getElementById('quickTrips');
+  if(!el) return;
+  const freq = appSettings.quickVisits ? getFrequentPlaces(3) : [];
+  const builtIn = quickTrips.map(t=>`<button class="quick-chip" onclick="routeTo('${t.name.replace(/'/g,"\\'")}',${t.lat},${t.lng})">${t.icon} ${t.name}</button>`).join('');
+  const freqHtml = freq.map(p=>`<button class="quick-chip" style="border-color:var(--purple)20;background:rgba(167,139,250,0.06)" onclick="flyTo(${p.lng},${p.lat})">${p.emoji||'📍'} ${escHtml(p.name)}</button>`).join('');
+  el.innerHTML = freqHtml + builtIn;
+}
+
+// ── Redway issue badges ───────────────────────────────────────────────────────
+let redwayBadgeMarkers = [];
+function renderRedwayIssueBadges() {
+  redwayBadgeMarkers.forEach(m=>m.remove());
+  redwayBadgeMarkers = [];
+  if(!appSettings.redwayBadges || !redwaysVisible) return;
+  // Show surface/lighting/flooding issues within 80m of a redway node
+  const redwayIssues = (data.issues||[]).filter(r=>
+    ['Surface','Lighting','Flooding','Obstruction'].includes(r.category)
+  );
+  redwayIssues.forEach(r => {
+    if(!r.latitude||!r.longitude) return;
+    // Only show if near a redway node
+    if(rrRedwayGraph) {
+      const n = rrNearestNode(rrRedwayGraph, r.latitude, r.longitude);
+      if(!n || rrHaversine(r.latitude,r.longitude,n.lat,n.lng) > 0.08) return;
+    }
+    const el = document.createElement('div');
+    el.style.cssText = `width:18px;height:18px;border-radius:50%;background:${catColor[r.category]||'#888'};border:2px solid white;display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.4);`;
+    el.textContent = catEmoji[r.category]||'⚠️';
+    el.title = r.title;
+    el.onclick = () => showIssueDetail(r.id);
+    const m = new mapboxgl.Marker({element:el}).setLngLat([r.longitude,r.latitude]).addTo(map);
+    redwayBadgeMarkers.push(m);
+  });
+}
+
+// ── END SETTINGS SYSTEM ──────────────────────────────────────────────────────
+
+// ── OPEN NOW FILTER ────────────────────────────────────────────────────────────
+let placesOpenNow = false;
+
+function toggleOpenNow() {
+  placesOpenNow = !placesOpenNow;
+  renderPlacesSidebar();
+  renderPlaceMarkers();
+}
+
+// ── MULTI-STOP ROUTE PLANNER ──────────────────────────────────────────────────
+let routeViaStops = [];
+let stopSearchTimer = null;
+let _activeACField = null;
+
+function addRouteStop() {
+  if(routeViaStops.length >= 3) { toast('Maximum 3 intermediate stops.','info'); return; }
+  routeViaStops.push({label:'', coords:null});
+  renderViaList();
+  document.getElementById('addStopBtn').style.opacity = routeViaStops.length >= 3 ? '0.4' : '1';
+}
+
+function removeRouteStop(idx) {
+  routeViaStops.splice(idx,1);
+  renderViaList();
+  document.getElementById('addStopBtn').style.opacity = '1';
+  updateStopCount();
+}
+
+function renderViaList() {
+  const list = document.getElementById('routeViaList');
+  if(!list) return;
+  list.innerHTML = routeViaStops.map((s,i) => `
+    <div style="width:1px;height:8px;background:var(--border);margin-left:4px"></div>
+    <div class="route-via-row" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+      <span class="route-stop-dot" style="background:var(--amber);width:10px;height:10px;border-radius:50%;flex-shrink:0"></span>
+      <input class="route-input" id="routeVia${i}" placeholder="Stop ${i+1} — place or address"
+             value="${escHtml(s.label)}" autocomplete="off"
+             oninput="routeStopSearch(this,'via${i}')" onfocus="routeStopSearch(this,'via${i}')"
+             style="flex:1;margin-bottom:0"/>
+      <button class="route-via-remove" onclick="removeRouteStop(${i})" title="Remove" style="background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;padding:0 2px;line-height:1">×</button>
+    </div>`).join('');
+  updateStopCount();
+}
+
+function updateStopCount() {
+  const el = document.getElementById('routeStopCount');
+  if(el) el.textContent = routeViaStops.length ? `${routeViaStops.length} stop${routeViaStops.length>1?'s':''} added` : '';
+}
+
+function routeStopSearch(input, fieldId) {
+  _activeACField = fieldId;
+  const val = input.value.trim();
+  clearTimeout(stopSearchTimer);
+  const ac = document.getElementById('routeStopAC');
+  if(!val || val.length < 2) { if(ac) ac.style.display='none'; return; }
+  stopSearchTimer = setTimeout(()=>_doStopSearch(input, fieldId, val), 180);
+}
+
+async function _doStopSearch(input, fieldId, val) {
+  const ac = document.getElementById('routeStopAC');
+  if(!ac) return;
+  try {
+    const lq = val.toLowerCase();
+    const local = [
+      ...quickTrips.filter(t=>t.name.toLowerCase().includes(lq)).map(t=>({name:t.icon+' '+t.name,sub:'Quick trip',coords:[t.lng,t.lat]})),
+      ...data.places.filter(p=>p.name.toLowerCase().includes(lq)).slice(0,3).map(p=>({name:p.emoji+' '+p.name,sub:p.category,coords:[p.lng,p.lat]})),
+    ];
+    let geo = [];
+    if(val.length >= 3) {
+      const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(val)}.json?proximity=-0.7594,52.0406&bbox=-1.05,51.85,-0.55,52.2&country=gb&limit=4&types=poi,address,postcode,place,neighborhood&access_token=${mapboxgl.accessToken}`);
+      const d = await r.json();
+      geo = (d.features||[]).map(f=>({name:f.text||f.place_name,sub:(f.place_name||'').replace((f.text||'')+', ','').substring(0,50),coords:f.center}));
+    }
+    const all = [...local,...geo].slice(0,6);
+    if(!all.length){ ac.style.display='none'; return; }
+
+    const rect = input.getBoundingClientRect();
+    const panel = document.getElementById('routePanel');
+    if(panel) {
+      const pr = panel.getBoundingClientRect();
+      ac.style.top = (rect.bottom - pr.top + 2)+'px';
+    }
+
+    ac.innerHTML = all.map((res,i)=>`
+      <div class="route-stop-ac-item" id="rsac_${i}">
+        <div class="route-stop-ac-name">${escHtml(res.name)}</div>
+        <div class="route-stop-ac-sub">${escHtml(res.sub)}</div>
+      </div>`).join('');
+
+    all.forEach((res,i)=>{
+      document.getElementById('rsac_'+i).addEventListener('mousedown',e=>{
+        e.preventDefault();
+        input.value = res.name;
+        if(String(fieldId).startsWith('via')) {
+          const idx = parseInt(String(fieldId).replace('via',''));
+          if(routeViaStops[idx]) { routeViaStops[idx].label=res.name; routeViaStops[idx].coords=res.coords; }
+        }
+        ac.style.display='none';
+      });
+    });
+    ac.style.display='block';
+  } catch(e) { if(ac) ac.style.display='none'; }
+}
+
+document.addEventListener('click',e=>{
+  const ac = document.getElementById('routeStopAC');
+  if(ac && !e.target.closest('#routePanel')) ac.style.display='none';
+});
+
+// ── ROUTE HAZARD ALERT ────────────────────────────────────────────────────────
+function checkRouteHazards(routeCoords) {
+  if(!data.issues||!data.issues.length) return;
+  const THRESH = 0.15;
+  const onRoute = data.issues.filter(issue=>{
+    if(!issue.latitude||!issue.longitude) return false;
+    return routeCoords.some(c=>distKm(issue.latitude,issue.longitude,c[1],c[0])<THRESH);
+  });
+  if(!onRoute.length) return;
+  const result = document.getElementById('routeResult');
+  if(!result) return;
+  const chips = onRoute.slice(0,4).map(r=>`
+    <span class="route-hazard-chip" onclick="showIssueDetail(${r.id});toggleRoutePanel()">
+      ${catEmoji[r.category]||'⚠️'} ${escHtml(r.title.length>28?r.title.substring(0,26)+'…':r.title)}
+    </span>`).join('');
+  const bar = `<div class="route-hazard-bar">
+    <div class="route-hazard-title">⚠️ ${onRoute.length} issue${onRoute.length>1?'s':''} on this route</div>
+    <div>${chips}</div>
+  </div>`;
+  result.innerHTML = bar + result.innerHTML;
+}
+
+// ── LANDMARK CALLOUTS ─────────────────────────────────────────────────────────
+function enrichStepWithLandmark(stepLng, stepLat) {
+  if(!MK_POI_LABELS||!MK_POI_LABELS.features) return null;
+  let best=null, bestDist=0.22;
+  for(const f of MK_POI_LABELS.features) {
+    const [flng,flat] = f.geometry.coordinates;
+    const d = distKm(stepLat,stepLng,flat,flng);
+    if(d<bestDist){ bestDist=d; best=f.properties; }
+  }
+  return best ? `${best.icon} near ${best.name}` : null;
+}
+
+// ── PATCHED getDirections (multi-stop + hazards + landmarks) ──────────────────
+async function getDirections() {
+  const from = document.getElementById('routeFrom').value.trim();
+  const to   = document.getElementById('routeTo').value.trim();
+  const result = document.getElementById('routeResult');
+  if(!to){ toast('Please enter a destination.','warn'); return; }
+
+  result.className='route-result show';
+  result.innerHTML='<div class="route-summary">Finding route…</div>';
+  const ac=document.getElementById('routeStopAC'); if(ac) ac.style.display='none';
+
+  try {
+    let fromCoords;
+    if(!from||from.toLowerCase().includes('your location')||from.toLowerCase()==='me') {
+      if(!userLat) await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(p=>{setUserMarker(p.coords.latitude,p.coords.longitude);res();},rej));
+      fromCoords=[userLng,userLat];
+    } else { fromCoords=await geocodeMK(from); }
+
+    const viaCoords=[];
+    for(const stop of routeViaStops) {
+      if(stop.coords){ viaCoords.push(stop.coords); }
+      else if(stop.label){ const c=await geocodeMK(stop.label); if(c){stop.coords=c;viaCoords.push(c);} }
+    }
+
+    const toCoords=await geocodeMK(to);
+    if(!fromCoords||!toCoords){ result.innerHTML='<div class="route-summary">Could not find one of the locations.</div>'; return; }
+
+    if(routeMode==='mkjourney') return await getDirectionsMKJourney(fromCoords,toCoords);
+
+    const allCoords=[fromCoords,...viaCoords,toCoords];
+    const wpStr=allCoords.map(c=>c.join(',')).join(';');
+    const profile=routeMode==='cycling'?'mapbox/cycling':routeMode==='walking'?'mapbox/walking':'mapbox/driving';
+    const r=await fetch(`https://api.mapbox.com/directions/v5/${profile}/${wpStr}?steps=true&geometries=geojson&banner_instructions=true&access_token=${mapboxgl.accessToken}`);
+    const d=await r.json();
+    if(!d.routes||!d.routes.length){ result.innerHTML='<div class="route-summary">No route found.</div>'; return; }
+
+    const route=d.routes[0];
+    const mins=Math.round(route.duration/60);
+    const km=(route.distance/1000).toFixed(1);
+    const modeEmoji=routeMode==='cycling'?'🚴':routeMode==='walking'?'🚶':'🚗';
+    const stopLabel=routeViaStops.length?` · ${routeViaStops.length} stop${routeViaStops.length>1?'s':''}` : '';
+
+    const steps=route.legs.flatMap(leg=>leg.steps);
+    const mIcon=t=>({'turn':'↪','depart':'•','arrive':'🎯','merge':'↗','on ramp':'↗','off ramp':'↘','fork':'⑂','end of road':'↵','continue':'↑','roundabout':'↺','rotary':'↺','roundabout turn':'↺','notification':'ℹ','exit roundabout':'↗','exit rotary':'↗'}[t]||'→');
+    const fmtD=m=>m>=1000?(m/1000).toFixed(1)+'km':Math.round(m)+'m';
+
+    const stepsHtml=steps.map(s=>{
+      const instr=escHtml(s.maneuver.instruction||s.name||'');
+      const icon=mIcon(s.maneuver.type);
+      const dist=fmtD(s.distance);
+      const loc=s.maneuver.location;
+      const lm=loc?enrichStepWithLandmark(loc[0],loc[1]):null;
+      return `<li class="route-step">
+        <span class="route-step-icon">${icon}</span>
+        <span style="flex:1">${instr}${lm?`<div class="route-step-landmark">${escHtml(lm)}</div>`:''}  </span>
+        <span class="route-step-dist">${dist}</span>
+      </li>`;
+    }).join('');
+
+    const legHtml=viaCoords.length?`<div style="font-size:10px;color:var(--muted);margin-bottom:6px">${route.legs.map((l,i)=>`Leg ${i+1}: ${Math.round(l.duration/60)}min · ${(l.distance/1000).toFixed(1)}km`).join(' &nbsp;·&nbsp; ')}</div>`:'';
+
+    result.innerHTML=`
+      <div class="route-summary">${modeEmoji} <strong>${mins} min</strong> · ${km} km${stopLabel}</div>
+      ${legHtml}<ul class="route-steps">${stepsHtml}</ul>`;
+
+    const routeGeo={type:'Feature',properties:{},geometry:route.geometry};
+    lastRouteGeo=routeGeo;
+    if(map.getSource('route')) map.getSource('route').setData(routeGeo);
+    else { map.addSource('route',{type:'geojson',data:routeGeo}); map.addLayer({id:'route',type:'line',source:'route',layout:{'line-join':'round','line-cap':'round'},paint:{'line-color':'#4a9eff','line-width':4,'line-opacity':0.85}}); }
+    const coords=route.geometry.coordinates;
+    map.fitBounds(coords.reduce((b,c)=>b.extend(c),new mapboxgl.LngLatBounds(coords[0],coords[0])),{padding:80});
+    checkRouteHazards(coords);
+
+  } catch(e) { result.innerHTML=`<div class="route-summary">Error: ${e.message}</div>`; }
+}
+
+// routeTo: offer "add as stop" if route is already active
+function routeTo(name,lat,lng) {
+  const panel=document.getElementById('routePanel');
+  const hasRoute=document.getElementById('routeResult')?.innerHTML.includes('route-summary')&&document.getElementById('routeResult')?.innerHTML.length>100;
+  const toInput=document.getElementById('routeTo');
+  if(panel.classList.contains('open')&&hasRoute&&toInput?.value.trim()&&routeViaStops.length<3) {
+    if(confirm(`Add "${name}" as a stop on your current route?`)) {
+      routeViaStops.push({label:name,coords:[lng,lat]});
+      renderViaList();
+      toast(`Stop added — ${routeViaStops.length} stop${routeViaStops.length>1?'s':''}. Tap Get Directions to update.`,'success');
+      return;
+    }
+  }
+  if(toInput) toInput.value=name;
+  if(userLat) document.getElementById('routeFrom').value='Your location';
+  panel.classList.add('open');
+  document.getElementById('routeHeaderBtn').classList.add('active');
+  if(userLat) getDirections();
+}
+
+window.addRouteStop=addRouteStop;
+window.removeRouteStop=removeRouteStop;
+window.routeStopSearch=routeStopSearch;
+window.toggleOpenNow=toggleOpenNow;
+window.routeTo=routeTo;
+window.getDirections=getDirections;
+
+// ── FIRST-RUN WELCOME ─────────────────────────────────────────────────────────
+function checkFirstRun() {
+  try {
+    if(localStorage.getItem('mkmaps_welcomed')) return;
+  } catch(e) {}
+  document.getElementById('welcomeOverlay').style.display = 'flex';
+}
+
+function welcomeGo() {
+  try { localStorage.setItem('mkmaps_welcomed','1'); } catch(e) {}
+  document.getElementById('welcomeOverlay').style.display = 'none';
+  // Request location and centre map
+  if(navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(pos => {
+      setUserMarker(pos.coords.latitude, pos.coords.longitude);
+      map.flyTo({center:[pos.coords.longitude, pos.coords.latitude], zoom:14, duration:900});
+      setTimeout(renderNearmeCard, 800);
+    }, () => {});
+  }
+}
+
+function welcomeSkip() {
+  try { localStorage.setItem('mkmaps_welcomed','1'); } catch(e) {}
+  document.getElementById('welcomeOverlay').style.display = 'none';
+}
+
+// ── NEAR-ME SUMMARY CARD ──────────────────────────────────────────────────────
+function renderNearmeCard() {
+  if(!userLat) return;
+  const card = document.getElementById('nearmeCard');
+  const body = document.getElementById('nearmeCardBody');
+  if(!card || !body) return;
+
+  // Gather nearby items across all data
+  const R = 0.8;
+  const nearby = [];
+
+  // Open places nearby
+  const nearPlaces = data.places
+    .filter(p => p.open === true && distKm(userLat,userLng,p.lat,p.lng) < R)
+    .sort((a,b) => distKm(userLat,userLng,a.lat,a.lng) - distKm(userLat,userLng,b.lat,b.lng))
+    .slice(0, 3);
+  nearPlaces.forEach(p => nearby.push({
+    icon: p.emoji, name: p.name, sub: p.category + ' · Open now',
+    dist: distKm(userLat,userLng,p.lat,p.lng),
+    action: () => showPlaceDetail(p.id)
+  }));
+
+  // Bus stops nearby
+  const nearBus = data.transport
+    .filter(t => distKm(userLat,userLng,t.lat,t.lng) < 0.4)
+    .sort((a,b) => distKm(userLat,userLng,a.lat,a.lng) - distKm(userLat,userLng,b.lat,b.lng))
+    .slice(0, 1);
+  nearBus.forEach(t => {
+    const next = t.departures && t.departures[0];
+    nearby.push({
+      icon: '🚌', name: `Bus ${t.number}`,
+      sub: next ? (next.minsAway <= 0 ? 'Due now' : `${next.minsAway} min`) : t.stop,
+      dist: distKm(userLat,userLng,t.lat,t.lng),
+      action: () => showTransportDetail(t.id)
+    });
+  });
+
+  // Active issues nearby
+  const nearIssues = data.issues
+    .filter(r => distKm(userLat,userLng,r.latitude,r.longitude) < 0.25)
+    .slice(0,1);
+  nearIssues.forEach(r => nearby.push({
+    icon: catEmoji[r.category]||'⚠️', name: r.title,
+    sub: r.category + ' · ' + timeAgo(r.created_at),
+    dist: distKm(userLat,userLng,r.latitude,r.longitude),
+    action: () => showIssueDetail(r.id)
+  }));
+
+  if(!nearby.length) return; // nothing to show
+
+  body.innerHTML = nearby.map(n => `
+    <div class="nearme-row" onclick="this._action&&this._action()">
+      <span class="nearme-row-icon">${n.icon}</span>
+      <div class="nearme-row-body">
+        <div class="nearme-row-name">${escHtml(n.name)}</div>
+        <div class="nearme-row-sub">${escHtml(n.sub)}</div>
+      </div>
+      <span class="nearme-row-dist">${fmtDist(n.dist)}</span>
+    </div>`).join('');
+
+  // Wire actions (can't inline functions in innerHTML)
+  const rows = body.querySelectorAll('.nearme-row');
+  nearby.forEach((n,i) => { if(rows[i]) rows[i]._action = n.action; });
+
+  card.classList.add('visible');
+}
+
+function closeNearmeCard() {
+  const card = document.getElementById('nearmeCard');
+  if(card) card.classList.remove('visible');
+}
+
+// Auto-render when user location is set
+const _origSetUserMarker = setUserMarker;
+function setUserMarker(lat, lng) {
+  _origSetUserMarker(lat, lng);
+  // Refresh near-me card when data is available
+  setTimeout(() => {
+    if(data.places.length || data.transport.length || data.issues.length) renderNearmeCard();
+  }, 500);
+}
+
+// ── RICH SEARCH RESULTS ───────────────────────────────────────────────────────
+// Patch renderSearchResults to inject open badge, distance, colour strip
+const _origRenderSearchResults = renderSearchResults;
+function renderSearchResults(list) {
+  activeSearchItems = list;
+  if(!list.length){ searchResults.style.display='none'; return; }
+  searchResults.innerHTML = list.map((item, i) => {
+    // Detect if this is a local place result (has open status)
+    const place = data.places.find(p => p.name === item.name);
+    const openBadge = place
+      ? (place.open === true
+          ? '<span class="sr-open-badge open">Open</span>'
+          : place.open === false
+            ? '<span class="sr-open-badge closed">Closed</span>'
+            : '')
+      : '';
+    const distBadge = item._dist !== undefined
+      ? `<span class="sr-dist">📍${fmtDist(item._dist)}</span>`
+      : '';
+    const catColor = place ? (CAT_COLORS && CAT_COLORS[place.category]) || 'var(--red)' : 'transparent';
+    const strip = place ? `<div class="sr-color-strip" style="background:${catColor}"></div>` : '';
+
+    return `<div class="sr" id="sr${i}" style="display:flex;align-items:center;gap:8px">
+      ${strip}
+      <span class="sr-icon">${item.icon}</span>
+      <div style="flex:1;min-width:0">
+        <div class="sr-name">${escHtml(item.name)}${openBadge}</div>
+        <div class="sr-sub">${escHtml(item.sub)}${distBadge}</div>
+      </div>
+    </div>`;
+  }).join('');
+  list.forEach((_,i) => {
+    const el = document.getElementById('sr'+i);
+    if(el) el.addEventListener('click', () => { _.onClick(); searchResults.style.display='none'; });
+  });
+  searchResults.style.display = 'block';
+}
+window.renderSearchResults = renderSearchResults;
+
+// ── PLACE PHOTO STRIP ─────────────────────────────────────────────────────────
+async function loadPlacePhotos(lat, lng) {
+  try {
+    const d = await db.get('place_photos', `&order=created_at.desc`);
+    const nearby = (Array.isArray(d) ? d : []).filter(p => distKm(lat,lng,p.lat,p.lng) < 0.1);
+    if(!nearby.length) return '';
+    const imgs = nearby.slice(0,5).map(p =>
+      `<img src="${escHtml(p.photo_url)}" alt="${escHtml(p.caption||'')}"
+            onclick="openPhotoLightbox('${escJs(p.photo_url)}','${escJs(p.caption||'')}')"
+            onerror="this.parentElement.removeChild(this)">`
+    ).join('');
+    return `<div class="place-photo-strip">${imgs}</div>`;
+  } catch(e) { return ''; }
+}
+
+// Patch showPlaceDetail to load photo strip
+const _origShowPlaceDetail = showPlaceDetail;
+async function showPlaceDetail(id) {
+  await _origShowPlaceDetail(id);
+  // After panel opens, try to inject photos above the hero
+  const p = data.places.find(x=>x.id===id);
+  if(!p) return;
+  const scroll = document.getElementById('detailScroll');
+  if(!scroll) return;
+  const strip = await loadPlacePhotos(p.lat, p.lng);
+  if(strip) scroll.insertAdjacentHTML('afterbegin', strip);
+}
+window.showPlaceDetail = showPlaceDetail;
+
+// ── MAP CONTEXT MENU ──────────────────────────────────────────────────────────
+let ctxLat = null, ctxLng = null;
+
+map.on('contextmenu', e => {
+  e.preventDefault();
+  ctxLat = e.lngLat.lat;
+  ctxLng = e.lngLat.lng;
+  showContextMenu(e.originalEvent.clientX, e.originalEvent.clientY, ctxLat, ctxLng);
+});
+
+// Long-press on mobile (300ms)
+let ctxPressTimer = null;
+map.on('touchstart', e => {
+  if(e.points.length !== 1) return;
+  ctxPressTimer = setTimeout(() => {
+    ctxLat = e.lngLat.lat;
+    ctxLng = e.lngLat.lng;
+    const t = e.originalEvent.touches[0];
+    showContextMenu(t.clientX, t.clientY, ctxLat, ctxLng);
+  }, 600);
+});
+map.on('touchend', () => clearTimeout(ctxPressTimer));
+map.on('touchmove', () => clearTimeout(ctxPressTimer));
+
+function showContextMenu(x, y, lat, lng) {
+  const menu = document.getElementById('mapContextMenu');
+  if(!menu) return;
+  document.getElementById('mapContextCoords').textContent =
+    `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  // Position within viewport
+  menu.style.left = Math.min(x, window.innerWidth - 200) + 'px';
+  menu.style.top  = Math.min(y, window.innerHeight - 200) + 'px';
+  menu.classList.add('open');
+  setTimeout(() => document.addEventListener('click', closeContextMenuOnce), 10);
+}
+
+function closeContextMenuOnce(e) {
+  const menu = document.getElementById('mapContextMenu');
+  if(menu && !menu.contains(e.target)) {
+    menu.classList.remove('open');
+    document.removeEventListener('click', closeContextMenuOnce);
+  }
+}
+
+function ctxDirectionsTo() {
+  document.getElementById('mapContextMenu').classList.remove('open');
+  const toInput = document.getElementById('routeTo');
+  if(toInput) { toInput.value = `${ctxLat.toFixed(5)}, ${ctxLng.toFixed(5)}`; }
+  if(userLat) document.getElementById('routeFrom').value = 'Your location';
+  document.getElementById('routePanel').classList.add('open');
+  document.getElementById('routeHeaderBtn').classList.add('active');
+  if(userLat) getDirections();
+}
+
+function ctxDirectionsFrom() {
+  document.getElementById('mapContextMenu').classList.remove('open');
+  const fromInput = document.getElementById('routeFrom');
+  if(fromInput) fromInput.value = `${ctxLat.toFixed(5)}, ${ctxLng.toFixed(5)}`;
+  document.getElementById('routePanel').classList.add('open');
+  document.getElementById('routeHeaderBtn').classList.add('active');
+}
+
+function ctxReportIssue() {
+  document.getElementById('mapContextMenu').classList.remove('open');
+  pendingLat = ctxLat; pendingLng = ctxLng;
+  setPendingMarker(ctxLat, ctxLng, '#E83A2F');
+  openReportModal(ctxLat, ctxLng);
+}
+
+function ctxPinPhoto() {
+  document.getElementById('mapContextMenu').classList.remove('open');
+  openPhotoModal(ctxLat, ctxLng, true);
+}
+
+function ctxCopyCoords() {
+  document.getElementById('mapContextMenu').classList.remove('open');
+  const txt = `${ctxLat.toFixed(6)}, ${ctxLng.toFixed(6)}`;
+  if(navigator.clipboard) navigator.clipboard.writeText(txt).then(()=>toast('Coordinates copied.','success'));
+  else toast(txt, 'info', 5000);
+}
+
+window.ctxDirectionsTo=ctxDirectionsTo;
+window.ctxDirectionsFrom=ctxDirectionsFrom;
+window.ctxReportIssue=ctxReportIssue;
+window.ctxPinPhoto=ctxPinPhoto;
+window.ctxCopyCoords=ctxCopyCoords;
+
+// ── ESC DISCIPLINE ────────────────────────────────────────────────────────────
+// Centralise ESC handling so all panels close in logical order
+document.addEventListener('keydown', e => {
+  if(e.key !== 'Escape') return;
+  // Order: context menu → photo lightbox → welcome → settings → detail panel → saved → rr panel → route panel → weather → search
+  const menu = document.getElementById('mapContextMenu');
+  if(menu && menu.classList.contains('open')) { menu.classList.remove('open'); return; }
+  const lb = document.getElementById('photoLightbox');
+  if(lb && lb.classList.contains('open')) { closePhotoLightbox(); return; }
+  const wo = document.getElementById('welcomeOverlay');
+  if(wo && wo.style.display !== 'none') { welcomeSkip(); return; }
+  const sp = document.getElementById('settingsPanel');
+  if(sp && sp.classList.contains('open')) { closeSettings(); return; }
+  const dp = document.getElementById('detailPanel');
+  if(dp && dp.classList.contains('open')) { closeDetail(); return; }
+  const svp = document.getElementById('savedPanel');
+  if(svp && svp.classList.contains('open')) { toggleSavedPanel(); return; }
+  const rrp = document.getElementById('rrPanel');
+  if(rrp && rrp.classList.contains('open')) { rrClose(); return; }
+  const rp = document.getElementById('routePanel');
+  if(rp && rp.classList.contains('open')) { toggleRoutePanel(); return; }
+  const wd = document.getElementById('weatherDetailPanel');
+  if(wd && wd.classList.contains('open')) { wd.classList.remove('open'); return; }
+  if(searchResults.style.display !== 'none') { searchResults.style.display='none'; return; }
+  if(typeof svOpen !== 'undefined' && svOpen) { closeStreetView(); return; }
+}, true); // capture phase so it fires before other handlers
+
+// ── LAYER BAR: ensure scrollable on desktop too ────────────────────────────
+function initLayerBarScroll() {
+  const bar = document.querySelector('.layer-bar');
+  if(!bar) return;
+  bar.style.overflowX = 'auto';
+  bar.style.maxWidth = 'calc(100vw - 200px)';
+}
+
+// ── START-UP SEQUENCE ─────────────────────────────────────────────────────────
+// (Runs after map.on('load') so we patch into the existing startup)
+map.once('idle', () => {
+  // Show welcome on first visit
+  checkFirstRun();
+  initLayerBarScroll();
+});
+
+window.welcomeGo=welcomeGo;
+window.welcomeSkip=welcomeSkip;
+window.closeNearmeCard=closeNearmeCard;
 
 function openMobileNav() {
   const drawer = document.getElementById('mobileNavDrawer');
   if(!drawer) return;
   drawer.style.display = 'block';
-  // Update weather label in drawer
   const wt = document.getElementById('weatherTemp');
   const wi = document.getElementById('weatherIcon');
   const ml = document.getElementById('mobileWeatherLabel');
