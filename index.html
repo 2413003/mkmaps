@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
   <meta name="apple-mobile-web-app-title" content="MK Maps"/>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E83A2F'/><text y='.9em' font-size='80'>📍</text></svg>"/>
-  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;MK Maps&quot;,&quot;short_name&quot;:&quot;MK Maps&quot;,&quot;start_url&quot;:&quot;.&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230a0a0a&quot;,&quot;theme_color&quot;:&quot;%230a0a0a&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E83A2F'/><text y='.9em' font-size='80'>📍</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}"/>
+  <link rel="manifest" href="data:application/json,{&quot;name&quot;:&quot;MK Maps&quot;,&quot;short_name&quot;:&quot;MK Maps&quot;,&quot;display&quot;:&quot;standalone&quot;,&quot;background_color&quot;:&quot;%230a0a0a&quot;,&quot;theme_color&quot;:&quot;%230a0a0a&quot;,&quot;icons&quot;:[{&quot;src&quot;:&quot;data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23E83A2F'/><text y='.9em' font-size='80'>📍</text></svg>&quot;,&quot;sizes&quot;:&quot;any&quot;,&quot;type&quot;:&quot;image/svg+xml&quot;}]}"/>
   <link href="https://api.mapbox.com/mapbox-gl-js/v3.3.0/mapbox-gl.css" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/mapillary-js@4.1.2/dist/mapillary.css"/>
   <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@700;800;900&display=swap" rel="stylesheet"/>
@@ -613,6 +613,15 @@
     .sv-btn:hover{border-color:#1a73e8;}
     .sv-btn-icon{font-size:18px;}
     .sv-btn-label{font-size:9px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+
+    /* ── DETAIL MINI MAP (static Mapbox thumbnail) ───────────── */
+    .detail-mini-map{display:block;margin:-16px -16px 14px;border-radius:18px 18px 0 0;overflow:hidden;cursor:pointer;text-decoration:none;}
+    .detail-mini-map img{width:100%;height:130px;object-fit:cover;display:block;transition:opacity .15s;}
+    .detail-mini-map:hover img{opacity:.92;}
+
+    /* ── MAP HOVER TOOLTIP ───────────────────────────────────── */
+    .map-tip{position:fixed;background:rgba(32,33,36,.93);color:#fff;padding:5px 12px;border-radius:20px;font-size:11px;font-weight:500;pointer-events:none;z-index:5000;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1);box-shadow:0 3px 12px rgba(0,0,0,.4);opacity:0;transition:opacity .1s;display:none;transform:translateX(-50%) translateY(-130%);}
+    .map-tip.show{opacity:1;display:block;}
   </style>
 </head>
 <body>
@@ -3730,22 +3739,36 @@ function selectGeocodeResult(f){
 function renderSearchResults(list){
   activeSearchItems = list;
   if(!list.length){ searchResults.style.display='none'; return; }
-  searchResults.innerHTML=list.map((_,i)=>{
-    const distHtml = _._dist !== undefined ? `<span class="sr-dist-pill">📍 ${fmtDist(_._dist)}</span>` : '';
-    const openHtml = _.open===true ? `<span class="sr-open-badge open">Open</span>` : _.open===false ? `<span class="sr-open-badge closed">Closed</span>` : '';
+  const _CATCOLS = {
+    'Restaurant':'#f97316','Café':'#a16207','Pub & Bar':'#b45309','Fast Food':'#ef4444',
+    'Shopping':'#8b5cf6','Health':'#06b6d4','Leisure':'#10b981','Parks & Nature':'#16a34a',
+    'Arts & Culture':'#ec4899','Transport':'#3b82f6','Community':'#14b8a6','Hotel':'#f59e0b',
+    'Beauty':'#db2777','Education':'#0ea5e9','Finance':'#64748b','Music & Nightlife':'#7c3aed',
+  };
+  searchResults.innerHTML = list.map((item,i) => {
+    const cc = _CATCOLS[item._cat] || null;
+    const strip = cc
+      ? `<div class="sr-color-strip" style="background:${cc}"></div>`
+      : '<div class="sr-color-strip"></div>';
+    const distHtml = item._dist !== undefined
+      ? `<span class="sr-dist-pill">📍 ${fmtDist(item._dist)}</span>` : '';
+    const openHtml = item._open===true
+      ? '<span class="sr-open-badge open">Open</span>'
+      : item._open===false ? '<span class="sr-open-badge closed">Closed</span>' : '';
     return `<div class="sr" id="sr${i}">
-      <span class="sr-icon">${_.icon}</span>
+      ${strip}
+      <span class="sr-icon">${item.icon}</span>
       <div class="sr-body">
-        <div class="sr-name">${escHtml(_.name||'')}${openHtml}</div>
-        <div class="sr-sub">${escHtml(_.sub||'')}${distHtml}</div>
+        <div class="sr-name">${escHtml(item.name||'')}${openHtml}</div>
+        <div class="sr-sub">${escHtml(item.sub||'')}${distHtml}</div>
       </div>
     </div>`;
   }).join('');
-  list.forEach((_,i)=>{
+  list.forEach((item,i) => {
     const el = document.getElementById('sr'+i);
-    if(el) el.addEventListener('click',()=>{_.onClick();searchResults.style.display='none';});
+    if(el) el.addEventListener('click', () => { item.onClick(); searchResults.style.display='none'; });
   });
-  searchResults.style.display='block';
+  searchResults.style.display = 'block';
 }
 function updateSearchClear(){
   const wrap = searchInput.closest('.search-wrap');
@@ -3808,6 +3831,7 @@ searchInput.addEventListener('input', () => {
           onClick: ()=>showPlaceDetail(p.id),
           open: p.open,
           _open: p.open,
+          _cat: p.category,
           _dist: userLat ? distKm(userLat,userLng,p.lat,p.lng) : undefined,
         }))
         .sort((a,b) => score(b)-score(a));
@@ -5559,18 +5583,21 @@ function rrExportGPXById(id){
   rrDoExport(r.name, r.coords);
 }
 function rrDoExport(name, coords){
-  const trkpts = coords.map(c=>`    <trkpt lat="${c[1].toFixed(6)}" lon="${c[0].toFixed(6)}"></trkpt>`).join('
-');
-  const gpx = `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="MK Maps" xmlns="http://www.topografix.com/GPX/1/1">
-  <metadata><name>${escHtml(name)}</name><desc>Redway route exported from MK Maps</desc></metadata>
-  <trk>
-    <name>${escHtml(name)}</name>
-    <trkseg>
-${trkpts}
-    </trkseg>
-  </trk>
-</gpx>`;
+  const nl = '\n';
+  const trkpts = coords.map(c=>`    <trkpt lat="${c[1].toFixed(6)}" lon="${c[0].toFixed(6)}"></trkpt>`).join(nl);
+  const gpxLines = [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<gpx version="1.1" creator="MK Maps" xmlns="http://www.topografix.com/GPX/1/1">',
+    '  <metadata><name>' + escHtml(name) + '</name><desc>Redway route from MK Maps</desc></metadata>',
+    '  <trk>',
+    '    <name>' + escHtml(name) + '</name>',
+    '    <trkseg>',
+    trkpts,
+    '    </trkseg>',
+    '  </trk>',
+    '</gpx>'
+  ];
+  const gpx = gpxLines.join(nl);
   const blob = new Blob([gpx], {type:'application/gpx+xml'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
