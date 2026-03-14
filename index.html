@@ -456,8 +456,13 @@
     .mapboxgl-ctrl-group button:hover{background:var(--panel2)!important;}
     .mapboxgl-ctrl-icon{filter:invert(.6);}
     body.theme-day .mapboxgl-ctrl-icon{filter:none;}
-    .mapboxgl-ctrl-attrib{font-size:9px!important;background:rgba(255,255,255,.7)!important;border-radius:4px!important;}
+    /* Attribution — collapse to tiny ⓘ button, full text available on click */
+    .mapboxgl-ctrl-attrib{font-size:9px!important;background:rgba(255,255,255,0.75)!important;border-radius:12px!important;padding:2px 6px!important;backdrop-filter:blur(4px);}
     .mapboxgl-ctrl-attrib a{color:var(--muted)!important;}
+    /* Hide the verbose text by default, only show toggle button */
+    .mapboxgl-ctrl-attrib-inner{display:none!important;}
+    .mapboxgl-ctrl-attrib.mapboxgl-compact-show .mapboxgl-ctrl-attrib-inner{display:block!important;}
+    .mapboxgl-ctrl-attrib-button{opacity:0.5;}
     .mapboxgl-ctrl-logo{width:80px!important;height:22px!important;background-size:80px 22px!important;opacity:.55!important;margin:0 4px 4px 0!important;}
     .mapboxgl-ctrl-logo:hover{opacity:.9!important;}
     .mapboxgl-ctrl-bottom-left{display:flex;flex-direction:row;align-items:flex-end;gap:4px;padding:0 0 8px 8px;}
@@ -1666,7 +1671,7 @@ const map = new mapboxgl.Map({
 map.addControl(new mapboxgl.NavigationControl({showCompass:true, visualizePitch:true}),'bottom-right');
 const geoControl = new mapboxgl.GeolocateControl({positionOptions:{enableHighAccuracy:true},trackUserLocation:true,showUserHeading:true});
 map.addControl(geoControl,'bottom-right');
-map.addControl(new mapboxgl.AttributionControl({compact:false, customAttribution:'© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'}),'bottom-right');
+map.addControl(new mapboxgl.AttributionControl({compact:true}),'bottom-right');
 map.addControl(new mapboxgl.ScaleControl({maxWidth:120,unit:'metric'}),'bottom-left');
 geoControl.on('geolocate', (e)=>{ try{ setUserMarker(e.coords.latitude, e.coords.longitude); }catch(err){} });
 
@@ -1724,19 +1729,73 @@ map.on('click', e => {
     openParkingModal(lat,lng);
     return;
   }
-  if (activeLayer === 'issues' || activeLayer === 'events') {
-    // For issues: only open modal if cluster layer isn't already handling this
-    // (cluster layer events fire before the generic click)
-    if(activeLayer === 'issues' && map.getLayer('issues-points')) {
+
+  // ── Check if user clicked a Mapbox built-in POI label (streets-v12 style) ──
+  // These are things like "National Space Centre", cafes, pubs etc. shown on the base map
+  const poiFeatures = map.queryRenderedFeatures(e.point, {
+    layers: ['poi-label','transit-label','airport-label','place-label']
+  });
+  if(poiFeatures.length) {
+    const f = poiFeatures[0];
+    const props = f.properties || {};
+    const name = props.name || props['name_en'] || 'Place';
+    const category = props.type || props.category_en || props.maki || '';
+    const coords = f.geometry && f.geometry.coordinates ? f.geometry.coordinates : [e.lngLat.lng, e.lngLat.lat];
+    const lng = coords[0], lat = coords[1];
+    // Check if we already have this in loaded places data
+    const existing = data.places.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
+    if(existing) {
+      showPlaceDetail(existing.id);
+      return;
+    }
+    // Otherwise show a quick info panel from the map feature itself
+    showMapPoiDetail(name, category, lat, lng, f);
+    return;
+  }
+
+  // ── Issues layer: clicking empty map opens report modal ──────
+  // But ONLY when the issues layer is the actively-selected layer (not just default state)
+  if (activeLayer === 'issues' && document.getElementById('chip-issues').classList.contains('active')) {
+    if(map.getLayer('issues-points')) {
       const features = map.queryRenderedFeatures(e.point, {layers:['issues-points','issues-clusters']});
       if(features.length) return; // handled by layer click listeners
     }
     const {lat,lng} = e.lngLat;
     pendingLat=lat; pendingLng=lng;
-    const color = activeLayer === 'issues' ? '#E83A2F' : '#f5a623';
-    setPendingMarker(lat,lng,color);
-    if(activeLayer === 'issues') openReportModal(lat,lng);
-    else openEventModal(lat,lng);
+    setPendingMarker(lat,lng,'#E83A2F');
+    openReportModal(lat,lng);
+    return;
+  }
+
+  // ── Events layer ─────────────────────────────────────────────
+  if (activeLayer === 'events' && document.getElementById('chip-events').classList.contains('active')) {
+    const {lat,lng} = e.lngLat;
+    pendingLat=lat; pendingLng=lng;
+    setPendingMarker(lat,lng,'#f5a623');
+    openEventModal(lat,lng);
+    return;
+  }
+
+  // ── Default: clicking empty map with no active layer ─────────
+  // Show coordinates / reverse geocode like Apple Maps "drop pin"
+  if(!activeLayer || (!document.getElementById('chip-issues')?.classList.contains('active') && !document.getElementById('chip-events')?.classList.contains('active'))) {
+    const {lat,lng} = e.lngLat;
+    // Show a minimal "dropped pin" detail
+    showSearchDetail({
+      text: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+      place_name: 'Dropped Pin',
+      center: [lng, lat],
+      id: 'pin_'+lat.toFixed(5)+'_'+lng.toFixed(5)
+    });
+    setSearchMarker(lng, lat);
+    reverseGeocode(lat, lng).then(addr => {
+      showSearchDetail({
+        text: addr.split(',')[0] || addr,
+        place_name: addr,
+        center: [lng, lat],
+        id: 'pin_'+lat.toFixed(5)+'_'+lng.toFixed(5)
+      });
+    });
   }
 });
 
@@ -2000,6 +2059,11 @@ function renderIssueMarkers() {
   map.on('mouseleave','issues-clusters',()=>{map.getCanvas().style.cursor='';});
   map.on('mouseenter','issues-points',()=>{map.getCanvas().style.cursor='pointer';});
   map.on('mouseleave','issues-points',()=>{map.getCanvas().style.cursor='';});
+  // POI labels from streets-v12 base style — show pointer to indicate clickability
+  ['poi-label','transit-label','airport-label'].forEach(layer => {
+    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
+  });;
 }
 
 function renderLocalIntel() {
@@ -3946,8 +4010,19 @@ async function submitReview(placeId) {
 function toggleRedways(btn) {
   redwaysVisible = !redwaysVisible;
   btn.classList.toggle('active', redwaysVisible);
-  if(redwaysVisible) loadRedways();
-  else if(map.getLayer('redways')) { map.setLayoutProperty('redways','visibility','none'); }
+  if(redwaysVisible) {
+    // If already loaded, just toggle visibility instantly
+    if(map.getLayer('redways')) {
+      map.setLayoutProperty('redways','visibility','visible');
+    } else {
+      // Show loading indicator while fetching
+      btn.style.opacity = '0.6';
+      toast('Loading Redways…','info',2000);
+      loadRedways().then(()=>{ btn.style.opacity=''; }).catch(()=>{ btn.style.opacity=''; });
+    }
+  } else {
+    if(map.getLayer('redways')) map.setLayoutProperty('redways','visibility','none');
+  }
 }
 
 async function loadRedways() {
@@ -4047,6 +4122,70 @@ function setSearchMarker(lng,lat){
 function clearSearchMarker(){
   if(searchMarker){ searchMarker.remove(); searchMarker=null; }
 }
+// ── MAP POI DETAIL — for Mapbox built-in POI labels (streets-v12) ──
+// When user taps a label on the base map that isn't in our data
+function showMapPoiDetail(name, category, lat, lng, feature) {
+  const props = feature ? (feature.properties || {}) : {};
+  // Map Mapbox maki icon names to readable categories + emojis
+  const makiMap = {
+    restaurant:'Restaurant',cafe:'Café',bar:'Bar',pub:'Pub',
+    fast_food:'Fast Food',food:'Restaurant',fuel:'Petrol Station',
+    hospital:'Hospital',pharmacy:'Pharmacy',doctor:'Doctor',
+    school:'School',college:'College',university:'University',
+    supermarket:'Supermarket',shop:'Shop',convenience:'Shop',
+    gym:'Gym',park:'Park',garden:'Park',museum:'Museum',
+    cinema:'Cinema',theatre:'Theatre',library:'Library',
+    hotel:'Hotel',bank:'Bank',atm:'ATM',
+    place_of_worship:'Place of Worship',police:'Police',
+    fire_station:'Fire Station',post:'Post Office',
+    bus:'Bus Stop',rail:'Railway',parking:'Car Park',
+    airport:'Airport',attraction:'Attraction',
+    swimming:'Swimming Pool',sports:'Sports Centre',
+  };
+  const emojiMap = {
+    Restaurant:'🍽️',Café:'☕',Bar:'🍸',Pub:'🍺','Fast Food':'🍔',
+    'Petrol Station':'⛽',Hospital:'🏥',Pharmacy:'💊',Doctor:'🩺',
+    School:'🏫',College:'🎓',University:'🎓',
+    Supermarket:'🛒',Shop:'🏪',Gym:'💪',Park:'🌳',Museum:'🏛️',
+    Cinema:'🎬',Theatre:'🎭',Library:'📚',Hotel:'🏨',
+    Bank:'🏦',ATM:'💳','Place of Worship':'🕌',Police:'🚔',
+    'Fire Station':'🚒','Post Office':'📮','Bus Stop':'🚌',
+    Railway:'🚂','Car Park':'🅿️',Airport:'✈️',Attraction:'⭐',
+    'Swimming Pool':'🏊','Sports Centre':'🏊',
+  };
+  const maki = props.maki || '';
+  const resolvedCat = makiMap[maki] || makiMap[category] || category || 'Place';
+  const emoji = emojiMap[resolvedCat] || '📍';
+  const id = 'poi_' + name.replace(/\s/g,'_') + '_' + lat.toFixed(4);
+  const distStr = userLat ? `<span style="font-size:11px;color:var(--blue);margin-left:6px">📍 ${fmtDist(distKm(userLat,userLng,lat,lng))} away</span>` : '';
+  const staticMapUrl = `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/pin-s+E83A2F(${lng},${lat})/${lng},${lat},16/280x120@2x?access_token=${mapboxgl.accessToken}`;
+
+  document.getElementById('detailScroll').innerHTML = `
+    <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank" rel="noopener" style="display:block;margin:-16px -16px 14px;border-radius:18px 18px 0 0;overflow:hidden;">
+      <img src="${staticMapUrl}" alt="${escHtml(name)}" style="width:100%;height:120px;object-fit:cover;display:block;" loading="lazy" onerror="this.parentElement.style.display='none'">
+    </a>
+    <div class="place-hero">
+      <div class="place-icon-big" style="font-size:26px;background:rgba(232,58,47,0.08)">${emoji}</div>
+      <div style="flex:1;min-width:0">
+        <div class="place-name">${escHtml(name)}</div>
+        <div class="place-cat">${escHtml(resolvedCat)}${distStr}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">Map data · OpenStreetMap</div>
+      </div>
+    </div>
+    <div class="action-row">
+      <button class="action-btn" onclick="routeTo('${escJs(name)}',${lat},${lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Directions</span></button>
+      <button class="action-btn" onclick="openStreetView(${lat},${lng},'${escJs(name)}')"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
+      <button class="action-btn" onclick="if(navigator.share)navigator.share({title:'${escJs(name)} — MK Maps',url:'${window.location.origin}${window.location.pathname}#@${lat.toFixed(5)},${lng.toFixed(5)},17z'});else navigator.clipboard.writeText('${escJs(name)}').then(()=>toast('Copied','success'))"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
+      <button class="action-btn" onclick="toggleSavePlace('${escJs(id)}','${escJs(name)}','${escJs(name+', '+resolvedCat)}',[${lng},${lat}])"><span class="action-btn-icon">☆</span><span class="action-btn-label">Save</span></button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);padding:10px 2px;line-height:1.6">
+      This place is shown on the OpenStreetMap base layer. Tap <strong>Places</strong> to search for more detailed info on MK businesses.
+    </div>`;
+  openDetail();
+  flyTo(lng, lat, 17);
+  setSearchMarker(lng, lat);
+}
+
 function showSearchDetail(f){
   if(!f || !f.center) return;
   lastSearchFeature = f;
@@ -6878,6 +7017,17 @@ map.on('load',()=>{
       }
     } catch(e) { /* silent — user can still tap Places chip to load */ }
   }, 1500);
+
+  // Pre-fetch Redways GeoJSON in the background so first toggle is instant
+  setTimeout(async () => {
+    try {
+      await loadRedways();
+      // Immediately hide it again (just pre-loading into map source)
+      if(map.getLayer('redways') && !redwaysVisible) {
+        map.setLayoutProperty('redways', 'visibility', 'none');
+      }
+    } catch(e) { /* silent pre-fetch — will retry on first toggle */ }
+  }, 3000);
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
