@@ -1433,21 +1433,27 @@ function showIssueDetail(id) {
   flyTo(r.longitude,r.latitude);
   const color=catColor[r.category]||'#888';
   document.getElementById('detailScroll').innerHTML=`
+    ${r.photo_url ? `
+      <div style="margin:-16px -16px 14px;position:relative;">
+        <img src="${escHtml(r.photo_url)}" alt="Issue photo"
+             style="width:100%;height:200px;object-fit:cover;display:block;border-radius:18px 18px 0 0;"
+             onerror="this.parentElement.style.display='none'">
+      </div>` : ''}
     <div class="place-hero" style="margin-bottom:12px">
       <div class="place-icon-big" style="background:${color}20">${catEmoji[r.category]||'⚠️'}</div>
       <div style="flex:1">
-        <div class="place-name" style="font-size:16px">${r.title}</div>
-        <div class="place-cat">${r.category} · ${timeAgo(r.created_at)}</div>
+        <div class="place-name" style="font-size:16px">${escHtml(r.title)}</div>
+        <div class="place-cat">${escHtml(r.category)} · ${timeAgo(r.created_at)}</div>
         <span class="open-badge ${(r.upvotes||0)>2?'open':'closed'}">${(r.upvotes||0)>2?'⚠️ Multiple reports':'📍 Reported'}</span>
       </div>
     </div>
-    ${r.description?`<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;padding:12px;background:var(--panel);border-radius:8px;border:1px solid var(--border)">${r.description}</div>`:''}
+    ${r.description?`<div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:16px;padding:12px;background:var(--panel);border-radius:8px;border:1px solid var(--border)">${escHtml(r.description)}</div>`:''}
     <div class="action-row">
       <button class="action-btn" onclick="upvoteIssue(event,${r.id})">
         <span class="action-btn-icon">▲</span>
         <span class="action-btn-label">Confirm (${r.upvotes||0})</span>
       </button>
-      <button class="action-btn" onclick="routeTo('${r.title.replace(/'/g,"\\'")}',${r.latitude},${r.longitude})">
+      <button class="action-btn" onclick="routeTo('${escJs(r.title)}',${r.latitude},${r.longitude})">
         <span class="action-btn-icon">🗺️</span>
         <span class="action-btn-label">Route here</span>
       </button>
@@ -1462,9 +1468,14 @@ function showIssueDetail(id) {
     </div>
     <div class="detail-section">
       <div class="detail-section-title">Location</div>
-
+      <div id="issueDetailAddr" style="font-size:12px;color:var(--muted)">⏳ Getting address…</div>
     </div>`;
   openDetail();
+  // Reverse-geocode location
+  reverseGeocode(r.latitude, r.longitude).then(addr => {
+    const el = document.getElementById('issueDetailAddr');
+    if(el) el.textContent = addr;
+  });
 }
 
 // ── TRANSPORT ────────────────────────────────────────────────────
@@ -1648,66 +1659,146 @@ function setBusView(mode) {
   renderTransportMarkers();
 }
 
-function showTransportDetail(id) {
+// ── TRANSPORT API (real stop departures) ─────────────────────────
+// Register free at developer.transportapi.com — 1,000 calls/day free
+const TAPI_ID  = '69c1efcc';
+const TAPI_KEY = '80240b65e18305092156a0aea61145e2';
+
+async function fetchStopDepartures(lat, lng) {
+  // Step 1: find nearest NaPTAN stop via TransportAPI places endpoint
+  try {
+    const nearUrl = `https://transportapi.com/v3/uk/places.json`
+      + `?app_id=${TAPI_ID}&app_key=${TAPI_KEY}`
+      + `&lat=${lat}&lon=${lng}&rpp=1&type=bus_stop`;
+    const nearRes = await fetch(nearUrl);
+    if(!nearRes.ok) return null;
+    const nearData = await nearRes.json();
+    const stop = nearData?.member?.[0];
+    if(!stop?.atcocode) return null;
+
+    // Step 2: fetch next departures from that stop
+    const depUrl = `https://transportapi.com/v3/uk/bus/stop/${stop.atcocode}/live.json`
+      + `?app_id=${TAPI_ID}&app_key=${TAPI_KEY}&group=no&nextbuses=yes&limit=8`;
+    const depRes = await fetch(depUrl);
+    if(!depRes.ok) return null;
+    const depData = await depRes.json();
+
+    const departures = [];
+    const deps = depData?.departures?.all || [];
+    deps.slice(0, 8).forEach(d => {
+      const aimed  = d.aimed_departure_time   || d.aimed_arrival_time   || '';
+      const expect = d.expected_departure_time || d.expected_arrival_time || aimed;
+      const minsAway = calcMinsAway(expect || aimed);
+      departures.push({
+        line:      d.line || d.line_name || '?',
+        direction: d.direction || d.destination_name || '',
+        operator:  d.operator_name || d.operator || '',
+        aimed,
+        expected:  expect,
+        minsAway,
+        status:    d.status || (expect && expect !== aimed ? 'Expected '+expect : 'On time'),
+        source:    'live'
+      });
+    });
+
+    return {
+      stopName:  stop.name || depData?.stop_name || 'Nearest stop',
+      atcocode:  stop.atcocode,
+      departures,
+      fetchedAt: Date.now()
+    };
+  } catch(err) {
+    console.warn('TransportAPI failed:', err);
+    return null;
+  }
+}
+
+function calcMinsAway(timeStr) {
+  if(!timeStr) return null;
+  try {
+    const now  = new Date();
+    const [h,m] = timeStr.split(':').map(Number);
+    const then  = new Date(now);
+    then.setHours(h, m, 0, 0);
+    if(then < now) then.setDate(then.getDate() + 1); // next day
+    return Math.round((then - now) / 60000);
+  } catch(e) { return null; }
+}
+
+async function showTransportDetail(id) {
   const r=data.transport.find(x=>String(x.id)===String(id));
   if(!r) return;
   flyTo(r.lng,r.lat);
-  document.getElementById('detailScroll').innerHTML=r.live?`
-    <div class="place-hero">
-      <div class="place-icon-big" style="background:${r.color}20;font-size:20px;font-family:'Syne',sans-serif;font-weight:900;color:${r.color}">${r.number}</div>
-      <div style="flex:1">
-        <div class="place-name" style="font-size:16px">${r.name}</div>
-        <div class="place-cat">${r.operator}</div>
-        <span class="open-badge open">● Live Vehicle</span>
-      </div>
-    </div>
-    <div class="action-row">
-      <button class="action-btn" onclick="flyTo(${r.lng},${r.lat})">
-        <span class="action-btn-icon">📍</span><span class="action-btn-label">Show bus</span>
-      </button>
-      <button class="action-btn" onclick="routeTo('${r.name.replace(/'/g,"\\'")}',${r.lat},${r.lng})">
-        <span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route to bus</span>
-      </button>
-    </div>
-    <div class="detail-section">
-      <div class="detail-section-title">Live Status</div>
-      <div class="hours-row"><span class="hours-day">Updated</span><span class="hours-time">${fmtUpdated(r.updated)}</span></div>
-      <div class="hours-row"><span class="hours-day">Route</span><span class="hours-time">${r.number}</span></div>
-      <div class="hours-row"><span class="hours-day">Vehicle</span><span class="hours-time">${r.stop}</span></div>
 
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:8px">Live positions refresh every ~20 seconds.</div>
-  `:`
+  // Render shell immediately so panel opens fast
+  const scroll = document.getElementById('detailScroll');
+  scroll.innerHTML=`
     <div class="place-hero">
       <div class="place-icon-big" style="background:${r.color}20;font-size:20px;font-family:'Syne',sans-serif;font-weight:900;color:${r.color}">${r.number}</div>
       <div style="flex:1">
-        <div class="place-name" style="font-size:16px">${r.name}</div>
-        <div class="place-cat">${r.operator}</div>
-        <span class="open-badge open">● Serving MK</span>
+        <div class="place-name" style="font-size:16px">${escHtml(r.name)}</div>
+        <div class="place-cat">${escHtml(r.operator||'')}</div>
+        <span class="open-badge open">${r.live?'● Live Vehicle':'🚌 Bus Route'}</span>
       </div>
     </div>
     <div class="action-row">
       <button class="action-btn" onclick="flyTo(${r.lng},${r.lat})">
-        <span class="action-btn-icon">📍</span><span class="action-btn-label">Show stop</span>
+        <span class="action-btn-icon">📍</span><span class="action-btn-label">${r.live?'Track bus':'Show stop'}</span>
       </button>
-      <a class="action-btn" href="https://bustimes.org/stops/?lat=${r.lat}&lon=${r.lng}" target="_blank">
-        <span class="action-btn-icon">🕐</span><span class="action-btn-label">Live times</span>
-      </a>
       <a class="action-btn" href="https://www.google.com/maps/dir/?api=1&destination=${r.lat},${r.lng}" target="_blank">
         <span class="action-btn-icon">🗺️</span><span class="action-btn-label">Directions</span>
       </a>
     </div>
     <div class="detail-section">
-      <div class="detail-section-title">Next departures from ${r.stop}</div>
-      ${r.departures.map(d=>`
-        <div class="departure" style="margin-bottom:4px">
-          <span class="dep-time ${d.minsAway<=0?'due':d.minsAway<=3?'soon':''}">${d.minsAway<=0?'Due now':d.time}</span>
-          <span class="dep-stop">${r.name}</span>
-          <span class="dep-status ${d.status==='On time'?'on-time':'delayed'}">${d.status}</span>
-        </div>`).join('')}
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:8px">⚠️ Times are estimated. Tap "Live times" for real-time data.</div>`;
+      <div class="detail-section-title">Next departures</div>
+      <div id="stopDepsLoading" style="font-size:12px;color:var(--muted);padding:8px 0">
+        <span style="display:inline-block;animation:pulse 1.2s infinite">⏳ Loading live times…</span>
+      </div>
+    </div>`;
   openDetail();
+
+  // Now fetch real departures
+  const live = await fetchStopDepartures(r.lat, r.lng);
+  const depsEl = document.getElementById('stopDepsLoading');
+  if(!depsEl) return; // panel was closed
+
+  if(!live || !live.departures.length) {
+    // Fallback: link out to bustimes.org
+    depsEl.outerHTML=`
+      <div style="font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:10px;">
+        ${TAPI_ID==='YOUR_TRANSPORTAPI_APP_ID'
+          ? '⚙️ Add your TransportAPI key to enable live times.'
+          : 'No live departures found for this stop right now.'}
+      </div>
+      <a class="action-btn" href="https://bustimes.org/stops/?lat=${r.lat}&lon=${r.lng}" target="_blank"
+         style="display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:8px;text-decoration:none;font-size:12px;color:var(--text);">
+        <span style="font-size:18px;">🕐</span> View on bustimes.org →
+      </a>`;
+    return;
+  }
+
+  const rows = live.departures.map(d => {
+    const mins = d.minsAway;
+    const timeDisplay = mins !== null
+      ? (mins <= 0 ? '<span style="color:var(--red);font-weight:700;animation:pulse 1s infinite">Due now</span>'
+        : mins <= 2 ? `<span style="color:var(--amber);font-weight:600">${mins} min</span>`
+        : `<span style="color:var(--green);font-weight:500">${mins} min</span>`)
+      : `<span style="color:var(--muted)">${d.expected||d.aimed||'—'}</span>`;
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);">
+        <div style="min-width:32px;height:32px;border-radius:6px;background:var(--blue);color:white;display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:800;flex-shrink:0;">${escHtml(d.line)}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escHtml(d.direction)}</div>
+          <div style="font-size:10px;color:var(--muted);">${escHtml(d.operator)}</div>
+        </div>
+        <div style="text-align:right;font-size:13px;flex-shrink:0;">${timeDisplay}</div>
+      </div>`;
+  }).join('');
+
+  depsEl.outerHTML=`
+    <div style="font-size:10px;color:var(--muted);margin-bottom:8px;">📍 ${escHtml(live.stopName)} · <span style="color:var(--green)">● Live</span></div>
+    ${rows}
+    <div style="font-size:10px;color:var(--muted2);margin-top:8px;">Real-time data via TransportAPI · Updated just now</div>`;
 }
 
 // ── EVENTS ───────────────────────────────────────────────────────
@@ -2763,100 +2854,124 @@ map.on('zoom', () => {
   placeZoomTimer = setTimeout(renderPlaceMarkers, 300);
 });
 
-function showPlaceDetail(id) {
+async function showPlaceDetail(id) {
   const p=data.places.find(x=>x.id===id);
   if(!p) return;
   updateURL('place',id);
   flyTo(p.lng,p.lat);
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today=days[new Date().getDay()];
-  const reviews=getReviews(id);
+
+  // Show skeleton while reviews load
   document.getElementById('detailScroll').innerHTML=`
     <div class="place-hero">
       <div class="place-icon-big">${p.emoji}</div>
       <div style="flex:1">
-        <div class="place-name">${p.name}</div>
-        <div class="place-cat">${p.category} · ${p.address}</div>
+        <div class="place-name">${escHtml(p.name)}</div>
+        <div class="place-cat">${escHtml(p.category)}${p.address?' · '+escHtml(p.address):''}</div>
         <div class="place-rating-row">
           ${p.rating ? `<span class='place-stars'>${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span><span class='place-rating-num'>${p.rating}</span><span class='place-review-count'>(${p.reviews.toLocaleString()} reviews)</span>` : `<span style='font-size:10px;color:var(--muted)'>Community data · OpenStreetMap</span>`}
           <span class="open-badge ${p.open===true?'open':p.open===false?'closed':''}" style="margin-left:4px">${p.open===true?'● Open now':p.open===false?'● Closed':'● Hours unknown'}</span>
         </div>
       </div>
     </div>
-
     <div class="action-row">
-      ${p.phone?`<a class="action-btn" href="tel:${p.phone}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
-      ${p.website?`<a class="action-btn" href="${p.website}" target="_blank"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
-      <button class="action-btn" onclick="routeTo('${p.name.replace(/'/g,"\\'")}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route here</span></button>
-      <button class="action-btn sv-place-btn" data-lat="${p.lat}" data-lng="${p.lng}"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
-      <button class="action-btn" onclick="sharePlace('${p.name}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
+      ${p.phone?`<a class="action-btn" href="tel:${escHtml(p.phone)}"><span class="action-btn-icon">📞</span><span class="action-btn-label">Call</span></a>`:''}
+      ${p.website?`<a class="action-btn" href="${escHtml(p.website)}" target="_blank" rel="noopener"><span class="action-btn-icon">🌐</span><span class="action-btn-label">Website</span></a>`:''}
+      <button class="action-btn" onclick="routeTo('${escJs(p.name)}',${p.lat},${p.lng})"><span class="action-btn-icon">🗺️</span><span class="action-btn-label">Route here</span></button>
+      <button class="action-btn sv-place-btn"><span class="action-btn-icon">👁️</span><span class="action-btn-label">Street view</span></button>
+      <button class="action-btn" onclick="sharePlace('${escJs(p.name)}',${p.id})"><span class="action-btn-icon">📤</span><span class="action-btn-label">Share</span></button>
     </div>
-
-    <div class="detail-section">
-      <div class="detail-section-title">About</div>
-      <div style="font-size:12px;color:var(--muted);line-height:1.7">${p.description}</div>
-    </div>
-
+    ${p.description?`<div class="detail-section"><div class="detail-section-title">About</div><div style="font-size:12px;color:var(--muted);line-height:1.7">${escHtml(p.description)}</div></div>`:''}
     ${Object.keys(p.hours||{}).length ? `
     <div class='detail-section'>
       <div class='detail-section-title'>Opening Hours</div>
       ${Object.entries(p.hours).map(([day,hrs])=>`
         <div class='hours-row ${day===today?'today':''}'>
-          <span class='hours-day'>${day}</span>
-          <span class='hours-time'>${hrs}</span>
+          <span class='hours-day'>${escHtml(day)}</span>
+          <span class='hours-time'>${escHtml(hrs)}</span>
         </div>`).join('')}
     </div>` : ''}
-
     <div class="detail-section" id="reviewsSection">
-      <div class="detail-section-title">Community Reviews (${reviews.length})</div>
-      ${reviews.length?reviews.map(r=>`
-        <div class="review">
-          <div class="review-top">
-            <span class="review-author">${r.author}</span>
-            <span class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
-          </div>
-          <div class="review-date">${timeAgo(r.created_at)}</div>
-          <div class="review-text" style="margin-top:6px">${r.text}</div>
-        </div>`).join(''):'<div style="font-size:12px;color:var(--muted);margin-bottom:12px">No reviews yet. Be the first!</div>'}
-      <div class="review-form">
-        <div class="review-form-title">Leave a review</div>
-        <div class="star-select" id="starSelect">
-          ${[1,2,3,4,5].map(n=>`<button class="star-btn" onclick="setRating(${n},${id})" data-star="${n}">★</button>`).join('')}
-        </div>
-        <input id="reviewAuthor" placeholder="Your name (optional)" style="margin-bottom:8px"/>
-        <textarea id="reviewText" placeholder="Share your experience..." style="min-height:60px;margin-bottom:8px"></textarea>
-        <button class="btn-primary" style="margin-top:0" onclick="submitReview(${id})">Post Review</button>
-      </div>
+      <div class="detail-section-title">Community Reviews</div>
+      <div style="font-size:12px;color:var(--muted);padding:8px 0"><span style="animation:pulse 1.2s infinite;display:inline-block">⏳ Loading reviews…</span></div>
     </div>`;
   openDetail();
-  // Wire street view button via closure (avoids HTML escaping issues)
   const svPlaceBtn = document.querySelector('.sv-place-btn');
   if(svPlaceBtn) svPlaceBtn.onclick = () => openStreetView(p.lat, p.lng, p.name);
+
+  // Now fetch real reviews from Supabase
+  const reviews = await getReviews(id);
+  const reviewsEl = document.getElementById('reviewsSection');
+  if(!reviewsEl) return;
+  reviewsEl.innerHTML=`
+    <div class="detail-section-title">Community Reviews (${reviews.length})</div>
+    ${reviews.length ? reviews.map(r=>`
+      <div class="review">
+        <div class="review-top">
+          <span class="review-author">${escHtml(r.author)}</span>
+          <span class="review-stars">${'★'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</span>
+        </div>
+        <div class="review-date">${timeAgo(r.created_at)}</div>
+        <div class="review-text" style="margin-top:6px">${escHtml(r.text)}</div>
+      </div>`).join('') : '<div style="font-size:12px;color:var(--muted);margin-bottom:12px">No reviews yet. Be the first!</div>'}
+    <div class="review-form">
+      <div class="review-form-title">Leave a review</div>
+      <div class="star-select" id="starSelect">
+        ${[1,2,3,4,5].map(n=>`<button class="star-btn" onclick="setRating(${n},${id})" data-star="${n}">★</button>`).join('')}
+      </div>
+      <input id="reviewAuthor" placeholder="Your name (optional)" style="margin-bottom:8px"/>
+      <textarea id="reviewText" placeholder="Share your experience…" style="min-height:60px;margin-bottom:8px"></textarea>
+      <button class="btn-primary" style="margin-top:0" onclick="submitReview(${id})">Post Review</button>
+    </div>`;
 }
 
-// ── REVIEWS ──────────────────────────────────────────────────────
-const reviewStore = {}; // In-memory until Supabase reviews table added
+// ── REVIEWS (persistent via Supabase) ────────────────────────────
+// Existing table schema:
+//   id         bigint (PK)
+//   created_at timestamptz
+//   place_id   bigint  ← OSM node ID
+//   author     text
+//   rating     bigint  (1–5)
+//   text       text
 
-function getReviews(placeId) {
-  return reviewStore[placeId] || [];
+async function getReviews(placeId) {
+  try {
+    const osmId = data.places.find(p=>p.id===placeId)?.osm_id || placeId;
+    const r = await fetch(
+      `${SB_URL}/rest/v1/reviews?place_id=eq.${osmId}&order=created_at.desc&limit=20`,
+      { headers: H }
+    );
+    if(!r.ok) return [];
+    return await r.json();
+  } catch(e) { return []; }
 }
 
-function setRating(n, placeId) {
-  selectedRating = n;
-  document.querySelectorAll('#starSelect .star-btn').forEach((b,i)=>{
-    b.classList.toggle('active', i < n);
-  });
-}
-
-function submitReview(placeId) {
+async function submitReview(placeId) {
   if(!selectedRating){ toast('Please select a star rating.','warn'); return; }
-  const text=document.getElementById('reviewText').value.trim();
-  const author=document.getElementById('reviewAuthor').value.trim()||'Anonymous';
+  const text   = document.getElementById('reviewText').value.trim();
+  const author = document.getElementById('reviewAuthor').value.trim() || 'Anonymous';
   if(!text){ toast('Please write your review.','warn'); return; }
-  if(!reviewStore[placeId]) reviewStore[placeId]=[];
-  reviewStore[placeId].unshift({ author, rating:selectedRating, text, created_at:new Date().toISOString() });
-  selectedRating=0;
-  showPlaceDetail(placeId); // refresh
+
+  const btn = document.querySelector('#reviewsSection .btn-primary');
+  if(btn){ btn.disabled=true; btn.textContent='Posting…'; }
+
+  try {
+    const osmId = data.places.find(p=>p.id===placeId)?.osm_id || placeId;
+    const res = await db.post('reviews', {
+      place_id: osmId,
+      author,
+      rating: selectedRating,
+      text
+    });
+    if(!res.ok) throw new Error(await res.text());
+    selectedRating = 0;
+    toast('Review posted — thank you!', 'success');
+    showPlaceDetail(placeId); // refresh with new review
+  } catch(e) {
+    toast('Could not post review: '+e.message, 'error');
+    if(btn){ btn.disabled=false; btn.textContent='Post Review'; }
+  }
 }
 
 // ── REDWAYS ──────────────────────────────────────────────────────
@@ -3351,30 +3466,109 @@ document.addEventListener('click', e => {
 function openReportModal(lat,lng) {
   const latVal = (lat!==undefined && lat!==null) ? lat : pendingLat;
   const lngVal = (lng!==undefined && lng!==null) ? lng : pendingLng;
+
   document.getElementById('reportBody').innerHTML=`
-    <p class="form-hint">Report any issue on MK roads, Redways or public spaces. Appears live instantly.</p>
+    <p class="form-hint">Spotted an issue in MK? Report it here — it goes live on the map instantly.</p>
+
     <div class="form-group"><label>Category *</label>
       <select id="r-cat">
-        <option value="">Select...</option>
+        <option value="">Select a category…</option>
+        <option value="Pothole">🕳️ Pothole</option>
         <option value="Flooding">🌊 Flooding</option>
         <option value="Closure">🚧 Road / Path Closure</option>
         <option value="Lighting">💡 Lighting Issue</option>
         <option value="Obstruction">🗑️ Obstruction / Fly-tipping</option>
         <option value="Surface">⚠️ Surface Damage</option>
-        <option value="Pothole">🕳️ Pothole</option>
         <option value="Anti-social behaviour">🚨 Anti-social Behaviour</option>
-      </select></div>
-    <div class="form-group"><label>Title *</label><input id="r-title" placeholder="e.g. Flooded path near Willen Lake"/></div>
-    <div class="form-group"><label>Description</label><textarea id="r-desc" placeholder="Extra details..."></textarea></div>
-    <div class="form-group"><label>Location — Lat / Lng *</label>
-      <div class="row2">
-        <input type="number" id="r-lat" placeholder="52.0406" step="0.00001" value="${latVal?latVal.toFixed(5):''}"/>
-        <input type="number" id="r-lng" placeholder="-0.7594" step="0.00001" value="${lngVal?lngVal.toFixed(5):''}"/>
-      </div>
-      <div style="font-size:10px;color:var(--muted);margin-top:5px">💡 Close and click the map to set location</div>
+      </select>
     </div>
+
+    <div class="form-group"><label>Title *</label>
+      <input id="r-title" placeholder="e.g. Flooded path near Willen Lake"/>
+    </div>
+
+    <div class="form-group"><label>Description</label>
+      <textarea id="r-desc" placeholder="Extra details — how bad is it, how long has it been there?"></textarea>
+    </div>
+
+    <div class="form-group">
+      <label>📸 Photo <span style="color:var(--muted);font-weight:400">(optional but helps)</span></label>
+      <div id="photoPreview" style="display:none;margin-bottom:8px;">
+        <img id="photoThumb" style="width:100%;max-height:160px;object-fit:cover;border-radius:8px;display:block;"/>
+        <button onclick="clearPhoto()" style="margin-top:4px;background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;padding:0;">✕ Remove photo</button>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1.5px dashed var(--border);border-radius:8px;cursor:pointer;font-size:12px;color:var(--muted);text-transform:none;letter-spacing:0;" for="r-photo">
+        📷 Take photo or choose from gallery
+      </label>
+      <input type="file" id="r-photo" accept="image/*" capture="environment" style="display:none;" onchange="previewPhoto(this)"/>
+    </div>
+
+    <div class="form-group">
+      <label>📍 Location</label>
+      <div id="r-location-display" style="padding:10px 12px;background:var(--panel2);border:1px solid var(--border);border-radius:8px;font-size:12px;color:var(--muted);min-height:38px;display:flex;align-items:center;gap:8px;">
+        ${latVal ? '⏳ Getting address…' : '⚠️ Go back, tap the map to pin the location'}
+      </div>
+      <input type="hidden" id="r-lat" value="${latVal||''}"/>
+      <input type="hidden" id="r-lng" value="${lngVal||''}"/>
+      ${latVal ? '' : `<div style="font-size:10px;color:var(--muted);margin-top:5px">Close this form and tap the map on the exact spot.</div>`}
+    </div>
+
     <button class="btn-primary" onclick="submitIssue()">Submit Report →</button>`;
+
   document.getElementById('reportModal').classList.add('open');
+
+  // Reverse-geocode the pinned location
+  if(latVal && lngVal) {
+    reverseGeocode(latVal, lngVal).then(addr => {
+      const el = document.getElementById('r-location-display');
+      if(el) el.innerHTML = `<span style="color:var(--text)">📍 ${escHtml(addr)}</span>`;
+    });
+  }
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://api.mapbox.com/geocoding/v5/mapbox.places/${lng},${lat}.json?types=address,street,neighborhood&limit=1&access_token=${mapboxgl.accessToken}`);
+    const d = await r.json();
+    return d?.features?.[0]?.place_name || `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  } catch(e) {
+    return `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+  }
+}
+
+function previewPhoto(input) {
+  const file = input.files?.[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('photoThumb').src = e.target.result;
+    document.getElementById('photoPreview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearPhoto() {
+  document.getElementById('r-photo').value = '';
+  document.getElementById('photoPreview').style.display = 'none';
+  document.getElementById('photoThumb').src = '';
+}
+
+async function uploadIssuePhoto(file) {
+  // Upload to Supabase Storage bucket 'issue-photos'
+  const ext = file.name.split('.').pop() || 'jpg';
+  const filename = `issue_${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+  const res = await fetch(`${SB_URL}/storage/v1/object/issue-photos/${filename}`, {
+    method: 'POST',
+    headers: {
+      apikey: SB_KEY,
+      Authorization: `Bearer ${SB_KEY}`,
+      'Content-Type': file.type || 'image/jpeg',
+      'x-upsert': 'true'
+    },
+    body: file
+  });
+  if(!res.ok) throw new Error('Photo upload failed: ' + await res.text());
+  return `${SB_URL}/storage/v1/object/public/issue-photos/${filename}`;
 }
 
 function openEventModal(lat,lng) {
@@ -3570,21 +3764,46 @@ function closeModal(id) {
 
 // ── SUBMIT ───────────────────────────────────────────────────────
 async function submitIssue() {
-  const cat=document.getElementById('r-cat').value;
-  const title=document.getElementById('r-title').value.trim();
-  const desc=document.getElementById('r-desc').value.trim();
-  const lat=parseFloat(document.getElementById('r-lat').value);
-  const lng=parseFloat(document.getElementById('r-lng').value);
-  if(!cat||!title||!lat||!lng){toast('Please fill in category, title and location.','warn');return;}
-  const btn=document.querySelector('#reportBody .btn-primary');
-  btn.disabled=true;btn.textContent='Submitting...';
-  try{
-    const r=await db.post('reports',{category:cat,title,description:desc,latitude:lat,longitude:lng,upvotes:0});
+  const cat   = document.getElementById('r-cat').value;
+  const title = document.getElementById('r-title').value.trim();
+  const desc  = document.getElementById('r-desc').value.trim();
+  const lat   = parseFloat(document.getElementById('r-lat').value);
+  const lng   = parseFloat(document.getElementById('r-lng').value);
+  if(!cat)   { toast('Please select a category.','warn'); return; }
+  if(!title) { toast('Please add a title.','warn'); return; }
+  if(!lat||!lng) { toast('No location set — close this form and tap the map first.','warn'); return; }
+
+  const btn = document.querySelector('#reportBody .btn-primary');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+
+  try {
+    // Upload photo if one was selected
+    let photo_url = null;
+    const photoInput = document.getElementById('r-photo');
+    if(photoInput?.files?.length) {
+      btn.textContent = 'Uploading photo…';
+      try { photo_url = await uploadIssuePhoto(photoInput.files[0]); }
+      catch(e) { console.warn('Photo upload failed, continuing without:', e); }
+    }
+
+    btn.textContent = 'Submitting…';
+    const payload = {category:cat, title, description:desc, latitude:lat, longitude:lng, upvotes:0};
+    if(photo_url) payload.photo_url = photo_url;
+
+    const r = await db.post('reports', payload);
     if(!r.ok) throw new Error(await r.text());
-    document.getElementById('reportBody').innerHTML=`<div class="success-msg"><div class="success-icon">✅</div><h3>Reported!</h3><p>Live on the map now.</p></div>`;
+    document.getElementById('reportBody').innerHTML=`
+      <div class="success-msg">
+        <div class="success-icon">✅</div>
+        <h3>Reported!</h3>
+        <p>Live on the map now. Thank you for helping MK.</p>
+      </div>`;
     toast('Issue reported — live on the map now.','success');
-    setTimeout(()=>{closeModal('reportModal');loadIssues();},1800);
-  }catch(e){toast('Submission error: '+e.message,'error');btn.disabled=false;btn.textContent='Submit Report →';}
+    setTimeout(()=>{ closeModal('reportModal'); loadIssues(); }, 1800);
+  } catch(e) {
+    toast('Submission error: '+e.message,'error');
+    btn.disabled=false; btn.textContent='Submit Report →';
+  }
 }
 
 async function submitEvent() {
@@ -4947,6 +5166,8 @@ window.rrExportGPX=rrExportGPX;
 window.rrExportGPXById=rrExportGPXById;
 window.openMobileNav=openMobileNav;
 window.closeMobileNav=closeMobileNav;
+window.previewPhoto=previewPhoto;
+window.clearPhoto=clearPhoto;
 window.catChipClick=catChipClick;
 window.toggleSatellite=toggleSatellite;
 window.openStreetView=openStreetView;
