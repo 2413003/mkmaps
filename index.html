@@ -29,45 +29,114 @@
     body{font-family:'DM Mono',monospace;background:var(--dark);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;}
 
     /* HEADER */
-    header{background:rgba(255,255,255,0.9);border-bottom:1px solid var(--border);padding:0 16px;height:64px;display:flex;align-items:center;gap:12px;flex-shrink:0;z-index:1000;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(15,23,42,0.06);}
-    .logo{display:flex;align-items:center;gap:8px;flex-shrink:0;}
-    .logo-icon{width:26px;height:26px;background:var(--red);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:13px;}
-    .logo-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;}
+    header{
+      background:var(--panel);
+      border-bottom:1px solid var(--border);
+      padding:0;
+      flex-shrink:0;
+      z-index:1000;
+      box-shadow:0 2px 12px rgba(15,23,42,0.08);
+      display:flex;
+      flex-direction:column;
+    }
+    .header-top{
+      display:flex;align-items:center;gap:10px;padding:8px 12px;height:56px;
+    }
+    .logo{display:flex;align-items:center;gap:7px;flex-shrink:0;text-decoration:none;}
+    .logo-icon{width:28px;height:28px;background:var(--red);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+    .logo-text{font-family:'Syne',sans-serif;font-size:15px;font-weight:900;letter-spacing:-0.5px;color:var(--text);}
     .logo-text span{color:var(--red);}
-    .search-wrap{flex:1;max-width:680px;position:relative;}
-    .search-input{width:100%;background:var(--panel);border:1.5px solid var(--border);color:var(--text);padding:11px 16px 11px 40px;border-radius:999px;font-family:'DM Mono',monospace;font-size:13px;outline:none;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:0 4px 20px rgba(15,23,42,0.08);}
-    .search-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(232,58,47,0.12);}
-    .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;}
-    .search-results{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:8px;z-index:9999;display:none;max-height:300px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.5);}
-    .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--panel);border:1px solid var(--border);color:var(--muted);width:22px;height:22px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:14px;cursor:pointer;}
+    .search-wrap{flex:1;max-width:560px;position:relative;}
+    .search-input{
+      width:100%;
+      background:var(--panel2);
+      border:1.5px solid var(--border);
+      color:var(--text);
+      padding:9px 36px 9px 36px;
+      border-radius:24px;
+      font-family:'DM Mono',monospace;
+      font-size:13px;
+      outline:none;
+      transition:border-color 0.15s,box-shadow 0.15s;
+    }
+    .search-input:focus{border-color:var(--red);box-shadow:0 0 0 3px rgba(232,58,47,0.1);}
+    .search-icon{position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;pointer-events:none;opacity:0.5;}
+    .search-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--panel);border:1px solid var(--border);border-radius:12px;z-index:9999;display:none;max-height:320px;overflow-y:auto;box-shadow:0 12px 36px rgba(0,0,0,0.18);}
+    .search-clear{position:absolute;right:10px;top:50%;transform:translateY(-50%);background:var(--muted2);border:none;color:var(--panel);width:18px;height:18px;border-radius:50%;display:none;align-items:center;justify-content:center;font-size:12px;cursor:pointer;line-height:1;}
     .search-wrap.has-text .search-clear{display:flex;}
-    .search-pin{width:30px;height:30px;background:#e11d48;border-radius:50% 50% 50% 0;transform:rotate(-45deg);position:relative;box-shadow:0 6px 16px rgba(225,29,72,0.4);border:2px solid rgba(255,255,255,0.9);}
-    .search-pin::after{content:'';position:absolute;width:12px;height:12px;background:white;border-radius:50%;top:8px;left:8px;box-shadow:0 0 0 2px rgba(225,29,72,0.2);}
-    .detail-title{font-family:'Syne',sans-serif;font-size:18px;font-weight:800;margin:4px 0;}
-    .detail-sub{color:var(--muted);font-size:12px;margin-bottom:10px;}
-    .detail-actions{display:flex;gap:8px;margin:10px 0 6px;}
-    .contribute-row{display:flex;gap:8px;margin-top:10px;}
-    .btn-secondary{width:100%;background:var(--panel);color:var(--text);border:1px solid var(--border);padding:11px;border-radius:6px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;transition:opacity 0.15s;}
-    .btn-secondary:hover{opacity:0.85;}
-    .pending-card{border:1px dashed var(--border);background:var(--panel2);padding:10px;border-radius:10px;margin-top:8px;}
-    .pending-actions{display:flex;gap:8px;margin-top:8px;}
-    .sr{padding:10px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;}
-    .sr:last-child{border-bottom:none;}
-    .sr:hover{background:var(--panel2);}
-    .sr-icon{font-size:16px;flex-shrink:0;}
-    .sr-name{font-weight:500;font-size:12px;}
-    .sr-sub{font-size:10px;color:var(--muted);margin-top:1px;}
-    .header-right{display:flex;align-items:center;gap:8px;margin-left:auto;}
-    .live-badge{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
-    .live-dot{width:5px;height:5px;background:var(--green);border-radius:50%;animation:pulse 2s infinite;}
-    .resident-badge{display:flex;align-items:center;gap:6px;background:linear-gradient(135deg,rgba(232,58,47,0.18),rgba(74,158,255,0.18));border:1px solid var(--border);color:var(--text);padding:5px 10px;border-radius:999px;font-size:10px;text-transform:uppercase;letter-spacing:0.8px;}
-    .theme-toggle{display:flex;align-items:center;gap:5px;padding:7px 12px;background:var(--panel);border:1px solid var(--border);border-radius:999px;font-size:11px;cursor:pointer;color:var(--muted);flex-shrink:0;transition:all 0.15s;font-family:'DM Mono',monospace;}
-    .theme-toggle:hover{color:var(--text);border-color:var(--muted2);}
-    .header-btn{display:flex;align-items:center;gap:6px;padding:7px 12px;background:var(--panel);border:1px solid var(--border);border-radius:999px;font-size:11px;cursor:pointer;color:var(--muted);transition:all 0.15s;font-family:'DM Mono',monospace;}
-    .header-btn:hover{color:var(--text);border-color:var(--muted2);}
+    .header-right{display:flex;align-items:center;gap:6px;margin-left:auto;flex-shrink:0;}
+    .header-btn{
+      display:flex;align-items:center;gap:5px;
+      padding:6px 11px;
+      background:transparent;
+      border:1px solid var(--border);
+      border-radius:20px;
+      font-size:11px;cursor:pointer;
+      color:var(--muted);
+      transition:all 0.15s;
+      font-family:'DM Mono',monospace;
+      white-space:nowrap;
+    }
+    .header-btn:hover{color:var(--text);border-color:var(--muted2);background:var(--panel2);}
+    .header-btn.saved-active{color:var(--amber);border-color:var(--amber);}
+    .weather-chip{display:flex;align-items:center;gap:5px;padding:5px 10px;background:transparent;border:1px solid var(--border);border-radius:20px;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0;transition:all 0.15s;color:var(--muted);}
+    .weather-chip:hover{color:var(--text);border-color:var(--muted2);}
+    .weather-temp{font-weight:500;}
+
+    /* LAYER CHIPS ROW — lives inside header, below search */
+    .layer-row{
+      display:flex;align-items:center;gap:6px;
+      padding:0 12px 8px;
+      overflow-x:auto;
+      -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+      border-top:1px solid var(--border);
+      background:var(--panel);
+    }
+    .layer-row::-webkit-scrollbar{display:none;}
+    .layer-chip{
+      display:flex;align-items:center;gap:5px;
+      padding:5px 12px;
+      border-radius:20px;
+      font-size:11px;cursor:pointer;
+      border:1px solid var(--border);
+      color:var(--muted);
+      background:var(--panel2);
+      font-family:'DM Mono',monospace;
+      white-space:nowrap;
+      transition:all 0.15s;
+      flex-shrink:0;
+    }
+    .layer-chip:hover{color:var(--text);border-color:var(--muted2);}
+    .layer-chip.issues.active{background:#fee2e2;border-color:#fca5a5;color:#b91c1c;}
+    .layer-chip.transport.active{background:#dbeafe;border-color:#93c5fd;color:#1d4ed8;}
+    .layer-chip.events.active{background:#fef3c7;border-color:#fcd34d;color:#92400e;}
+    .layer-chip.places.active{background:#d1fae5;border-color:#6ee7b7;color:#065f46;}
+    .layer-chip.parking.active{background:#d1fae5;border-color:#6ee7b7;color:#065f46;}
+    .layer-chip.roadworks.active{background:#fef3c7;border-color:#fcd34d;color:#92400e;}
+    .layer-chip.redways.active{background:#fee2e2;border-color:#fca5a5;color:#991b1b;}
+    .layer-chip.photos.active{background:#ede9fe;border-color:#c4b5fd;color:#5b21b6;}
+    body:not(.theme-day) .layer-chip.issues.active{background:rgba(232,58,47,0.15);border-color:rgba(232,58,47,0.4);color:#fca5a5;}
+    body:not(.theme-day) .layer-chip.transport.active{background:rgba(74,158,255,0.15);border-color:rgba(74,158,255,0.4);color:#93c5fd;}
+    body:not(.theme-day) .layer-chip.events.active{background:rgba(245,166,35,0.15);border-color:rgba(245,166,35,0.4);color:#fcd34d;}
+    body:not(.theme-day) .layer-chip.places.active{background:rgba(76,175,125,0.15);border-color:rgba(76,175,125,0.4);color:#6ee7b7;}
+    body:not(.theme-day) .layer-chip.parking.active{background:rgba(76,175,125,0.15);border-color:rgba(76,175,125,0.4);color:#6ee7b7;}
+    body:not(.theme-day) .layer-chip.roadworks.active{background:rgba(245,166,35,0.15);border-color:rgba(245,166,35,0.4);color:#fcd34d;}
+    body:not(.theme-day) .layer-chip.redways.active{background:rgba(204,34,0,0.15);border-color:rgba(204,34,0,0.4);color:#fca5a5;}
+    body:not(.theme-day) .layer-chip.photos.active{background:rgba(167,139,250,0.15);border-color:rgba(167,139,250,0.4);color:#c4b5fd;}
+    .layer-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+    /* hide old floating layer bar */
+    .layer-bar{display:none!important;}
+    .layer-bar-wrap{display:none!important;}
+    /* legacy compat */
+    .layer-btn{display:none!important;}
+    .theme-toggle{display:none!important;}
+
+    body:not(.theme-day) .layer-row{background:rgba(18,18,18,1);border-top-color:#2a2a2a;}
+    body:not(.theme-day) header{background:rgba(18,18,18,1);}
 
     /* LAYER MENU */
-    .layer-menu{position:absolute;top:72px;right:16px;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 40px rgba(15,23,42,0.12);padding:8px;display:none;z-index:3000;min-width:180px;}
+    .layer-menu{position:absolute;top:108px;right:16px;background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:0 14px 40px rgba(15,23,42,0.12);padding:8px;display:none;z-index:3000;min-width:180px;}
     .layer-menu.open{display:block;}
     .layer-item{display:flex;align-items:center;gap:8px;padding:8px;border-radius:8px;font-size:12px;cursor:pointer;color:var(--text);}
     .layer-item:hover{background:var(--panel2);}
@@ -103,8 +172,8 @@
     /* MAIN */
     .main{display:flex;flex:1;overflow:hidden;position:relative;}
 
-    /* SIDEBAR */
-    .sidebar{position:absolute;top:72px;left:16px;bottom:16px;width:340px;flex-shrink:0;background:rgba(255,255,255,0.95);border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;z-index:1500;transition:transform 0.2s ease,opacity 0.2s ease;box-shadow:0 18px 50px rgba(15,23,42,0.12);backdrop-filter:blur(12px);}
+    /* SIDEBAR — adjust for taller two-row header (~100px) */
+    .sidebar{position:absolute;top:100px;left:16px;bottom:16px;width:340px;flex-shrink:0;background:var(--panel);border:1px solid var(--border);border-radius:18px;display:flex;flex-direction:column;overflow:hidden;z-index:1500;transition:transform 0.2s ease,opacity 0.2s ease;box-shadow:0 18px 50px rgba(15,23,42,0.12);}
     .sidebar.collapsed{transform:translateX(-120%);opacity:0;pointer-events:none;}
     .sidebar-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
     .sidebar-title{font-family:'Syne',sans-serif;font-size:14px;font-weight:800;}
@@ -173,7 +242,7 @@
     .detail-panel{
       will-change:transform;
       position:absolute;
-      top:72px;
+      top:100px;
       left:16px;
       bottom:16px;
       width:340px;
@@ -469,28 +538,12 @@
     /* MOBILE */
     @media(max-width:700px){
       .sidebar{display:none;}
-      .layer-bar{
-        left:0;right:0;transform:none;border-radius:0;
-        top:auto;bottom:64px;
-        overflow-x:auto;overflow-y:hidden;
-        -webkit-overflow-scrolling:touch;
-        padding:6px 10px;
-        width:100%;
-        justify-content:flex-start;
-        border-radius:0;
-        border:none;
-        border-top:1px solid var(--border);
-        background:var(--panel);
-        gap:6px;
-        display:flex;
-        box-shadow:0 -4px 20px rgba(15,23,42,0.08);
-      }
-      .layer-bar::-webkit-scrollbar{display:none;}
+      .layer-bar{display:none!important;}
       .route-panel{width:calc(100vw - 24px);}
       .weather-chip .weather-label{display:none;}
       .mobile-sheet{display:flex;}
       .route-header-btn span{display:none;}
-      .header-right{display:none;}
+      .header-right .header-btn:not(#savedBtn):not(#settingsBtn){display:none;}
       .mobile-menu-btn{display:flex;}
       .search-wrap{max-width:none;}
       .fab{bottom:130px;}
@@ -498,6 +551,13 @@
       .map-hint{bottom:130px;}
       .mapboxgl-ctrl-bottom-right{bottom:125px!important;}
       .mapboxgl-ctrl-bottom-left{bottom:125px!important;}
+      .header-top{padding:6px 10px;height:50px;}
+      .logo-text{display:none;}
+      .layer-row{padding:4px 8px 6px;gap:5px;}
+      .layer-chip{padding:4px 10px;font-size:10px;}
+      .nearme-card{bottom:140px;left:12px;width:calc(100vw - 24px);}
+      .detail-panel{top:auto!important;}
+      .sidebar{top:auto!important;}
     }
 
     /* SAVED PLACES PANEL */
@@ -1018,29 +1078,43 @@
 <body>
 
 <header>
-  <div class="logo">
-    <div class="logo-icon">📍</div>
-    <div class="logo-text">MK <span>Maps</span></div>
-  </div>
-  <div class="search-wrap">
-    <span class="search-icon">🔍</span>
-    <input class="search-input" id="searchInput" placeholder="Search places, postcodes, addresses in MK..." autocomplete="off"/>
-    <button class="search-clear" id="searchClear" title="Clear search">×</button>
-    <div class="search-results" id="searchResults"></div>
-  </div>
-  <div class="header-right">
-    <button class="header-btn" id="layerMenuBtn" onclick="toggleLayerMenu()" title="Layers">Layers</button>
-    <button class="header-btn" onclick="toggleRoutePanel()" title="Directions">Directions</button>
-    <button class="header-btn" id="rrBtn" onclick="rrToggle()" title="Redway Routes">🛤️ Routes</button>
-    <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
-    <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
-      <span id="weatherIcon">🌤️</span>
-      <span class="weather-temp" id="weatherTemp">—°C</span>
-      <span class="weather-label" id="weatherDesc"></span>
+  <div class="header-top">
+    <div class="logo">
+      <div class="logo-icon">📍</div>
+      <div class="logo-text">MK <span>Maps</span></div>
     </div>
-    <button class="settings-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️ Settings</button>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="searchInput" placeholder="Search MK — places, postcodes, addresses…" autocomplete="off"/>
+      <button class="search-clear" id="searchClear" title="Clear">×</button>
+      <div class="search-results" id="searchResults"></div>
+    </div>
+    <div class="header-right">
+      <div class="weather-chip" id="weatherChip" onclick="toggleWeatherDetail()" title="MK Weather">
+        <span id="weatherIcon">🌤️</span>
+        <span class="weather-temp" id="weatherTemp">—°C</span>
+        <span class="weather-label" id="weatherDesc"></span>
+      </div>
+      <button class="header-btn" id="savedBtn" onclick="toggleSavedPanel()" title="Saved places">★ Saved</button>
+      <button class="header-btn" id="settingsBtn" onclick="openSettings()" title="Settings">⚙️</button>
+    </div>
+    <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
   </div>
-  <button class="mobile-menu-btn" id="mobileMenuBtn" onclick="openMobileNav()" title="Menu">☰</button>
+  <!-- Layer chips row — replaces floating layer bar -->
+  <div class="layer-row" id="layerRow">
+    <button class="layer-chip issues active" id="chip-issues" onclick="setLayer('issues',this)"><span class="layer-dot"></span>Issues</button>
+    <button class="layer-chip transport" id="chip-transport" onclick="setLayer('transport',this)"><span class="layer-dot"></span>Transport</button>
+    <button class="layer-chip events" id="chip-events" onclick="setLayer('events',this)"><span class="layer-dot"></span>What's On</button>
+    <button class="layer-chip places" id="chip-places" onclick="setLayer('places',this)"><span class="layer-dot"></span>Places</button>
+    <button class="layer-chip parking" id="chip-parking" onclick="setLayer('parking',this)"><span class="layer-dot"></span>Parking</button>
+    <button class="layer-chip roadworks" id="chip-roadworks" onclick="setLayer('roadworks',this)"><span class="layer-dot"></span>Roadworks</button>
+    <button class="layer-chip redways" id="chip-redways" onclick="toggleRedways(this)"><span class="layer-dot"></span>Redways</button>
+    <button class="layer-chip photos" id="chip-photos" onclick="togglePhotoLayer(this)"><span class="layer-dot"></span>Photos</button>
+    <span style="margin-left:auto;flex-shrink:0;display:flex;gap:6px;padding-left:8px;border-left:1px solid var(--border);">
+      <button class="layer-chip" onclick="toggleRoutePanel()" id="dirChip">🗺️ Directions</button>
+      <button class="layer-chip" id="rrChipBtn" onclick="rrToggle()">🛤️ Routes</button>
+    </span>
+  </div>
 </header>
 
 <!-- MOBILE NAV DRAWER -->
@@ -1053,7 +1127,7 @@
     </div>
     <div class="mobile-nav-body">
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleLayerMenu()">🗂️ Layers</div>
-      <div class="mobile-nav-item" onclick="closeMobileNav();setLayer('roadworks',document.getElementById('btn-roadworks'))">🚧 Roadworks</div>
+      <div class="mobile-nav-item" onclick="closeMobileNav();setLayer('roadworks',document.getElementById('chip-roadworks'))">🚧 Roadworks</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleRoutePanel()">🗺️ Directions</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();rrToggle()">🛤️ Redway Routes</div>
       <div class="mobile-nav-item" onclick="closeMobileNav();toggleSavedPanel()">★ Saved Places</div>
@@ -1066,13 +1140,13 @@
 </div>
 
 <div class="layer-menu" id="layerMenu">
-  <div class="layer-item" id="menu-issues" onclick="setLayer('issues',document.getElementById('btn-issues'));toggleLayerMenu(true)">⚠️ Issues</div>
-  <div class="layer-item" id="menu-transport" onclick="setLayer('transport',document.getElementById('btn-transport'));toggleLayerMenu(true)">🚌 Transport</div>
-  <div class="layer-item" id="menu-events" onclick="setLayer('events',document.getElementById('btn-events'));toggleLayerMenu(true)">📅 What's On</div>
-  <div class="layer-item" id="menu-places" onclick="setLayer('places',document.getElementById('btn-places'));toggleLayerMenu(true)">📍 Places</div>
-  <div class="layer-item" id="menu-parking" onclick="setLayer('parking',document.getElementById('btn-parking'));toggleLayerMenu(true)">🅿️ Free Parking</div>
-  <div class="layer-item" id="menu-roadworks" onclick="setLayer('roadworks',document.getElementById('btn-roadworks'));toggleLayerMenu(true)">🚧 Roadworks</div>
-  <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('btn-redways'))">🛤️ Redways</div>
+  <div class="layer-item" id="menu-issues" onclick="setLayer('issues',document.getElementById('chip-issues'));toggleLayerMenu(true)">⚠️ Issues</div>
+  <div class="layer-item" id="menu-transport" onclick="setLayer('transport',document.getElementById('chip-transport'));toggleLayerMenu(true)">🚌 Transport</div>
+  <div class="layer-item" id="menu-events" onclick="setLayer('events',document.getElementById('chip-events'));toggleLayerMenu(true)">📅 What's On</div>
+  <div class="layer-item" id="menu-places" onclick="setLayer('places',document.getElementById('chip-places'));toggleLayerMenu(true)">📍 Places</div>
+  <div class="layer-item" id="menu-parking" onclick="setLayer('parking',document.getElementById('chip-parking'));toggleLayerMenu(true)">🅿️ Free Parking</div>
+  <div class="layer-item" id="menu-roadworks" onclick="setLayer('roadworks',document.getElementById('chip-roadworks'));toggleLayerMenu(true)">🚧 Roadworks</div>
+  <div class="layer-item" id="menu-redways" onclick="toggleRedways(document.getElementById('chip-redways'))">🛤️ Redways</div>
   <div style="padding:6px 8px 2px;font-size:9px;color:var(--muted);border-top:1px solid var(--border);margin-top:4px;text-align:center;letter-spacing:0.5px">Build 2026-03-13A</div>
 </div>
 
@@ -1677,7 +1751,7 @@ function clearMarkersExcept(layer){
 function clearActiveLayer(){
   activeLayer = 'none';
   saveLayer('none');
-  document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.layer-chip:not(.redways):not(.photos)').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.mobile-tab').forEach(b=>b.classList.remove('active'));
   document.querySelectorAll('.layer-item').forEach(i=>i.classList.remove('active'));
   document.getElementById('transportControls').style.display = 'none';
@@ -1702,8 +1776,13 @@ function setLayer(layer, btn, opts={}) {
   if(activeLayer==='transport' && layer!=='transport' && transportTimer){ clearTimeout(transportTimer); transportTimer=null; }
   activeLayer = layer;
   saveLayer(layer);
-  document.querySelectorAll('.layer-btn:not(.redways)').forEach(b=>b.classList.remove('active'));
+  // Deactivate all layer chips
+  document.querySelectorAll('.layer-chip:not(.redways):not(.photos)').forEach(b=>b.classList.remove('active'));
+  // Activate the matching chip (btn could be old layer-btn or new layer-chip)
   if(btn) btn.classList.add('active');
+  // Also activate by chip id in case btn is the old element
+  const chipEl = document.getElementById('chip-'+layer);
+  if(chipEl && chipEl !== btn) chipEl.classList.add('active');
   document.getElementById('sidebar').classList.remove('collapsed');
   document.getElementById('transportControls').style.display = layer==='transport' ? 'flex' : 'none';
   document.getElementById('sortRow').style.display = layer==='issues' ? 'flex' : 'none';
@@ -3416,6 +3495,7 @@ async function showPlaceDetail(id) {
       <div style="font-size:12px;color:var(--muted);padding:8px 0"><span style="animation:pulse 1.2s infinite;display:inline-block">⏳ Loading reviews…</span></div>
     </div>`;
   openDetail();
+  window._pendingPhotoPlaceId = id;
   const svPlaceBtn = document.querySelector('.sv-place-btn');
   if(svPlaceBtn) svPlaceBtn.onclick = () => openStreetView(p.lat, p.lng, p.name);
 
@@ -4822,7 +4902,7 @@ function mobileTab(layer, btn) {
     return;
   }
   btn.classList.add('active');
-  setLayer(layer, document.getElementById('btn-'+layer), {force:true});
+  setLayer(layer, document.getElementById('chip-'+layer), {force:true});
   // Mirror sidebar content into mobile list
   setTimeout(()=>{
     const ml=document.getElementById('mobileList');
@@ -5407,7 +5487,7 @@ function rrSaveRoutes(){ try{ localStorage.setItem('mkmaps_rr_routes', JSON.stri
 // ── Panel open/close ──────────────────────────────────────────────────────
 function rrToggle(){
   const panel = document.getElementById('rrPanel');
-  const btn = document.getElementById('rrBtn');
+  const btn = document.getElementById('rrChipBtn');
   const isOpen = panel.classList.toggle('open');
   btn.classList.toggle('saved-active', isOpen);
   if(isOpen){
@@ -5416,7 +5496,7 @@ function rrToggle(){
     rrShowTab('build');
     // Auto-enable Redways if not already on
     if(!redwaysVisible){
-      const rwBtn = document.getElementById('btn-redways');
+      const rwBtn = document.getElementById('chip-redways');
       if(rwBtn) toggleRedways(rwBtn);
     }
     rrSetActive(true);
@@ -5426,7 +5506,7 @@ function rrToggle(){
 }
 function rrClose(){
   document.getElementById('rrPanel').classList.remove('open');
-  document.getElementById('rrBtn').classList.remove('saved-active');
+  document.getElementById('rrChipBtn').classList.remove('saved-active');
   rrSetActive(false);
   // Clear the drawn route and markers from map when closing
   rrClearFromMap();
@@ -5848,7 +5928,7 @@ async function catChipClick(btn, cat) {
   }
   activeCatChip = cat;
   // Switch to places layer and filter by category
-  const placeBtn = document.getElementById('btn-places');
+  const placeBtn = document.getElementById('chip-places');
   if(activeLayer !== 'places') {
     setLayer('places', placeBtn);
     await new Promise(r => setTimeout(r, 600));
@@ -6076,7 +6156,7 @@ async function rrRouteBetween() {
 
   // Make sure redways are on
   if(!redwaysVisible) {
-    const rwBtn = document.getElementById('btn-redways');
+    const rwBtn = document.getElementById('chip-redways');
     if(rwBtn) toggleRedways(rwBtn);
     await new Promise(r=>setTimeout(r,400));
   }
@@ -6516,7 +6596,7 @@ map.on('load',()=>{
   const _sv = loadSavedPlaces();
   if(_sv.length) { const sb=document.getElementById('savedBtn'); if(sb) sb.textContent=`★ Saved (${_sv.length})`; }
   const savedLayer = getSavedLayer();
-  const savedBtn = document.getElementById('btn-'+savedLayer);
+  const savedBtn = document.getElementById('chip-'+savedLayer);
   try{ setLayer(savedLayer, savedBtn); }catch(e){ showFatal(e.message||'Layer init failed'); }
 
   try{ initTheme(); }catch(e){ showFatal(e.message||'Theme init failed'); }
@@ -7217,83 +7297,78 @@ function closeNearmeCard() {
   if(card) card.classList.remove('visible');
 }
 
-// Auto-render when user location is set
-const _origSetUserMarker = setUserMarker;
-function setUserMarker(lat, lng) {
-  _origSetUserMarker(lat, lng);
-  // Refresh near-me card when data is available
+// ── NEAR-ME CARD: trigger safely without wrapping setUserMarker ───────────────
+// Hook into the geolocate control's event instead of wrapping setUserMarker
+geoControl.on('geolocate', () => {
   setTimeout(() => {
     if(data.places.length || data.transport.length || data.issues.length) renderNearmeCard();
-  }, 500);
-}
+  }, 600);
+});
 
 // ── RICH SEARCH RESULTS ───────────────────────────────────────────────────────
-// Patch renderSearchResults to inject open badge, distance, colour strip
-const _origRenderSearchResults = renderSearchResults;
-function renderSearchResults(list) {
-  activeSearchItems = list;
-  if(!list.length){ searchResults.style.display='none'; return; }
-  searchResults.innerHTML = list.map((item, i) => {
-    // Detect if this is a local place result (has open status)
-    const place = data.places.find(p => p.name === item.name);
-    const openBadge = place
-      ? (place.open === true
-          ? '<span class="sr-open-badge open">Open</span>'
-          : place.open === false
-            ? '<span class="sr-open-badge closed">Closed</span>'
-            : '')
-      : '';
-    const distBadge = item._dist !== undefined
-      ? `<span class="sr-dist">📍${fmtDist(item._dist)}</span>`
-      : '';
-    const catColor = place ? (CAT_COLORS && CAT_COLORS[place.category]) || 'var(--red)' : 'transparent';
-    const strip = place ? `<div class="sr-color-strip" style="background:${catColor}"></div>` : '';
+// Override renderSearchResults defined earlier to inject badges
+(function(){
+  const _orig = window.renderSearchResults || renderSearchResults;
+  window.renderSearchResults = function(list) {
+    activeSearchItems = list;
+    if(!list.length){ searchResults.style.display='none'; return; }
+    searchResults.innerHTML = list.map((item, i) => {
+      const place = data.places.find(p => p.name === item.name);
+      const openBadge = place
+        ? (place.open === true ? '<span class="sr-open-badge open">Open</span>'
+          : place.open === false ? '<span class="sr-open-badge closed">Closed</span>' : '')
+        : '';
+      const distBadge = item._dist !== undefined ? `<span class="sr-dist">${fmtDist(item._dist)} away</span>` : '';
+      const catColor = place && typeof CAT_COLORS !== 'undefined' ? (CAT_COLORS[place.category] || '#E83A2F') : null;
+      const strip = catColor ? `<div class="sr-color-strip" style="background:${catColor}"></div>` : '';
+      return `<div class="sr" id="sr${i}" style="display:flex;align-items:center;gap:0;overflow:hidden;border-radius:6px">
+        ${strip}
+        <span class="sr-icon" style="margin-left:10px">${item.icon}</span>
+        <div style="flex:1;min-width:0;margin-left:8px">
+          <div class="sr-name">${escHtml(item.name)}${openBadge}</div>
+          <div class="sr-sub">${escHtml(item.sub)}${distBadge}</div>
+        </div>
+      </div>`;
+    }).join('');
+    list.forEach((_,i) => {
+      const el = document.getElementById('sr'+i);
+      if(el) el.addEventListener('click', () => { _.onClick(); searchResults.style.display='none'; });
+    });
+    searchResults.style.display = 'block';
+  };
+})();
 
-    return `<div class="sr" id="sr${i}" style="display:flex;align-items:center;gap:8px">
-      ${strip}
-      <span class="sr-icon">${item.icon}</span>
-      <div style="flex:1;min-width:0">
-        <div class="sr-name">${escHtml(item.name)}${openBadge}</div>
-        <div class="sr-sub">${escHtml(item.sub)}${distBadge}</div>
-      </div>
-    </div>`;
-  }).join('');
-  list.forEach((_,i) => {
-    const el = document.getElementById('sr'+i);
-    if(el) el.addEventListener('click', () => { _.onClick(); searchResults.style.display='none'; });
-  });
-  searchResults.style.display = 'block';
-}
-window.renderSearchResults = renderSearchResults;
-
-// ── PLACE PHOTO STRIP ─────────────────────────────────────────────────────────
-async function loadPlacePhotos(lat, lng) {
-  try {
-    const d = await db.get('place_photos', `&order=created_at.desc`);
-    const nearby = (Array.isArray(d) ? d : []).filter(p => distKm(lat,lng,p.lat,p.lng) < 0.1);
-    if(!nearby.length) return '';
-    const imgs = nearby.slice(0,5).map(p =>
-      `<img src="${escHtml(p.photo_url)}" alt="${escHtml(p.caption||'')}"
-            onclick="openPhotoLightbox('${escJs(p.photo_url)}','${escJs(p.caption||'')}')"
-            onerror="this.parentElement.removeChild(this)">`
-    ).join('');
-    return `<div class="place-photo-strip">${imgs}</div>`;
-  } catch(e) { return ''; }
-}
-
-// Patch showPlaceDetail to load photo strip
-const _origShowPlaceDetail = showPlaceDetail;
-async function showPlaceDetail(id) {
-  await _origShowPlaceDetail(id);
-  // After panel opens, try to inject photos above the hero
-  const p = data.places.find(x=>x.id===id);
-  if(!p) return;
-  const scroll = document.getElementById('detailScroll');
-  if(!scroll) return;
-  const strip = await loadPlacePhotos(p.lat, p.lng);
-  if(strip) scroll.insertAdjacentHTML('afterbegin', strip);
-}
-window.showPlaceDetail = showPlaceDetail;
+// ── PLACE PHOTO STRIP: inject into existing showPlaceDetail ──────────────────
+// We patch the detail open to async-load photos after the panel is shown
+(function(){
+  const _origOpen = openDetail;
+  // After openDetail(), check if we should load photos for the current place
+  window._pendingPhotoPlaceId = null;
+  window.openDetail = function() {
+    _origOpen();
+    const pid = window._pendingPhotoPlaceId;
+    if(!pid) return;
+    window._pendingPhotoPlaceId = null;
+    const p = data.places.find(x=>x.id===pid);
+    if(!p) return;
+    db.get('place_photos','&order=created_at.desc').then(d => {
+      const nearby = (Array.isArray(d)?d:[]).filter(ph=>distKm(p.lat,p.lng,ph.lat,ph.lng)<0.1);
+      if(!nearby.length) return;
+      const scroll = document.getElementById('detailScroll');
+      if(!scroll) return;
+      const imgs = nearby.slice(0,5).map(ph=>
+        `<img src="${escHtml(ph.photo_url)}" alt="${escHtml(ph.caption||'')}"
+              style="height:160px;min-width:200px;object-fit:cover;flex-shrink:0;cursor:pointer"
+              onclick="openPhotoLightbox('${escJs(ph.photo_url)}','${escJs(ph.caption||'')}')"
+              onerror="this.parentElement&&this.parentElement.children.length===1?this.parentElement.remove():this.remove()">`
+      ).join('');
+      const strip = document.createElement('div');
+      strip.style.cssText='display:flex;gap:0;overflow-x:auto;margin:-16px -16px 14px;height:160px;background:var(--panel2);scrollbar-width:none;';
+      strip.innerHTML = imgs;
+      scroll.insertBefore(strip, scroll.firstChild);
+    }).catch(()=>{});
+  };
+})();
 
 // ── MAP CONTEXT MENU ──────────────────────────────────────────────────────────
 let ctxLat = null, ctxLng = null;
