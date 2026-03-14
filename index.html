@@ -3240,18 +3240,43 @@ let _parkingLaneCacheTime = 0;
 const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
 
 async function loadParkingLaneLayer() {
-  // Only show roads with EXPLICIT OSM parking data — no assumptions.
-  // Car park markers are the reliable base; on-street data is OSM-sourced only.
+  // ── UK LAW BASIS ─────────────────────────────────────────────────────────
+  // On-street parking is permitted by default in the UK (Highway Code R238)
+  // unless signs/markings restrict it. MK residential estates: genuinely free.
+  // Layer A: Mapbox vector tiles → immediate colour for ALL roads by class
+  // Layer B: OSM explicit restrictions → override with red/amber where tagged
+  // ─────────────────────────────────────────────────────────────────────────
+  if(!map.getLayer('pk-base-res')) {
+    try {
+      map.addLayer({
+        id:'pk-base-res', type:'line', source:'composite', 'source-layer':'road',
+        filter:['match',['get','class'],['residential','living_street','service','unclassified'],true,false],
+        layout:{'line-join':'round','line-cap':'round'},
+        paint:{'line-color':'#22c55e','line-width':['interpolate',['linear'],['zoom'],11,1,14,2.5,17,4],'line-opacity':0.65}
+      },'road-label');
+      map.addLayer({
+        id:'pk-base-sec', type:'line', source:'composite', 'source-layer':'road',
+        filter:['match',['get','class'],['secondary','secondary_link','tertiary','tertiary_link'],true,false],
+        layout:{'line-join':'round','line-cap':'round'},
+        paint:{'line-color':'#f59e0b','line-width':['interpolate',['linear'],['zoom'],11,1,14,2,17,3.5],'line-opacity':0.6}
+      },'road-label');
+    } catch(_) {}
+  }
+  try {
+    map.setLayoutProperty('pk-base-res','visibility','visible');
+    map.setLayoutProperty('pk-base-sec','visibility','visible');
+  } catch(_){}
+
+  // Return early if OSM restriction overlay already fresh
   if(map.getLayer('parking-lanes') && _parkingLaneCache && (Date.now()-_parkingLaneCacheTime) < PARKING_LANE_TTL) {
-    map.setLayoutProperty('parking-lanes','visibility','visible');
-    map.setLayoutProperty('parking-lanes-hit','visibility','visible');
+    try { map.setLayoutProperty('parking-lanes','visibility','visible'); map.setLayoutProperty('parking-lanes-hit','visibility','visible'); } catch(_){}
     return;
   }
   if(map.getLayer('parking-lanes')) {
-    map.setLayoutProperty('parking-lanes','visibility','visible');
-    map.setLayoutProperty('parking-lanes-hit','visibility','visible');
+    try { map.setLayoutProperty('parking-lanes','visibility','visible'); map.setLayoutProperty('parking-lanes-hit','visibility','visible'); } catch(_){}
   }
 
+  // Fetch OSM explicit restriction data (overrides base layer)
   const bbox = '51.90,-0.95,52.15,-0.55';
   const query = `[out:json][timeout:90];
 (
@@ -3431,8 +3456,9 @@ function showParkingLanePopup(lngLat, street, parts, props) {
 
 function hideParkingLaneLayer() {
   try {
-    if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','none');
-    if(map.getLayer('parking-lanes-hit')) map.setLayoutProperty('parking-lanes-hit','visibility','none');
+    ['parking-lanes','parking-lanes-hit','pk-base-res','pk-base-sec'].forEach(id=>{
+      try{if(map.getLayer(id))map.setLayoutProperty(id,'visibility','none');}catch(_){}
+    });
   } catch(_) {}
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
@@ -3861,7 +3887,7 @@ function renderParkingSidebar() {
   // Map legend — shown at top of sidebar, always visible
   const legend = `<div style="padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel2)">
     <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;margin-bottom:6px">🅿️ MK Parking</div>
-    <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:10px">26 confirmed MK car parks shown. On-street road colours load from OSM data — coverage is limited where roads haven't been tagged yet. Tap any coloured road for details.</div>
+    <div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:10px">All MK roads coloured by parking status. Green = free by default (UK law). Amber = check signs. Red = restricted. Tap any road for details.</div>
     <div style="font-family:'Syne',sans-serif;font-size:11px;font-weight:800;margin-bottom:8px">🗺️ Tap any road on the map to see parking rules</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:11px">
       <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#22c55e;display:inline-block;flex-shrink:0"></span>Free parking</div>
@@ -4321,7 +4347,7 @@ let _stayCache = null, _stayCacheTime = 0;
 const STAY_TTL = 20 * 60 * 1000;
 
 async function loadStayLayer() {
-  clearAllMarkers();
+  clearMarkersExcept('stay');
   const body = document.getElementById('sidebarBody');
   document.getElementById('sidebarTitle').textContent = 'Places to Stay';
   showSkeletons(4);
@@ -4332,18 +4358,26 @@ async function loadStayLayer() {
     return;
   }
 
-  const bbox = '51.88,-0.98,52.18,-0.52';
-  const query = `[out:json][timeout:30];
+  const bbox = '51.90,-0.95,52.15,-0.55';
+  const query = `[out:json][timeout:25];
 (
   node["tourism"~"hotel|guest_house|hostel|motel|apartment|chalet|camp_site|caravan_site"](${bbox});
-  way["tourism"~"hotel|guest_house|hostel|motel|apartment"](${bbox});
+  way["tourism"~"hotel|guest_house|hostel|motel"](${bbox});
 );
 out center tags qt;`;
 
-  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
   let d = null;
   for(const ep of eps) {
-    try { const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)}); if(r.ok){d=await r.json();break;} } catch(_){}
+    try {
+      const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(20000)});
+      if(r.ok){d=await r.json();break;}
+    } catch(_){}
+  }
+  // Show error state if all endpoints fail
+  if(!d) {
+    document.getElementById('sidebarBody').innerHTML='<div class="empty"><div class="ei">⚠️</div><p>Could not load accommodation data right now.<br><span style="color:var(--muted);font-size:11px">Try again in a moment.</span></p></div>';
+    return;
   }
 
   const items = [];
@@ -4398,7 +4432,7 @@ function renderStaySidebar(items) {
   body.innerHTML = items.map(p => {
     const stars = p.stars ? '★'.repeat(p.stars)+'☆'.repeat(Math.max(0,5-p.stars)) : '';
     const dist = userLat ? `<span class="card-dist">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
-    return `<div class="place-card" onclick="showStayDetail(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+    return `<div class="place-card" onclick="showStayDetail(${p.id})">
       <div class="place-card-thumb" style="width:80px;background:linear-gradient(135deg,rgba(26,115,232,.12),rgba(26,115,232,.06));display:flex;align-items:center;justify-content:center;font-size:26px">${p.emoji}</div>
       <div class="place-card-body">
         <div class="place-card-tag">${escHtml(p.type)}</div>
@@ -4410,8 +4444,9 @@ function renderStaySidebar(items) {
   }).join('');
 }
 
-function showStayDetail(p) {
-  if(typeof p === 'string') { try{ p = JSON.parse(p); }catch(e){ return; } }
+function showStayDetail(idOrObj) {
+  const p = typeof idOrObj === 'object' ? idOrObj : (_stayCache||[]).find(x=>x.id===idOrObj);
+  if(!p) return;
   flyTo(p.lng, p.lat);
   const stars = p.stars ? '<span style="color:#ea8600;font-size:14px">'+'★'.repeat(p.stars)+'☆'.repeat(Math.max(0,5-p.stars))+'</span>' : '';
   const dist = userLat ? `<span style="font-size:11px;color:var(--blue)">📍 ${fmtDist(distKm(userLat,userLng,p.lat,p.lng))}</span>` : '';
@@ -4441,7 +4476,7 @@ let _foodCache = null, _foodCacheTime = 0;
 const FOOD_TTL = 20 * 60 * 1000;
 
 async function loadFoodLayer() {
-  clearAllMarkers();
+  clearMarkersExcept('food');
   document.getElementById('sidebarTitle').textContent = 'Food & Drink';
   showSkeletons(5);
 
@@ -4451,29 +4486,37 @@ async function loadFoodLayer() {
     return;
   }
 
-  const bbox = '51.88,-0.98,52.18,-0.52';
-  const query = `[out:json][timeout:30];
+  const bbox = '51.90,-0.95,52.15,-0.55';
+  // nodes only = much faster (ways are minority of food places)
+  const query = `[out:json][timeout:25];
 (
   node["amenity"~"restaurant|cafe|fast_food|pub|bar|food_court|ice_cream|bakery"](${bbox});
-  way["amenity"~"restaurant|cafe|fast_food|pub|bar"](${bbox});
+  node["shop"~"bakery|deli|butcher|seafood|cheese|chocolate|coffee"](${bbox});
 );
-out center tags qt;`;
+out tags qt;`;
 
-  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter'];
+  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
   let d = null;
   for(const ep of eps) {
-    try { const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)}); if(r.ok){d=await r.json();break;} } catch(_){}
+    try {
+      const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query),signal:AbortSignal.timeout(20000)});
+      if(r.ok){d=await r.json();break;}
+    } catch(_){}
+  }
+  if(!d) {
+    document.getElementById('sidebarBody').innerHTML='<div class="empty"><div class="ei">⚠️</div><p>Could not load food & drink data.<br><span style="color:var(--muted);font-size:11px">Try again in a moment.</span></p></div>';
+    return;
   }
 
   const items = [];
-  const FOOD_EMOJI = {restaurant:'🍽️',cafe:'☕',fast_food:'🍔',pub:'🍺',bar:'🍸',food_court:'🥡',ice_cream:'🍦',bakery:'🥐'};
+  const FOOD_EMOJI = {restaurant:'🍽️',cafe:'☕',fast_food:'🍔',pub:'🍺',bar:'🍸',food_court:'🥡',ice_cream:'🍦',bakery:'🥐',deli:'🥪',butcher:'🥩',seafood:'🐟',coffee:'☕'};
   if(d && d.elements) {
     d.elements.forEach((el,i) => {
       const t = el.tags || {};
-      const lat = el.lat || el.center?.lat;
-      const lng = el.lon || el.center?.lon;
+      const lat = el.lat;
+      const lng = el.lon;
       if(!lat||!lng||!t.name) return;
-      const type = t.amenity || 'restaurant';
+      const type = t.amenity || t.shop || 'restaurant';
       items.push({
         id: 950000+i, name: t.name, type: type.replace(/_/g,' ').replace(/\w/g,l=>l.toUpperCase()),
         emoji: FOOD_EMOJI[type]||'🍽️', lat, lng,
@@ -4514,12 +4557,11 @@ function renderFoodMarkers(items) {
 
 function renderFoodSidebar(items) {
   const body = document.getElementById('sidebarBody');
-  // Category filter
   const cats = [...new Set(items.map(p=>p.type))].sort();
-  const f = activeFilters['food'];
+  const f = activeFilters['food'] || null;
   let filtered = f ? items.filter(p=>p.type===f) : items;
   if(userLat) filtered = filtered.map(p=>({...p,_dist:distKm(userLat,userLng,p.lat,p.lng)})).sort((a,b)=>a._dist-b._dist);
-  renderFilterBar(cats, 'food');
+  renderFilterBar(cats);
   if(!filtered.length){ body.innerHTML=`<div class="empty"><div class="ei">🍽️</div><p>No food & drink places found.</p></div>`; return; }
   body.innerHTML = filtered.map(p => {
     const dist = p._dist !== undefined ? `<span class="card-dist">📍 ${fmtDist(p._dist)}</span>` : '';
