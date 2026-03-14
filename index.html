@@ -3159,65 +3159,18 @@ let _parkingLaneCacheTime = 0;
 const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
 
 async function loadParkingLaneLayer() {
-  // ── STEP 1: Base road overlay using Mapbox vector tiles ──────────────────────
-  // Covers the ENTIRE MK road network instantly (no API call).
-  // Residential/service/living_street = green (parking almost always free in MK)
-  // Secondary/tertiary = amber (may have restrictions)
-  // Motorway/trunk/primary = excluded (you can't park on them)
-  // This gives the map immediate visual coverage, OSM data overrides where available.
-  const EXCL_CLASSES = ['motorway','motorway_link','trunk','trunk_link',
-                         'primary','primary_link','path','pedestrian',
-                         'golf','ferry','aerialway'];
-
-  if(!map.getLayer('parking-road-base')) {
-    try {
-      // Green base for residential/service/living streets
-      map.addLayer({
-        id: 'parking-road-base-free',
-        type: 'line',
-        source: 'composite',
-        'source-layer': 'road',
-        filter: ['match', ['get','class'],
-          ['residential','living_street','service','track','unclassified'], true, false],
-        layout: {'line-join':'round','line-cap':'round'},
-        paint: {
-          'line-color': '#22c55e',
-          'line-width': ['interpolate',['linear'],['zoom'], 11,1, 14,2.5, 17,5],
-          'line-opacity': 0.55
-        }
-      }, 'road-label');
-      // Amber base for secondary/tertiary (more likely to have restrictions)
-      map.addLayer({
-        id: 'parking-road-base',
-        type: 'line',
-        source: 'composite',
-        'source-layer': 'road',
-        filter: ['match', ['get','class'],
-          ['secondary','secondary_link','tertiary','tertiary_link'], true, false],
-        layout: {'line-join':'round','line-cap':'round'},
-        paint: {
-          'line-color': '#f59e0b',
-          'line-width': ['interpolate',['linear'],['zoom'], 11,1, 14,2, 17,4],
-          'line-opacity': 0.45
-        }
-      }, 'road-label');
-    } catch(_) {}
-  }
-  try {
-    map.setLayoutProperty('parking-road-base-free','visibility','visible');
-    map.setLayoutProperty('parking-road-base','visibility','visible');
-  } catch(_) {}
-
-  // Return early if OSM override layer already loaded and fresh
+  // Only show roads with EXPLICIT OSM parking data — no assumptions.
+  // Car park markers are the reliable base; on-street data is OSM-sourced only.
   if(map.getLayer('parking-lanes') && _parkingLaneCache && (Date.now()-_parkingLaneCacheTime) < PARKING_LANE_TTL) {
     map.setLayoutProperty('parking-lanes','visibility','visible');
+    map.setLayoutProperty('parking-lanes-hit','visibility','visible');
     return;
   }
-  if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','visible');
+  if(map.getLayer('parking-lanes')) {
+    map.setLayoutProperty('parking-lanes','visibility','visible');
+    map.setLayoutProperty('parking-lanes-hit','visibility','visible');
+  }
 
-  // ── STEP 2: Fetch OSM parking tag data for explicit overrides ────────────────
-  // These roads have been explicitly tagged with parking rules — they override the base.
-  // Motorway/trunk/primary excluded so they never appear.
   const bbox = '51.90,-0.95,52.15,-0.55';
   const query = `[out:json][timeout:90];
 (
@@ -3278,13 +3231,13 @@ out geom tags qt;`;
       if(maxstay || (cond && cond.includes('max')) || (cond && cond.includes('@'))) return 'limited';
       if(cond && /\d+/.test(cond)) return 'limited'; // any numeric condition
 
-      // Free / parking allowed — explicit tags for parallel/diagonal/perpendicular mean space exists
-      if(lane === 'parallel' || lane === 'diagonal' || lane === 'perpendicular' ||
-         lane === 'marked' || lane === 'yes') {
-        if(!cond || cond === 'free') return 'free';
-        return 'limited'; // has a condition
-      }
+      // Free parking — MUST have explicit condition='free' or no condition AND no restriction hint
+      // lane type alone (parallel/diagonal etc) is NOT enough — OSM data is often incomplete
       if(cond === 'free') return 'free';
+      if((lane === 'parallel' || lane === 'diagonal' || lane === 'perpendicular' ||
+          lane === 'marked' || lane === 'yes') && !cond) {
+        return 'unknown'; // lane type present but no condition data — don't assume free
+      }
 
       // Has a lane value but unclear
       if(lane && lane !== '') return 'unknown';
@@ -3399,8 +3352,6 @@ function hideParkingLaneLayer() {
   try {
     if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','none');
     if(map.getLayer('parking-lanes-hit')) map.setLayoutProperty('parking-lanes-hit','visibility','none');
-    if(map.getLayer('parking-road-base')) map.setLayoutProperty('parking-road-base','visibility','none');
-    if(map.getLayer('parking-road-base-free')) map.setLayoutProperty('parking-road-base-free','visibility','none');
   } catch(_) {}
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
@@ -3408,30 +3359,13 @@ function hideParkingLaneLayer() {
 
 // Re-add parking lane layers after style change
 map.on('style.load', () => {
-  if(activeLayer !== 'parking') return;
+  if(activeLayer !== 'parking' || !_parkingLaneCache) return;
   setTimeout(() => {
     try {
-      // Re-add base road coverage layers (use composite source, must recreate after style load)
-      const EXCL = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link','path','pedestrian','golf','ferry','aerialway'];
-      if(!map.getLayer('parking-road-base-free')) {
-        map.addLayer({id:'parking-road-base-free',type:'line',source:'composite','source-layer':'road',
-          filter:['match',['get','class'],['residential','living_street','service','track','unclassified'],true,false],
-          layout:{'line-join':'round','line-cap':'round'},
-          paint:{'line-color':'#22c55e','line-width':['interpolate',['linear'],['zoom'],11,1,14,2.5,17,5],'line-opacity':0.55}
-        },'road-label');
-      }
-      if(!map.getLayer('parking-road-base')) {
-        map.addLayer({id:'parking-road-base',type:'line',source:'composite','source-layer':'road',
-          filter:['match',['get','class'],['secondary','secondary_link','tertiary','tertiary_link'],true,false],
-          layout:{'line-join':'round','line-cap':'round'},
-          paint:{'line-color':'#f59e0b','line-width':['interpolate',['linear'],['zoom'],11,1,14,2,17,4],'line-opacity':0.45}
-        },'road-label');
-      }
-      // Re-add OSM override layer if cached
-      if(_parkingLaneCache && !map.getSource('parking-lanes')) {
+      if(!map.getSource('parking-lanes')) {
         map.addSource('parking-lanes',{type:'geojson',data:_parkingLaneCache});
         map.addLayer({id:'parking-lanes-hit',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':16,'line-opacity':0,'line-color':'#000'}});
-        map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],'line-opacity':0.9,'line-color':['match',['get','status'],'free','#22c55e','limited','#f59e0b','permit','#8b5cf6','none','#ef4444','#94a3b8']}});
+        map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],'line-opacity':0.9,'line-color':['match',['get','status'],'free','#22c55e','limited','#f59e0b','permit','#8b5cf6','none','#ef4444','#94a3b8']}},'road-label');
       }
     } catch(_) {}
   }, 300);
@@ -5920,25 +5854,33 @@ function toggleWeatherDetail() {
 }
 function wmoIcon(c) {
   if(c===0) return '☀️';
-  if(c<=2) return '🌤️';
-  if(c<=3) return '☁️';
-  if(c<=49) return '🌫️';
-  if(c<=69) return '🌧️';
-  if(c<=79) return '🌨️';
-  if(c<=82) return '🌦️';
-  if(c<=99) return '⛈️';
+  if(c===1) return '🌤️';
+  if(c===2) return '⛅';
+  if(c===3) return '☁️';
+  if(c===45||c===48) return '🌫️';
+  if(c>=51&&c<=57) return '🌦️';   // drizzle
+  if(c>=61&&c<=67) return '🌧️';   // rain
+  if(c>=71&&c<=77) return '🌨️';   // snow
+  if(c>=80&&c<=82) return '🌦️';   // showers
+  if(c>=85&&c<=86) return '🌨️';   // snow showers
+  if(c>=95&&c<=99) return '⛈️';   // thunderstorm
   return '🌤️';
 }
 function wmoDesc(c) {
-  if(c===0) return 'Clear';
-  if(c<=2) return 'Partly cloudy';
-  if(c<=3) return 'Overcast';
-  if(c<=49) return 'Foggy';
-  if(c<=69) return 'Rainy';
-  if(c<=79) return 'Snowy';
-  if(c<=82) return 'Showers';
-  if(c<=99) return 'Thunderstorm';
-  return '';
+  if(c===0) return 'Clear sky';
+  if(c===1) return 'Mainly clear';
+  if(c===2) return 'Partly cloudy';
+  if(c===3) return 'Overcast';
+  if(c===45||c===48) return 'Foggy';
+  if(c>=51&&c<=55) return 'Drizzle';
+  if(c===56||c===57) return 'Freezing drizzle';
+  if(c>=61&&c<=65) return 'Rainy';
+  if(c===66||c===67) return 'Freezing rain';
+  if(c>=71&&c<=77) return 'Snowy';
+  if(c>=80&&c<=82) return 'Showers';
+  if(c>=85&&c<=86) return 'Snow showers';
+  if(c>=95&&c<=99) return 'Thunderstorm';
+  return 'Cloudy';
 }
 
 // ── MAP HOVER TOOLTIP ─────────────────────────────────────────────
@@ -7774,16 +7716,7 @@ map.on('load',()=>{
     } catch(e) { /* silent */ }
   }, 3000);
 
-  // Pre-fetch parking OSM data in background so first tap is instant
-  setTimeout(async () => {
-    try {
-      const osm = await fetchFreeParkingOSM();
-      if(osm && osm.length) {
-        _parkingOSMCache = osm;
-        _parkingOSMCacheTime = Date.now();
-      }
-    } catch(e) { /* silent */ }
-  }, 5000);
+  // Parking OSM data fetched on demand when layer is activated
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
