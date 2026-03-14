@@ -1900,6 +1900,11 @@ function clearActiveLayer(){
   document.getElementById('fab').style.display='none';
   if(transportTimer) { clearTimeout(transportTimer); transportTimer = null; }
   closeDetail();
+  // Hide all layer-specific overlays
+  setParkingZonesVisible(false);
+  hideParkingLaneLayer();
+  const pop = document.getElementById('parkingLanePopup');
+  if(pop) pop.remove();
   const sb = document.getElementById('sidebar');
   document.getElementById('sidebarTitle').textContent='Choose a layer';
   document.getElementById('sidebarCount').textContent='—';
@@ -3175,6 +3180,10 @@ async function loadParkingLaneLayer() {
   way["parking:left:restriction"](${bbox});
   way["parking:right:restriction"](${bbox});
   way["parking:restriction"](${bbox});
+  way["parking:left:maxstay"](${bbox});
+  way["parking:right:maxstay"](${bbox});
+  way["parking:both:maxstay"](${bbox});
+  way[~"^parking:"~"."](${bbox});
 );
 out geom tags qt;`;
 
@@ -3974,16 +3983,13 @@ function renderPlacesSidebar() {
     const distHtml = p._dist<999 ? `<span class="card-dist">📍 ${fmtDist(p._dist)}</span>` : '';
     const thumbId = 'pthumb_' + p.id;
     const cachedPhoto = _photoCache[p.id||p.name];
-    const thumbSrc = (cachedPhoto && cachedPhoto !== 'none')
-      ? escHtml(cachedPhoto)
-      : (CAT_PHOTOS[p.category] || `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${p.lng.toFixed(5)},${p.lat.toFixed(5)},17,0/80x80@2x?access_token=${token}`);
+    const hasRealPhoto = cachedPhoto && cachedPhoto !== 'none';
+    const thumbContent = hasRealPhoto
+      ? `<img id="${thumbId}" src="${escHtml(cachedPhoto)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;" onerror="this.parentElement.innerHTML=buildEmojiThumb({emoji:'${p.emoji}',category:'${escHtml(p.category)}'}, '100%', '80px')">`
+      : buildEmojiThumb(p, '100%', '80px');
     return `
     <div class="place-card" onclick="showPlaceDetail(${p.id})">
-      <div class="place-card-thumb">
-        <img id="${thumbId}" src="${thumbSrc}" alt="" loading="lazy"
-          onerror="this.src='${CAT_PHOTOS[p.category]||''}';this.onerror=null"
-          style="width:100%;height:100%;object-fit:cover;display:block;">
-      </div>
+      <div class="place-card-thumb" style="border-radius:var(--r-md) 0 0 var(--r-md);overflow:hidden;">${thumbContent}</div>
       <div class="place-card-body">
         <div class="place-card-tag">${p.emoji} ${escHtml(p.category)}</div>
         <div class="place-card-name">${escHtml(p.name)}</div>
@@ -4125,19 +4131,16 @@ async function showPlaceDetail(id) {
 
   // Get photo (cached or fetch)
   const cachedPhoto = _photoCache[p.id||p.name];
-  const photoUrl = (cachedPhoto && cachedPhoto !== 'none') ? cachedPhoto : (CAT_PHOTOS[p.category] || null);
+  const photoUrl = (cachedPhoto && cachedPhoto !== 'none') ? cachedPhoto : null;
 
   const heroPhotoHtml = photoUrl
     ? `<div style="margin:-16px -16px 0;position:relative;">
         <img id="placeDetailHeroImg" src="${escHtml(photoUrl)}" alt="${escHtml(p.name)}"
           style="width:100%;height:180px;object-fit:cover;display:block;border-radius:18px 18px 0 0;"
-          onerror="this.parentElement.remove()">
+          onerror="this.style.display='none'">
         <div style="position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(0,0,0,0.5));border-radius:18px 18px 0 0;"></div>
       </div>`
-    : `<div id="placeDetailHeroImg" style="margin:-16px -16px 0;height:100px;background:linear-gradient(135deg,${CAT_COLORS[p.category]||'#4caf7d'}22,${CAT_COLORS[p.category]||'#4caf7d'}08);border-radius:18px 18px 0 0;display:flex;align-items:center;padding:0 18px;gap:12px;">
-        <span style="font-size:40px">${p.emoji}</span>
-        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${escHtml(p.name)}</div>
-      </div>`;
+    : `<div id="placeDetailHeroImg" style="margin:-16px -16px 0;">${buildEmojiThumb(p, 'calc(100% + 32px)', '120px')}</div>`;
 
   document.getElementById('detailScroll').innerHTML=`
     ${heroPhotoHtml}
@@ -5915,7 +5918,7 @@ const _preview = {
 
     // Position: above the cursor, shifted right slightly
     const vw = window.innerWidth, vh = window.innerHeight;
-    const W = 220, H = 185; // approx card size
+    const W = 220, H = 185;
     let left = clientX + 12;
     let top  = clientY - H - 12;
     if(left + W > vw - 8) left = clientX - W - 12;
@@ -5923,31 +5926,37 @@ const _preview = {
     this.el.style.left = left + 'px';
     this.el.style.top  = top + 'px';
 
-    // Fill content
-    document.getElementById('placePreviewName').textContent = p.name;
-    document.getElementById('placePreviewCat').textContent  = (p.emoji||'') + ' ' + (p.category||'Place');
+    // Fill content — guard each element against null
+    const nameEl = document.getElementById('placePreviewName');
+    const catEl  = document.getElementById('placePreviewCat');
     const statusEl = document.getElementById('placePreviewStatus');
-    if(p.open === true)  { statusEl.textContent = '● Open now'; statusEl.style.color = 'var(--green)'; }
-    else if(p.open === false) { statusEl.textContent = '● Closed'; statusEl.style.color = 'var(--red)'; }
-    else { statusEl.textContent = ''; }
-    const distEl = document.getElementById('placePreviewDist');
+    const distEl   = document.getElementById('placePreviewDist');
+    const imgWrap  = document.getElementById('placePreviewImgWrap');
+    if(!nameEl || !catEl || !statusEl || !distEl || !imgWrap) return; // panel not in DOM yet
+
+    nameEl.textContent = p.name;
+    catEl.textContent  = (p.emoji||'') + ' ' + (p.category||'Place');
+    if(p.open === true)        { statusEl.textContent = '● Open now'; statusEl.style.color = 'var(--green)'; }
+    else if(p.open === false)  { statusEl.textContent = '● Closed';   statusEl.style.color = 'var(--red)';   }
+    else                       { statusEl.textContent = ''; }
     distEl.textContent = (userLat && p.lat) ? '📍 ' + fmtDist(distKm(userLat,userLng,p.lat,p.lng)) + ' away' : '';
 
-    // Image
-    const imgWrap = document.getElementById('placePreviewImgWrap');
+    // Image — real photo from Wikipedia if cached, else styled emoji card
     const cached = _photoCache[p.id] || _photoCache[p.name];
-    if(cached === 'none') {
-      imgWrap.innerHTML = `<div class="place-preview-img-placeholder">${p.emoji||'📍'}</div>`;
-    } else if(cached) {
-      imgWrap.innerHTML = `<img class="place-preview-img" src="${cached}" alt="" onerror="this.parentElement.innerHTML='<div class=place-preview-img-placeholder>${p.emoji||'📍'}</div>'">`;
+    const showEmojiCard = () => {
+      imgWrap.innerHTML = buildEmojiThumb(p, '100%', '110px');
+    };
+    if(cached === 'none' || !cached) {
+      showEmojiCard();
+      if(!cached) {
+        getPlacePhoto(p).then(url => {
+          if(url && this.el && this.el.classList.contains('show')) {
+            imgWrap.innerHTML = `<img class="place-preview-img" src="${url}" alt="" onerror="this.parentElement.innerHTML=buildEmojiThumb({emoji:'${p.emoji||'📍'}',category:'${p.category||''}'},'100%','110px')">`;
+          }
+        });
+      }
     } else {
-      // Show category placeholder immediately, then try to load a real photo
-      imgWrap.innerHTML = `<div class="place-preview-img-placeholder">${p.emoji||'📍'}</div>`;
-      getPlacePhoto(p).then(url => {
-        if(url && this.el && this.el.classList.contains('show')) {
-          imgWrap.innerHTML = `<img class="place-preview-img" src="${url}" alt="" onerror="this.parentElement.innerHTML='<div class=place-preview-img-placeholder>${p.emoji||'📍'}</div>'">`;
-        }
-      });
+      imgWrap.innerHTML = `<img class="place-preview-img" src="${cached}" alt="" onerror="this.parentElement.innerHTML=buildEmojiThumb({emoji:'${p.emoji||'📍'}',category:'${p.category||''}'},'100%','110px')">`;
     }
 
     this.el.style.display = 'block';
@@ -5961,43 +5970,46 @@ const _preview = {
 };
 
 // ── PHOTO CACHE & FETCHER ─────────────────────────────────────────
-const _photoCache = {};  // keyed by place id or name
-
-// Category fallback photos from Unsplash (curated, stable URLs)
-const CAT_PHOTOS = {
-  'Pub & Bar':     'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=440&q=75',
-  'Restaurant':    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=440&q=75',
-  'Café':          'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=440&q=75',
-  'Fast Food':     'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=440&q=75',
-  'Shopping':      'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=440&q=75',
-  'Supermarket':   'https://images.unsplash.com/photo-1542838132-92c53300491e?w=440&q=75',
-  'Health':        'https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=440&q=75',
-  'Hospital':      'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=440&q=75',
-  'Hotel':         'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=440&q=75',
-  'Leisure':       'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=440&q=75',
-  'Gym':           'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=440&q=75',
-  'Arts & Culture':'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=440&q=75',
-  'Museum':        'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=440&q=75',
-  'Education':     'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=440&q=75',
-  'Finance':       'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=440&q=75',
-  'Transport':     'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=440&q=75',
-  'Community':     'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=440&q=75',
-  'Beauty':        'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=440&q=75',
-  'Park':          'https://images.unsplash.com/photo-1444927714506-8492d94b4e3d?w=440&q=75',
+// Category emoji — used as styled placeholder when no real photo exists
+const CAT_EMOJI = {
+  'Pub & Bar':'🍺','Restaurant':'🍽️','Café':'☕','Fast Food':'🍔',
+  'Shopping':'🛍️','Supermarket':'🛒','Health':'💊','Hospital':'🏥',
+  'Hotel':'🏨','Leisure':'🏊','Gym':'💪','Arts & Culture':'🎨',
+  'Museum':'🏛️','Education':'🎓','Finance':'🏦','Transport':'🚌',
+  'Community':'🤝','Beauty':'💅','Park':'🌳','Cinema':'🎬',
+  'Theatre':'🎭','Library':'📚','Dentist':'🦷','Pharmacy':'💊',
+  'School':'🏫','Sports Centre':'🏟️','Attraction':'⭐','Place':'📍',
 };
+
+// Category gradient colours for the emoji card background
+const CAT_GRAD = {
+  'Pub & Bar':['#92400e','#b45309'],'Restaurant':['#7c2d12','#c2410c'],
+  'Café':['#451a03','#92400e'],'Fast Food':['#713f12','#ca8a04'],
+  'Shopping':['#4c1d95','#7c3aed'],'Supermarket':['#14532d','#15803d'],
+  'Health':['#0c4a6e','#0369a1'],'Hospital':['#0c4a6e','#0284c7'],
+  'Hotel':['#1e1b4b','#3730a3'],'Leisure':['#064e3b','#059669'],
+  'Gym':['#0f172a','#1e293b'],'Arts & Culture':['#831843','#be185d'],
+  'Museum':['#1c1917','#57534e'],'Education':['#082f49','#0369a1'],
+  'Finance':['#1e3a5f','#1e40af'],'Transport':['#0f1d3d','#1d4ed8'],
+  'Community':['#052e16','#166534'],'Beauty':['#4a044e','#86198f'],
+  'Park':['#052e16','#15803d'],'Cinema':['#1a1a2e','#7c3aed'],
+};
+
+const _photoCache = {};
 
 async function getPlacePhoto(p) {
   const cacheKey = p.id || p.name;
   if(_photoCache[cacheKey] !== undefined) return _photoCache[cacheKey] === 'none' ? null : _photoCache[cacheKey];
 
-  // 1) Try Wikipedia image for named places
+  // 1) Try Wikipedia REST summary (has thumbnail for famous places)
   try {
-    const q = encodeURIComponent(p.name);
-    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${q}`, {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),3000); return c.signal; })()});
+    const r = await fetch(
+      `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(p.name)}`,
+      {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),2500); return c.signal; })()}
+    );
     if(r.ok) {
       const d = await r.json();
       if(d.thumbnail && d.thumbnail.source) {
-        // Make image larger
         const url = d.thumbnail.source.replace(/\/\d+px-/, '/400px-');
         _photoCache[cacheKey] = url;
         return url;
@@ -6005,10 +6017,12 @@ async function getPlacePhoto(p) {
     }
   } catch(_) {}
 
-  // 2) Try Wikimedia Commons search
+  // 2) Try Wikipedia pageimages API (broader coverage)
   try {
-    const q = encodeURIComponent(p.name + ' ' + (p.category||''));
-    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(p.name)}&prop=pageimages&format=json&pithumbsize=400&origin=*`, {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),3000); return c.signal; })()});
+    const r = await fetch(
+      `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(p.name)}&prop=pageimages&format=json&pithumbsize=400&origin=*`,
+      {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),2500); return c.signal; })()}
+    );
     if(r.ok) {
       const d = await r.json();
       const pages = d.query && d.query.pages;
@@ -6022,10 +6036,16 @@ async function getPlacePhoto(p) {
     }
   } catch(_) {}
 
-  // 3) Fall back to category Unsplash photo
-  const catPhoto = CAT_PHOTOS[p.category] || CAT_PHOTOS[p.osm_type] || null;
-  _photoCache[cacheKey] = catPhoto || 'none';
-  return catPhoto;
+  // No real photo — use emoji card (set to 'none' so we don't retry)
+  _photoCache[cacheKey] = 'none';
+  return null;
+}
+
+// Build an emoji placeholder card HTML (used when no real photo available)
+function buildEmojiThumb(p, width='100%', height='80px') {
+  const emoji = p.emoji || CAT_EMOJI[p.category] || '📍';
+  const grad = CAT_GRAD[p.category] || ['#1e293b','#334155'];
+  return `<div style="width:${width};height:${height};background:linear-gradient(135deg,${grad[0]},${grad[1]});display:flex;align-items:center;justify-content:center;font-size:${parseInt(height)>60?'32px':'22px'};border-radius:inherit;flex-shrink:0">${emoji}</div>`;
 }
 
 // Pre-warm photos ONCE after places load — not on every map idle event
@@ -8805,6 +8825,8 @@ function closeAppMenu() {
 }
 window.openAppMenu=openAppMenu;
 window.closeAppMenu=closeAppMenu;
+// Expose buildEmojiThumb globally so onerror HTML attributes can call it
+window.buildEmojiThumb=buildEmojiThumb;
 
 // Legacy aliases so any remaining openMobileNav calls still work
 function openMobileNav() { openAppMenu(); }
