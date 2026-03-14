@@ -252,6 +252,7 @@
     .layer-item.active{background:rgba(232,58,47,.1);}
 
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+    @keyframes fadeUp{from{opacity:0;transform:translateX(-50%) translateY(8px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
     /* ── LAYOUT — map fills everything, everything else is fixed ── */
     .main{position:fixed;inset:0;overflow:hidden;}
@@ -765,6 +766,31 @@
     /* ── MAP HOVER TOOLTIP ───────────────────────────────────── */
     .map-tooltip{position:fixed;background:rgba(32,33,36,.92);color:#fff;padding:6px 12px;border-radius:20px;font-size:11px;font-weight:500;pointer-events:none;z-index:5000;white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.1);box-shadow:0 3px 12px rgba(0,0,0,.35);opacity:0;transition:opacity .12s;transform:translateX(-50%) translateY(-120%);display:none;}
     .map-tooltip.show{opacity:1;display:block;}
+
+    /* ── PLACE PREVIEW CARD — rich hover card like Google Maps ── */
+    .place-preview{
+      position:fixed;
+      z-index:5100;
+      pointer-events:none;
+      width:220px;
+      background:var(--panel);
+      border-radius:14px;
+      overflow:hidden;
+      box-shadow:0 8px 28px rgba(0,0,0,0.22),0 2px 8px rgba(0,0,0,0.12);
+      border:1px solid var(--border);
+      opacity:0;
+      transform:translateY(8px) scale(0.97);
+      transition:opacity .15s,transform .15s;
+      display:none;
+    }
+    .place-preview.show{opacity:1;transform:translateY(0) scale(1);display:block;}
+    .place-preview-img{width:100%;height:110px;object-fit:cover;display:block;background:var(--panel2);}
+    .place-preview-img-placeholder{width:100%;height:110px;display:flex;align-items:center;justify-content:center;font-size:36px;background:var(--panel2);}
+    .place-preview-body{padding:10px 12px 11px;}
+    .place-preview-name{font-size:13px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .place-preview-cat{font-size:10px;color:var(--muted);margin-bottom:4px;}
+    .place-preview-status{font-size:11px;font-weight:600;}
+    .place-preview-dist{font-size:10px;color:var(--blue);margin-top:2px;}
 
     /* ── ZOOM TO MY LOCATION BUTTON ──────────────────────────── */
     /* locate-btn removed — Mapbox geolocate control handles this */
@@ -1502,6 +1528,15 @@
 
 <!-- MAP HOVER TOOLTIP -->
 <div class="map-tooltip" id="mapTooltip"></div>
+<div class="place-preview" id="placePreview">
+  <div id="placePreviewImgWrap"></div>
+  <div class="place-preview-body">
+    <div class="place-preview-name" id="placePreviewName"></div>
+    <div class="place-preview-cat" id="placePreviewCat"></div>
+    <div class="place-preview-status" id="placePreviewStatus"></div>
+    <div class="place-preview-dist" id="placePreviewDist"></div>
+  </div>
+</div>
 
 <!-- NEAR-ME SUMMARY CARD -->
 <div class="nearme-card" id="nearmeCard">
@@ -1910,7 +1945,11 @@ function setLayer(layer, btn, opts={}) {
   // FAB only on issues — report a problem
   document.getElementById('fab').style.display = layer==='issues' ? 'flex' : 'none';
   if(layer==='parking') setParkingZonesVisible(true);
-  else { setParkingZonesVisible(false); if(typeof digitizeMode!=='undefined' && digitizeMode && typeof cancelDigitize==='function') cancelDigitize(); }
+  else {
+    setParkingZonesVisible(false);
+    hideParkingLaneLayer();
+    if(typeof digitizeMode!=='undefined' && digitizeMode && typeof cancelDigitize==='function') cancelDigitize();
+  }
 }
 
 // ── ISSUES ───────────────────────────────────────────────────────
@@ -2083,8 +2122,40 @@ function renderIssueMarkers() {
   map.on('mouseleave','issues-points',()=>{map.getCanvas().style.cursor='';});
   // POI labels from streets-v12 base style — show pointer to indicate clickability
   ['poi-label','transit-label','airport-label'].forEach(layer => {
-    map.on('mouseenter', layer, () => { map.getCanvas().style.cursor = 'pointer'; });
-    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; });
+    map.on('mouseenter', layer, (e) => {
+      map.getCanvas().style.cursor = 'pointer';
+      const f = e.features && e.features[0];
+      if(!f) return;
+      const props = f.properties || {};
+      const name = props.name || props['name_en'] || null;
+      if(!name) return;
+      const category = props.type || props.category_en || props.maki || 'Place';
+      const emoji = (() => {
+        const m = props.maki || '';
+        const map2 = {restaurant:'🍽️',cafe:'☕',bar:'🍸',pub:'🍺',fuel:'⛽',hospital:'🏥',
+          pharmacy:'💊',school:'🏫',hotel:'🏨',museum:'🏛️',cinema:'🎬',library:'📚',
+          supermarket:'🛒',shop:'🏪',gym:'💪',park:'🌳',bank:'🏦',attraction:'⭐',
+          fast_food:'🍔',hairdresser:'✂️','place_of_worship':'🕌',theatre:'🎭'};
+        return map2[m] || '📍';
+      })();
+      // Find in data.places for open status & distance
+      const existing = data.places.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
+      const previewP = existing || { name, category, emoji, open: null, lat: e.lngLat.lat, lng: e.lngLat.lng };
+      _preview.show(previewP, e.originalEvent.clientX, e.originalEvent.clientY);
+    });
+    map.on('mousemove', layer, (e) => {
+      if(_preview.el && _preview.el.classList.contains('show')) {
+        const vw = window.innerWidth;
+        const W = 220, H = 185;
+        let left = e.originalEvent.clientX + 12;
+        let top  = e.originalEvent.clientY - H - 12;
+        if(left + W > vw - 8) left = e.originalEvent.clientX - W - 12;
+        if(top < 8) top = e.originalEvent.clientY + 24;
+        _preview.el.style.left = left + 'px';
+        _preview.el.style.top  = top + 'px';
+      }
+    });
+    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; _preview.hide(); });
   });;
 }
 
@@ -2891,6 +2962,8 @@ async function loadPlaces() {
   document.getElementById('s1').textContent=data.places.length;
   document.getElementById('s2').textContent=open ? open+' open now' : '—';
   document.getElementById('s3').textContent='OSM';
+  // Pre-warm photos after a short delay (don't block render)
+  setTimeout(prewarmPlacePhotos, 800);
 }
 
 // OSM category mapping
@@ -3107,37 +3180,278 @@ out center body;`;
 // ── FREE PARKING ─────────────────────────────────────────────────
 const PARKING_MAP_URL = 'https://www.milton-keynes.gov.uk/sites/default/files/2025-10/Milton-Keynes-Parking-Map-%2801.10.2025%29.pdf';
 const PARKING_INFO_URL = 'https://www.milton-keynes.gov.uk/parking/where-park';
+// ── PARKING LANE LAYER ───────────────────────────────────────────
+// Shows parking rules for any road in MK as colour-coded lines
+// Green = free / no restriction, Amber = limited/conditional, Red = no parking
+let _parkingLaneCache = null;
+let _parkingLaneCacheTime = 0;
+const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
+
+async function loadParkingLaneLayer() {
+  // Return early if already loaded and fresh
+  if(map.getLayer('parking-lanes') && _parkingLaneCache && (Date.now()-_parkingLaneCacheTime) < PARKING_LANE_TTL) {
+    map.setLayoutProperty('parking-lanes','visibility','visible');
+    return;
+  }
+  // If source exists but is stale, just show it while we refetch
+  if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','visible');
+
+  const bbox = '51.90,-0.95,52.15,-0.55';
+  const query = `[out:json][timeout:45];
+(
+  way["parking:left"](${bbox});
+  way["parking:right"](${bbox});
+  way["parking:both"](${bbox});
+  way["parking:lane:left"](${bbox});
+  way["parking:lane:right"](${bbox});
+  way["parking:lane:both"](${bbox});
+  way["parking:condition:left"](${bbox});
+  way["parking:condition:right"](${bbox});
+  way["parking:condition:both"](${bbox});
+);
+out geom tags;`;
+
+  const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
+  let d = null;
+  for(const ep of eps) {
+    try {
+      const r = await fetch(ep,{method:'POST',body:'data='+encodeURIComponent(query)});
+      if(r.ok){ d=await r.json(); break; }
+    } catch(_){}
+  }
+  if(!d || !d.elements || !d.elements.length) return;
+
+  // Convert to GeoJSON FeatureCollection
+  const features = [];
+  for(const way of d.elements) {
+    if(!way.geometry || way.geometry.length < 2) continue;
+    const t = way.tags || {};
+    const coords = way.geometry.map(p=>[p.lon,p.lat]);
+
+    // Parse parking status for left and right sides
+    const parseSide = (side) => {
+      const val = t[`parking:${side}`] || t[`parking:lane:${side}`] || '';
+      const cond = t[`parking:condition:${side}`] || t[`parking:condition:${side}:default`] || '';
+      const restriction = t[`restriction:${side}`] || '';
+
+      if(val === 'no' || val === 'no_parking' || restriction === 'no_parking') return 'none';
+      if(cond === 'no_parking' || cond === 'no_stopping') return 'none';
+      if(cond === 'free' || cond === 'disc' || val === 'parallel' || val === 'diagonal' || val === 'perpendicular') return 'free';
+      if(cond && cond.includes('max')) return 'limited';
+      if(cond && cond.includes('@')) return 'limited'; // conditional
+      if(cond === 'residents' || cond === 'permit') return 'permit';
+      if(val && val !== 'no' && val !== 'none') return 'free';
+      return 'unknown';
+    };
+
+    const leftStatus  = parseSide('left')  || parseSide('both');
+    const rightStatus = parseSide('right') || parseSide('both');
+    const status = leftStatus === rightStatus ? leftStatus : (leftStatus !== 'unknown' ? leftStatus : rightStatus);
+
+    const maxstay = t['parking:condition:left:maxstay'] || t['parking:condition:right:maxstay'] || t['parking:condition:both:maxstay'] || '';
+    const condText = t['parking:condition:left'] || t['parking:condition:right'] || t['parking:condition:both'] || '';
+    const street = t.name || t['addr:street'] || '';
+
+    features.push({
+      type:'Feature',
+      geometry:{type:'LineString',coordinates:coords},
+      properties:{
+        status,
+        street,
+        maxstay,
+        condition: condText,
+        left: leftStatus,
+        right: rightStatus,
+        raw: JSON.stringify({
+          left: t['parking:left']||t['parking:lane:left']||'',
+          right: t['parking:right']||t['parking:lane:right']||'',
+          condLeft: t['parking:condition:left']||'',
+          condRight: t['parking:condition:right']||''
+        })
+      }
+    });
+  }
+
+  _parkingLaneCache = {type:'FeatureCollection',features};
+  _parkingLaneCacheTime = Date.now();
+
+  if(map.getSource('parking-lanes')) {
+    map.getSource('parking-lanes').setData(_parkingLaneCache);
+  } else {
+    map.addSource('parking-lanes',{type:'geojson',data:_parkingLaneCache});
+    // Wide invisible hit target
+    map.addLayer({id:'parking-lanes-hit',type:'line',source:'parking-lanes',
+      layout:{'line-join':'round','line-cap':'round'},
+      paint:{'line-width':16,'line-opacity':0,'line-color':'#000'}
+    });
+    // Visible coloured line
+    map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',
+      layout:{'line-join':'round','line-cap':'round'},
+      paint:{
+        'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],
+        'line-opacity':0.85,
+        'line-color':[
+          'match',['get','status'],
+          'free','#22c55e',
+          'limited','#f59e0b',
+          'permit','#8b5cf6',
+          'none','#ef4444',
+          '#94a3b8' // unknown
+        ]
+      }
+    },'road-label');
+  }
+  map.setLayoutProperty('parking-lanes','visibility','visible');
+  map.setLayoutProperty('parking-lanes-hit','visibility','visible');
+
+  // Click handler for parking lane info
+  map.on('click','parking-lanes-hit',(e)=>{
+    if(!e.features || !e.features.length) return;
+    const p = e.features[0].properties;
+    const raw = JSON.parse(p.raw||'{}');
+    const statusLabel = {free:'🟢 Parking allowed',limited:'🟡 Limited parking',permit:'🟣 Permit holders',none:'🔴 No parking',unknown:'⬜ Unknown'}[p.status]||'Unknown';
+    const condLabel = p.condition ? `Condition: ${p.condition}` : '';
+    const maxLabel = p.maxstay ? `Max stay: ${p.maxstay}` : '';
+    const parts = [statusLabel, condLabel, maxLabel].filter(Boolean);
+    showParkingLanePopup(e.lngLat, p.street||'This road', parts, p);
+  });
+  map.on('mouseenter','parking-lanes-hit',()=>{ map.getCanvas().style.cursor='pointer'; });
+  map.on('mouseleave','parking-lanes-hit',()=>{ map.getCanvas().style.cursor=''; });
+}
+
+function showParkingLanePopup(lngLat, street, parts, props) {
+  const existing = document.getElementById('parkingLanePopup');
+  if(existing) existing.remove();
+
+  const el = document.createElement('div');
+  el.id = 'parkingLanePopup';
+  el.style.cssText = `
+    position:fixed;bottom:140px;left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--border);border-radius:16px;
+    padding:14px 18px;z-index:700;min-width:260px;max-width:340px;
+    box-shadow:0 8px 28px rgba(0,0,0,0.18);font-family:'DM Mono',monospace;
+    display:flex;flex-direction:column;gap:6px;
+    animation:fadeUp .18s ease;
+  `;
+  const statusEmoji = {free:'🟢',limited:'🟡',permit:'🟣',none:'🔴',unknown:'⬜'}[props.status]||'⬜';
+  const statusText = {free:'Parking allowed',limited:'Limited / conditional',permit:'Permit holders only',none:'No parking',unknown:'No data for this road'}[props.status]||'Unknown';
+  el.innerHTML = `
+    <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:800;margin-bottom:2px">${statusEmoji} ${escHtml(street||'This road')}</div>
+    <div style="font-size:13px;font-weight:600;color:${{free:'#22c55e',limited:'#f59e0b',permit:'#8b5cf6',none:'#ef4444',unknown:'var(--muted)'}[props.status]||'var(--muted)'}">${statusText}</div>
+    ${props.condition?`<div style="font-size:11px;color:var(--muted)">Condition: ${escHtml(props.condition)}</div>`:''}
+    ${props.maxstay?`<div style="font-size:11px;color:var(--muted)">Max stay: ${escHtml(props.maxstay)}</div>`:''}
+    <div style="font-size:10px;color:var(--muted2);margin-top:2px">Left: ${escHtml(props.left||'—')} · Right: ${escHtml(props.right||'—')}</div>
+    <button onclick="document.getElementById('parkingLanePopup').remove()" style="position:absolute;top:10px;right:12px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;line-height:1">×</button>
+  `;
+  document.body.appendChild(el);
+  // Auto-dismiss after 6s
+  setTimeout(()=>{ const x=document.getElementById('parkingLanePopup'); if(x) x.remove(); }, 6000);
+}
+
+function hideParkingLaneLayer() {
+  try {
+    if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','none');
+    if(map.getLayer('parking-lanes-hit')) map.setLayoutProperty('parking-lanes-hit','visibility','none');
+  } catch(_) {}
+  const pop = document.getElementById('parkingLanePopup');
+  if(pop) pop.remove();
+}
+
+// Re-add parking lane layers after style change
+map.on('style.load', () => {
+  if(_parkingLaneCache) {
+    // Re-add source and layers after style reload
+    setTimeout(() => {
+      try {
+        if(!map.getSource('parking-lanes')) {
+          map.addSource('parking-lanes',{type:'geojson',data:_parkingLaneCache});
+          map.addLayer({id:'parking-lanes-hit',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':16,'line-opacity':0,'line-color':'#000'}});
+          map.addLayer({id:'parking-lanes',type:'line',source:'parking-lanes',layout:{'line-join':'round','line-cap':'round'},paint:{'line-width':['interpolate',['linear'],['zoom'],12,2,16,5],'line-opacity':0.85,'line-color':['match',['get','status'],'free','#22c55e','limited','#f59e0b','permit','#8b5cf6','none','#ef4444','#94a3b8']}});
+        }
+      } catch(_) {}
+    }, 300);
+  }
+});
+
+// Parking cache — avoids refetching on every tap
+let _parkingOSMCache = null;
+let _parkingOSMCacheTime = 0;
+const PARKING_CACHE_TTL = 15 * 60 * 1000; // 15 min
+
 async function loadParking() {
-  showSkeletons(3);
-  try{
-    const osm = await fetchFreeParkingOSM();
-    const council = getCouncilFreeParking();
-    const community = await fetchCommunityParking();
-    const zones = await fetchParkingZones();
+  // Load parking lane layer (colour-coded road overlay) — fires in parallel, doesn't block
+  loadParkingLaneLayer().catch(()=>{});
+
+  // Show council data IMMEDIATELY — no waiting
+  const council = getCouncilFreeParking();
+  if(!data.parking.length) {
+    data.parking = [...council];
+    renderParkingSidebar();
+    renderParkingMarkers();
+  }
+
+  // Return cached OSM data if still fresh
+  const now = Date.now();
+  if(_parkingOSMCache && (now - _parkingOSMCacheTime) < PARKING_CACHE_TTL) {
+    const merged = _mergeParking(_parkingOSMCache, council);
+    data.parking = merged;
+    renderParkingSidebar();
+    renderParkingMarkers();
+    // Still fetch community/zones
+    try {
+      const [community, zones] = await Promise.all([fetchCommunityParking(), fetchParkingZones()]);
+      communityParkingPending = community.pending || [];
+      parkingZones = zones || [];
+      renderParkingZones();
+    } catch(_) {}
+    _updateParkingStats();
+    return;
+  }
+
+  // Fetch OSM + community + zones in parallel
+  try {
+    const [osm, community, zones] = await Promise.all([
+      fetchFreeParkingOSM(),
+      fetchCommunityParking(),
+      fetchParkingZones()
+    ]);
+    _parkingOSMCache = osm || [];
+    _parkingOSMCacheTime = Date.now();
     communityParkingPending = community.pending || [];
     parkingZones = zones || [];
-    const merged = [].concat(osm || [], community.verified || []);
-    council.forEach(p=>{
-      const exists = merged.some(o=>distKm(o.lat,o.lng,p.lat,p.lng) < 0.15);
-      if(!exists) merged.push(p);
-    });
-    data.parking = merged;
-  }catch(e){
-    data.parking = [];
-    communityParkingPending = [];
-    parkingZones = [];
-    console.error('Parking load failed', e);
-    toast('Could not load parking data. Try again shortly.','warn');
+    data.parking = _mergeParking(_parkingOSMCache, council, community.verified || []);
+  } catch(e) {
+    // Keep council data visible if OSM fails
+    if(!data.parking.length) data.parking = council;
+    console.warn('Parking OSM fetch failed:', e);
   }
   renderParkingSidebar();
   renderParkingMarkers();
   renderParkingZones();
-  document.getElementById('sidebarTitle').textContent='Parking';
-  document.getElementById('sidebarCount').textContent=data.parking.length;
-  document.getElementById('s1').textContent=data.parking.length;
-  document.getElementById('s2').textContent=data.parking.filter(p=>p.freeNow).length+' free now';
-  document.getElementById('s3').textContent=data.parking.filter(p=>p.freeAfter).length+' free later';
-}function parkingNowStatus() {
+  _updateParkingStats();
+}
+
+function _mergeParking(osm, council, community=[]) {
+  const merged = [...(osm||[]), ...(community||[])];
+  (council||[]).forEach(p => {
+    const exists = merged.some(o => distKm(o.lat,o.lng,p.lat,p.lng) < 0.12);
+    if(!exists) merged.push(p);
+  });
+  return merged;
+}
+
+function _updateParkingStats() {
+  const el = document.getElementById;
+  try {
+    document.getElementById('sidebarTitle').textContent = 'Parking';
+    document.getElementById('sidebarCount').textContent = data.parking.length;
+    document.getElementById('s1').textContent = data.parking.length;
+    document.getElementById('s2').textContent = data.parking.filter(p=>p.freeNow).length + ' free now';
+    document.getElementById('s3').textContent = data.parking.filter(p=>p.freeAfter).length + ' free later';
+  } catch(_) {}
+}
+
+function parkingNowStatus() {
   const now = new Date();
   const h = now.getHours() + (now.getMinutes()/60);
   return !(h >= 7 && h < 18);
@@ -3465,6 +3779,19 @@ function renderParkingSidebar() {
     ? '⚠️ Paid hours (7am–6pm). Check signs — some bays are free.'
     : '✅ Outside paid hours — most CMK bays are free.';
 
+  // Map legend — shown at top of sidebar, always visible
+  const legend = `<div style="padding:12px 14px;border-bottom:1px solid var(--border);background:var(--panel2)">
+    <div style="font-family:'Syne',sans-serif;font-size:12px;font-weight:800;margin-bottom:10px">🗺️ Tap any road on the map to see parking rules</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 10px;font-size:11px">
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#22c55e;display:inline-block;flex-shrink:0"></span>Free parking</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#f59e0b;display:inline-block;flex-shrink:0"></span>Limited / timed</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#8b5cf6;display:inline-block;flex-shrink:0"></span>Permit holders</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#ef4444;display:inline-block;flex-shrink:0"></span>No parking</div>
+      <div style="display:flex;align-items:center;gap:7px"><span style="width:28px;height:5px;border-radius:3px;background:#94a3b8;display:inline-block;flex-shrink:0"></span>No data yet</div>
+    </div>
+    <div style="font-size:9px;color:var(--muted);margin-top:8px">Road colours load after a moment. Tap any coloured road for details.</div>
+  </div>`;
+
   // Sort by distance if location known, else free-now first
   let sorted = [...data.parking];
   if(userLat) sorted.sort((a,b)=>distKm(userLat,userLng,a.lat,a.lng)-distKm(userLat,userLng,b.lat,b.lng));
@@ -3511,7 +3838,8 @@ function renderParkingSidebar() {
 
   const emptyMsg = sorted.length === 0 ? '<div class="empty"><div class="ei">🅿️</div><p>Loading parking data…</p></div>' : '';
 
-  body.innerHTML = statusBar
+  body.innerHTML = legend
+    + statusBar
     + section('🟢 Free Now', '#10b981', freeNowList)
     + section('🕐 Free Outside Paid Hours', '#ea8600', freeCondList)
     + section('💳 Paid Parking', 'var(--muted)', paidList)
@@ -3657,13 +3985,17 @@ function renderPlacesSidebar() {
     const openColor = p.open===true?'var(--green)':p.open===false?'var(--red)':'var(--muted)';
     const ratingHtml = p.rating ? `<span class="stars">${'★'.repeat(Math.round(p.rating))}${'☆'.repeat(5-Math.round(p.rating))}</span> ${p.rating} (${p.reviews.toLocaleString()})` : '';
     const distHtml = p._dist<999 ? `<span class="card-dist">📍 ${fmtDist(p._dist)}</span>` : '';
-    const thumbSrc = p.imageUrl
-      ? escHtml(p.imageUrl)
-      : `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${p.lng.toFixed(5)},${p.lat.toFixed(5)},17,0/80x80@2x?access_token=${token}`;
+    const thumbId = 'pthumb_' + p.id;
+    const cachedPhoto = _photoCache[p.id||p.name];
+    const thumbSrc = (cachedPhoto && cachedPhoto !== 'none')
+      ? escHtml(cachedPhoto)
+      : (CAT_PHOTOS[p.category] || `https://api.mapbox.com/styles/v1/mapbox/streets-v12/static/${p.lng.toFixed(5)},${p.lat.toFixed(5)},17,0/80x80@2x?access_token=${token}`);
     return `
     <div class="place-card" onclick="showPlaceDetail(${p.id})">
       <div class="place-card-thumb">
-        <img src="${thumbSrc}" alt="" loading="lazy" onerror="this.parentElement.innerHTML='<span style=font-size:24px;line-height:64px;text-align:center;display:block>${p.emoji}</span>'">
+        <img id="${thumbId}" src="${thumbSrc}" alt="" loading="lazy"
+          onerror="this.src='${CAT_PHOTOS[p.category]||''}';this.onerror=null"
+          style="width:100%;height:100%;object-fit:cover;display:block;">
       </div>
       <div class="place-card-body">
         <div class="place-card-tag">${p.emoji} ${escHtml(p.category)}</div>
@@ -3725,34 +4057,70 @@ function makePlaceMarkerEl(p) {
     </svg>
     <span style='position:relative;z-index:1;font-size:13px;line-height:1;margin-top:-6px'>${p.emoji}</span>
   `;
-  el.addEventListener('mouseenter', ()=>{ el.style.transform='scale(1.15) translateY(-2px)'; });
-  el.addEventListener('mouseleave', ()=>{ el.style.transform=''; });
-  el.onclick = () => showPlaceDetail(p.id);
-  addMarkerTooltip(el, p.name + (p.open === true ? ' · Open' : p.open === false ? ' · Closed' : ''));
+  el.addEventListener('mouseenter', (e) => { el.style.transform='scale(1.15) translateY(-2px)'; _preview.show(p, e.clientX, e.clientY); });
+  el.addEventListener('mousemove', (e) => {
+    // Reposition preview card as mouse moves
+    if(_preview.el && _preview.el.classList.contains('show')) {
+      const vw = window.innerWidth;
+      const W = 220, H = 185;
+      let left = e.clientX + 12;
+      let top  = e.clientY - H - 12;
+      if(left + W > vw - 8) left = e.clientX - W - 12;
+      if(top < 8) top = e.clientY + 24;
+      _preview.el.style.left = left + 'px';
+      _preview.el.style.top  = top + 'px';
+    }
+  });
+  el.addEventListener('mouseleave', () => { el.style.transform=''; _preview.hide(); });
+  el.onclick = () => { _preview.hide(0); showPlaceDetail(p.id); };
   return el;
 }
 
 function renderPlaceMarkers() {
-  markers.places.forEach(m=>m.remove()); markers.places=[];
+  // On first render or data change: create all markers once, then toggle visibility by zoom
   const zoom = map.getZoom();
-  // z < 11: landmarks only; z 11-13: all OSM, hide tiny ones; z >= 13: everything
-  const places = data.places.filter(p => {
-    if(zoom >= 13) return true;
-    if(zoom >= 11) return !p.osm_id || ['pub','bar','cafe','restaurant','pharmacy','hospital','supermarket','cinema','museum','hotel','university','school','sports_centre','swimming_pool'].includes(p.osm_type);
-    return LANDMARK_IDS.has(p.id); // only major landmarks at low zoom
-  });
-  places.forEach(p=>{
-    const el = makePlaceMarkerEl(p);
-    markers.places.push(new mapboxgl.Marker({element:el, anchor:'bottom'}).setLngLat([p.lng,p.lat]).addTo(map));
+  const isFirstRender = markers.places.length === 0 && data.places.length > 0;
+
+  if(isFirstRender || markers.places.length !== data.places.length) {
+    // Full rebuild only when data changes
+    markers.places.forEach(m => m.remove());
+    markers.places = [];
+    data.places.forEach(p => {
+      const el = makePlaceMarkerEl(p);
+      const m = new mapboxgl.Marker({element:el, anchor:'bottom'}).setLngLat([p.lng,p.lat]).addTo(map);
+      m._placeData = p; // store reference for visibility toggling
+      markers.places.push(m);
+    });
+  }
+
+  // Toggle visibility based on zoom (no DOM recreation)
+  markers.places.forEach(m => {
+    const p = m._placeData;
+    if(!p) return;
+    let show = false;
+    if(zoom >= 13) show = true;
+    else if(zoom >= 11) show = !p.osm_id || ['pub','bar','cafe','restaurant','pharmacy','hospital','supermarket','cinema','museum','hotel','university','school','sports_centre','swimming_pool'].includes(p.osm_type);
+    else show = LANDMARK_IDS.has(p.id);
+    m.getElement().style.display = show ? '' : 'none';
   });
 }
 
-// Re-render markers on zoom change (throttled)
+// Re-apply visibility on zoom (no DOM work, just CSS)
 let placeZoomTimer = null;
 map.on('zoom', () => {
-  if(activeLayer !== 'places') return;
+  if(!data.places.length) return;
   clearTimeout(placeZoomTimer);
-  placeZoomTimer = setTimeout(renderPlaceMarkers, 300);
+  placeZoomTimer = setTimeout(() => {
+    const zoom = map.getZoom();
+    markers.places.forEach(m => {
+      const p = m._placeData;
+      if(!p) return;
+      let show = zoom >= 13 ? true :
+        zoom >= 11 ? (!p.osm_id || ['pub','bar','cafe','restaurant','pharmacy','hospital','supermarket','cinema','museum','hotel','university','school','sports_centre','swimming_pool'].includes(p.osm_type)) :
+        LANDMARK_IDS.has(p.id);
+      m.getElement().style.display = show ? '' : 'none';
+    });
+  }, 100); // tighter debounce
 });
 
 async function showPlaceDetail(id) {
@@ -3760,7 +4128,6 @@ async function showPlaceDetail(id) {
   if(!p) return;
   updateURL('place',id);
   flyTo(p.lng,p.lat);
-  // Record this visit for Quick Visits
   recordVisit(p.id, p.name, p.lat, p.lng, p.emoji);
   const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const today=days[new Date().getDay()];
@@ -3769,9 +4136,25 @@ async function showPlaceDetail(id) {
   const savedId = p.id+'_'+p.name;
   const isSaved = isSavedPlace(savedId);
 
-  // Show skeleton while reviews load
+  // Get photo (cached or fetch)
+  const cachedPhoto = _photoCache[p.id||p.name];
+  const photoUrl = (cachedPhoto && cachedPhoto !== 'none') ? cachedPhoto : (CAT_PHOTOS[p.category] || null);
+
+  const heroPhotoHtml = photoUrl
+    ? `<div style="margin:-16px -16px 0;position:relative;">
+        <img id="placeDetailHeroImg" src="${escHtml(photoUrl)}" alt="${escHtml(p.name)}"
+          style="width:100%;height:180px;object-fit:cover;display:block;border-radius:18px 18px 0 0;"
+          onerror="this.parentElement.remove()">
+        <div style="position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(0,0,0,0.5));border-radius:18px 18px 0 0;"></div>
+      </div>`
+    : `<div id="placeDetailHeroImg" style="margin:-16px -16px 0;height:100px;background:linear-gradient(135deg,${CAT_COLORS[p.category]||'#4caf7d'}22,${CAT_COLORS[p.category]||'#4caf7d'}08);border-radius:18px 18px 0 0;display:flex;align-items:center;padding:0 18px;gap:12px;">
+        <span style="font-size:40px">${p.emoji}</span>
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;color:var(--text)">${escHtml(p.name)}</div>
+      </div>`;
+
   document.getElementById('detailScroll').innerHTML=`
-    <div class="place-hero">
+    ${heroPhotoHtml}
+    <div class="place-hero" style="padding-top:14px">
       <div class="place-icon-big" style="background:${(CAT_COLORS[p.category]||'#4caf7d')}18">${p.emoji}</div>
       <div style="flex:1;min-width:0">
         <div class="place-name">${escHtml(p.name)}</div>
@@ -3808,6 +4191,27 @@ async function showPlaceDetail(id) {
   openDetail();
   showDirPill(p.name, p.lat, p.lng);
   window._pendingPhotoPlaceId = id;
+  // Fetch real photo in background and upgrade hero image if found
+  getPlacePhoto(p).then(url => {
+    if(!url || url === 'none') return;
+    const hero = document.getElementById('placeDetailHeroImg');
+    if(!hero) return;
+    // Replace placeholder with real photo
+    const wrapper = hero.parentElement || hero;
+    if(hero.tagName === 'IMG') {
+      hero.src = url;
+    } else {
+      hero.outerHTML = `<div style="margin:-16px -16px 0;position:relative;">
+        <img src="${url}" alt="${escHtml(p.name)}"
+          style="width:100%;height:180px;object-fit:cover;display:block;border-radius:18px 18px 0 0;"
+          onerror="this.parentElement.remove()">
+        <div style="position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(0,0,0,0.5));border-radius:18px 18px 0 0;"></div>
+      </div>`;
+    }
+    // Also update sidebar card thumbnail if visible
+    const thumbEl = document.getElementById('pthumb_' + p.id);
+    if(thumbEl && thumbEl.tagName === 'IMG') thumbEl.src = url;
+  }).catch(()=>{});
   const svPlaceBtn = document.querySelector('.sv-place-btn');
   if(svPlaceBtn) svPlaceBtn.onclick = () => openStreetView(p.lat, p.lng, p.name);
 
@@ -5509,6 +5913,145 @@ function addMarkerTooltip(el, text) {
   el.addEventListener('mouseleave', () => _tooltip.hide());
   el.addEventListener('click', () => _tooltip.hide());
 }
+
+// ── PLACE PREVIEW CARD (rich hover like Google Maps) ─────────────
+const _preview = {
+  el: null,
+  hideTimer: null,
+  init() {
+    if(!this.el) this.el = document.getElementById('placePreview');
+  },
+  show(p, clientX, clientY) {
+    this.init();
+    clearTimeout(this.hideTimer);
+    if(!this.el) return;
+
+    // Position: above the cursor, shifted right slightly
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const W = 220, H = 185; // approx card size
+    let left = clientX + 12;
+    let top  = clientY - H - 12;
+    if(left + W > vw - 8) left = clientX - W - 12;
+    if(top < 8) top = clientY + 24;
+    this.el.style.left = left + 'px';
+    this.el.style.top  = top + 'px';
+
+    // Fill content
+    document.getElementById('placePreviewName').textContent = p.name;
+    document.getElementById('placePreviewCat').textContent  = (p.emoji||'') + ' ' + (p.category||'Place');
+    const statusEl = document.getElementById('placePreviewStatus');
+    if(p.open === true)  { statusEl.textContent = '● Open now'; statusEl.style.color = 'var(--green)'; }
+    else if(p.open === false) { statusEl.textContent = '● Closed'; statusEl.style.color = 'var(--red)'; }
+    else { statusEl.textContent = ''; }
+    const distEl = document.getElementById('placePreviewDist');
+    distEl.textContent = (userLat && p.lat) ? '📍 ' + fmtDist(distKm(userLat,userLng,p.lat,p.lng)) + ' away' : '';
+
+    // Image
+    const imgWrap = document.getElementById('placePreviewImgWrap');
+    const cached = _photoCache[p.id] || _photoCache[p.name];
+    if(cached === 'none') {
+      imgWrap.innerHTML = `<div class="place-preview-img-placeholder">${p.emoji||'📍'}</div>`;
+    } else if(cached) {
+      imgWrap.innerHTML = `<img class="place-preview-img" src="${cached}" alt="" onerror="this.parentElement.innerHTML='<div class=place-preview-img-placeholder>${p.emoji||'📍'}</div>'">`;
+    } else {
+      // Show category placeholder immediately, then try to load a real photo
+      imgWrap.innerHTML = `<div class="place-preview-img-placeholder">${p.emoji||'📍'}</div>`;
+      getPlacePhoto(p).then(url => {
+        if(url && this.el && this.el.classList.contains('show')) {
+          imgWrap.innerHTML = `<img class="place-preview-img" src="${url}" alt="" onerror="this.parentElement.innerHTML='<div class=place-preview-img-placeholder>${p.emoji||'📍'}</div>'">`;
+        }
+      });
+    }
+
+    this.el.style.display = 'block';
+    requestAnimationFrame(() => { if(this.el) this.el.classList.add('show'); });
+  },
+  hide(delay=80) {
+    this.hideTimer = setTimeout(() => {
+      if(this.el) { this.el.classList.remove('show'); setTimeout(()=>{ if(this.el && !this.el.classList.contains('show')) this.el.style.display='none'; }, 160); }
+    }, delay);
+  }
+};
+
+// ── PHOTO CACHE & FETCHER ─────────────────────────────────────────
+const _photoCache = {};  // keyed by place id or name
+
+// Category fallback photos from Unsplash (curated, stable URLs)
+const CAT_PHOTOS = {
+  'Pub & Bar':     'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=440&q=75',
+  'Restaurant':    'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=440&q=75',
+  'Café':          'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb?w=440&q=75',
+  'Fast Food':     'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=440&q=75',
+  'Shopping':      'https://images.unsplash.com/photo-1555529669-e69e7aa0ba9a?w=440&q=75',
+  'Supermarket':   'https://images.unsplash.com/photo-1542838132-92c53300491e?w=440&q=75',
+  'Health':        'https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?w=440&q=75',
+  'Hospital':      'https://images.unsplash.com/photo-1586773860418-d37222d8fce3?w=440&q=75',
+  'Hotel':         'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=440&q=75',
+  'Leisure':       'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=440&q=75',
+  'Gym':           'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=440&q=75',
+  'Arts & Culture':'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=440&q=75',
+  'Museum':        'https://images.unsplash.com/photo-1518998053901-5348d3961a04?w=440&q=75',
+  'Education':     'https://images.unsplash.com/photo-1523050854058-8df90110c9f1?w=440&q=75',
+  'Finance':       'https://images.unsplash.com/photo-1601597111158-2fceff292cdc?w=440&q=75',
+  'Transport':     'https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=440&q=75',
+  'Community':     'https://images.unsplash.com/photo-1529156069898-49953e39b3ac?w=440&q=75',
+  'Beauty':        'https://images.unsplash.com/photo-1560066984-138dadb4c035?w=440&q=75',
+  'Park':          'https://images.unsplash.com/photo-1444927714506-8492d94b4e3d?w=440&q=75',
+};
+
+async function getPlacePhoto(p) {
+  const cacheKey = p.id || p.name;
+  if(_photoCache[cacheKey] !== undefined) return _photoCache[cacheKey] === 'none' ? null : _photoCache[cacheKey];
+
+  // 1) Try Wikipedia image for named places
+  try {
+    const q = encodeURIComponent(p.name);
+    const r = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${q}`, {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),3000); return c.signal; })()});
+    if(r.ok) {
+      const d = await r.json();
+      if(d.thumbnail && d.thumbnail.source) {
+        // Make image larger
+        const url = d.thumbnail.source.replace(/\/\d+px-/, '/400px-');
+        _photoCache[cacheKey] = url;
+        return url;
+      }
+    }
+  } catch(_) {}
+
+  // 2) Try Wikimedia Commons search
+  try {
+    const q = encodeURIComponent(p.name + ' ' + (p.category||''));
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(p.name)}&prop=pageimages&format=json&pithumbsize=400&origin=*`, {signal: (()=>{ const c=new AbortController(); setTimeout(()=>c.abort(),3000); return c.signal; })()});
+    if(r.ok) {
+      const d = await r.json();
+      const pages = d.query && d.query.pages;
+      if(pages) {
+        const page = Object.values(pages)[0];
+        if(page && page.thumbnail) {
+          _photoCache[cacheKey] = page.thumbnail.source;
+          return page.thumbnail.source;
+        }
+      }
+    }
+  } catch(_) {}
+
+  // 3) Fall back to category Unsplash photo
+  const catPhoto = CAT_PHOTOS[p.category] || CAT_PHOTOS[p.osm_type] || null;
+  _photoCache[cacheKey] = catPhoto || 'none';
+  return catPhoto;
+}
+
+// Pre-warm photos ONCE after places load — not on every map idle event
+let _photoPrewarmDone = false;
+function prewarmPlacePhotos() {
+  if(_photoPrewarmDone || !data.places.length) return;
+  _photoPrewarmDone = true;
+  // Warm 20 places with a small stagger to avoid hammering Wikipedia
+  const toWarm = data.places.filter(p => !_photoCache[p.id||p.name]).slice(0, 20);
+  toWarm.forEach((p, i) => {
+    setTimeout(() => getPlacePhoto(p), i * 200); // stagger by 200ms each
+  });
+}
 function setUserMarker(lat,lng){
   userLat = lat;
   userLng = lng;
@@ -7098,27 +7641,37 @@ map.on('load',()=>{
   if(sb2) sb2.classList.add('collapsed');
 
   // Auto-load place markers in the background so the map shows POIs immediately
-  // (like Google Maps which always shows businesses on the base map)
   setTimeout(async () => {
     try {
       const osm = await fetchOSMPlaces();
       if(osm && osm.length > 0 && activeLayer !== 'places') {
         data.places = osm;
-        renderPlaceMarkers(); // show on map without opening sidebar
+        renderPlaceMarkers();
+        setTimeout(prewarmPlacePhotos, 1000);
       }
-    } catch(e) { /* silent — user can still tap Places chip to load */ }
+    } catch(e) { /* silent */ }
   }, 1500);
 
   // Pre-fetch Redways GeoJSON in the background so first toggle is instant
   setTimeout(async () => {
     try {
       await loadRedways();
-      // Immediately hide it again (just pre-loading into map source)
       if(map.getLayer('redways') && !redwaysVisible) {
         map.setLayoutProperty('redways', 'visibility', 'none');
       }
-    } catch(e) { /* silent pre-fetch — will retry on first toggle */ }
+    } catch(e) { /* silent */ }
   }, 3000);
+
+  // Pre-fetch parking OSM data in background so first tap is instant
+  setTimeout(async () => {
+    try {
+      const osm = await fetchFreeParkingOSM();
+      if(osm && osm.length) {
+        _parkingOSMCache = osm;
+        _parkingOSMCacheTime = Date.now();
+      }
+    } catch(e) { /* silent */ }
+  }, 5000);
 
   // Silent geolocation on startup — only centre on user if they haven't searched
   if(navigator.geolocation) {
