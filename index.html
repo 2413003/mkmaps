@@ -2120,43 +2120,7 @@ function renderIssueMarkers() {
   map.on('mouseleave','issues-clusters',()=>{map.getCanvas().style.cursor='';});
   map.on('mouseenter','issues-points',()=>{map.getCanvas().style.cursor='pointer';});
   map.on('mouseleave','issues-points',()=>{map.getCanvas().style.cursor='';});
-  // POI labels from streets-v12 base style — show pointer to indicate clickability
-  ['poi-label','transit-label','airport-label'].forEach(layer => {
-    map.on('mouseenter', layer, (e) => {
-      map.getCanvas().style.cursor = 'pointer';
-      const f = e.features && e.features[0];
-      if(!f) return;
-      const props = f.properties || {};
-      const name = props.name || props['name_en'] || null;
-      if(!name) return;
-      const category = props.type || props.category_en || props.maki || 'Place';
-      const emoji = (() => {
-        const m = props.maki || '';
-        const map2 = {restaurant:'🍽️',cafe:'☕',bar:'🍸',pub:'🍺',fuel:'⛽',hospital:'🏥',
-          pharmacy:'💊',school:'🏫',hotel:'🏨',museum:'🏛️',cinema:'🎬',library:'📚',
-          supermarket:'🛒',shop:'🏪',gym:'💪',park:'🌳',bank:'🏦',attraction:'⭐',
-          fast_food:'🍔',hairdresser:'✂️','place_of_worship':'🕌',theatre:'🎭'};
-        return map2[m] || '📍';
-      })();
-      // Find in data.places for open status & distance
-      const existing = data.places.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
-      const previewP = existing || { name, category, emoji, open: null, lat: e.lngLat.lat, lng: e.lngLat.lng };
-      _preview.show(previewP, e.originalEvent.clientX, e.originalEvent.clientY);
-    });
-    map.on('mousemove', layer, (e) => {
-      if(_preview.el && _preview.el.classList.contains('show')) {
-        const vw = window.innerWidth;
-        const W = 220, H = 185;
-        let left = e.originalEvent.clientX + 12;
-        let top  = e.originalEvent.clientY - H - 12;
-        if(left + W > vw - 8) left = e.originalEvent.clientX - W - 12;
-        if(top < 8) top = e.originalEvent.clientY + 24;
-        _preview.el.style.left = left + 'px';
-        _preview.el.style.top  = top + 'px';
-      }
-    });
-    map.on('mouseleave', layer, () => { map.getCanvas().style.cursor = ''; _preview.hide(); });
-  });;
+  // POI label hover handlers registered in map.on('load') — not here
 }
 
 function renderLocalIntel() {
@@ -3197,7 +3161,7 @@ async function loadParkingLaneLayer() {
   if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','visible');
 
   const bbox = '51.90,-0.95,52.15,-0.55';
-  const query = `[out:json][timeout:45];
+  const query = `[out:json][timeout:60];
 (
   way["parking:left"](${bbox});
   way["parking:right"](${bbox});
@@ -3208,8 +3172,11 @@ async function loadParkingLaneLayer() {
   way["parking:condition:left"](${bbox});
   way["parking:condition:right"](${bbox});
   way["parking:condition:both"](${bbox});
+  way["parking:left:restriction"](${bbox});
+  way["parking:right:restriction"](${bbox});
+  way["parking:restriction"](${bbox});
 );
-out geom tags;`;
+out geom tags qt;`;
 
   const eps = ['https://overpass-api.de/api/interpreter','https://overpass.kumi.systems/api/interpreter','https://overpass.nchc.org.tw/api/interpreter'];
   let d = null;
@@ -3230,18 +3197,38 @@ out geom tags;`;
 
     // Parse parking status for left and right sides
     const parseSide = (side) => {
-      const val = t[`parking:${side}`] || t[`parking:lane:${side}`] || '';
-      const cond = t[`parking:condition:${side}`] || t[`parking:condition:${side}:default`] || '';
-      const restriction = t[`restriction:${side}`] || '';
+      // Check all common tag patterns used in MK
+      const lane    = t[`parking:lane:${side}`] || t[`parking:${side}`] || '';
+      const cond    = t[`parking:condition:${side}`] || t[`parking:condition:${side}:default`] || '';
+      const restr   = t[`parking:${side}:restriction`] || t[`parking:restriction`] || '';
+      const maxstay = t[`parking:condition:${side}:maxstay`] || '';
 
-      if(val === 'no' || val === 'no_parking' || restriction === 'no_parking') return 'none';
-      if(cond === 'no_parking' || cond === 'no_stopping') return 'none';
-      if(cond === 'free' || cond === 'disc' || val === 'parallel' || val === 'diagonal' || val === 'perpendicular') return 'free';
-      if(cond && cond.includes('max')) return 'limited';
-      if(cond && cond.includes('@')) return 'limited'; // conditional
-      if(cond === 'residents' || cond === 'permit') return 'permit';
-      if(val && val !== 'no' && val !== 'none') return 'free';
-      return 'unknown';
+      // Explicit no-parking signals
+      if(lane === 'no_parking' || lane === 'no_stopping' || lane === 'fire_lane') return 'none';
+      if(restr === 'no_parking' || restr === 'no_stopping') return 'none';
+      if(cond  === 'no_parking' || cond === 'no_stopping') return 'none';
+      if(lane  === 'no' || lane === 'none') return 'none';
+
+      // Permit / residents
+      if(cond === 'permit' || cond === 'residents' || cond === 'resident_permit' ||
+         lane === 'permit' || lane === 'residents') return 'permit';
+
+      // Limited / timed
+      if(cond === 'disc' || cond === 'ticket' || cond === 'pay_and_display') return 'limited';
+      if(maxstay || (cond && cond.includes('max')) || (cond && cond.includes('@'))) return 'limited';
+      if(cond && /\d+/.test(cond)) return 'limited'; // any numeric condition
+
+      // Free / parking allowed — explicit tags for parallel/diagonal/perpendicular mean space exists
+      if(lane === 'parallel' || lane === 'diagonal' || lane === 'perpendicular' ||
+         lane === 'marked' || lane === 'yes') {
+        if(!cond || cond === 'free') return 'free';
+        return 'limited'; // has a condition
+      }
+      if(cond === 'free') return 'free';
+
+      // Has a lane value but unclear
+      if(lane && lane !== '') return 'unknown';
+      return null;
     };
 
     const leftStatus  = parseSide('left')  || parseSide('both');
@@ -7630,6 +7617,53 @@ window.closeNavBanner=closeNavBanner;
 // ── START ────────────────────────────────────────────────────────
 setTimeout(()=>{document.getElementById('mapHint').style.opacity='0';},5000);
 map.on('load',()=>{
+  // ── Register POI label hover/click handlers ONCE on load ─────
+  // These work on streets-v12 built-in layers (Longdan, Moxy, etc.)
+  function registerPoiHandlers() {
+    const poiLayers = ['poi-label','transit-label','airport-label'];
+    const makiEmoji = {restaurant:'🍽️',cafe:'☕',bar:'🍸',pub:'🍺',fuel:'⛽',hospital:'🏥',
+      pharmacy:'💊',school:'🏫',hotel:'🏨',museum:'🏛️',cinema:'🎬',library:'📚',
+      supermarket:'🛒',shop:'🏪',gym:'💪',park:'🌳',bank:'🏦',attraction:'⭐',
+      fast_food:'🍔',hairdresser:'✂️',place_of_worship:'🕌',theatre:'🎭',
+      clothing_store:'👗',convenience:'🏪',bicycle:'🚲',car:'🚗',bus:'🚌'};
+
+    poiLayers.forEach(layer => {
+      // Skip if layer doesn't exist in current style
+      try { if(!map.getLayer(layer)) return; } catch(_) { return; }
+
+      map.on('mouseenter', layer, (e) => {
+        map.getCanvas().style.cursor = 'pointer';
+        const f = e.features && e.features[0];
+        if(!f) return;
+        const props = f.properties || {};
+        const name = props.name || props['name_en'] || null;
+        if(!name) return;
+        const maki = props.maki || '';
+        const emoji = makiEmoji[maki] || '📍';
+        const category = props.category_en || props.type || maki || 'Place';
+        const existing = data.places.find(p => p.name && p.name.toLowerCase() === name.toLowerCase());
+        const lat = e.lngLat.lat, lng = e.lngLat.lng;
+        const previewP = existing || { name, category, emoji, open: null, lat, lng };
+        _preview.show(previewP, e.originalEvent.clientX, e.originalEvent.clientY);
+      });
+      map.on('mousemove', layer, (e) => {
+        if(_preview.el && _preview.el.classList.contains('show')) {
+          const W=220, H=185, vw=window.innerWidth;
+          let left = e.originalEvent.clientX + 14;
+          let top  = e.originalEvent.clientY - H - 14;
+          if(left + W > vw - 8) left = e.originalEvent.clientX - W - 14;
+          if(top < 8) top = e.originalEvent.clientY + 28;
+          _preview.el.style.left = left + 'px';
+          _preview.el.style.top  = top + 'px';
+        }
+      });
+      map.on('mouseleave', layer, () => { map.getCanvas().style.cursor=''; _preview.hide(); });
+    });
+  }
+  registerPoiHandlers();
+  // Re-register after every style change (theme toggle, satellite)
+  map.on('style.load', () => setTimeout(registerPoiHandlers, 200));
+
   // Init saved button badge
   const _sv = loadSavedPlaces();
   if(_sv.length) { const sb=document.getElementById('savedBtn'); if(sb) sb.textContent=`★ Saved (${_sv.length})`; }
