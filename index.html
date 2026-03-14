@@ -3157,33 +3157,56 @@ let _parkingLaneCacheTime = 0;
 const PARKING_LANE_TTL = 30 * 60 * 1000; // 30 min
 
 async function loadParkingLaneLayer() {
-  // Return early if already loaded and fresh
+  // ── STEP 1: Base road overlay using Mapbox vector tiles ──────────
+  // Covers the ENTIRE MK road network (except motorways/trunk/primary which
+  // you can't park on anyway) in neutral grey = "no specific data yet".
+  // The OSM data layer sits on top and overrides with real colours where available.
+  const EXCLUDED_HW_CLASSES = ['motorway','motorway_link','trunk','trunk_link',
+                                'primary','primary_link','path','pedestrian',
+                                'golf','ferry','aerialway'];
+  if(!map.getLayer('parking-road-base')) {
+    try {
+      map.addLayer({
+        id:'parking-road-base',
+        type:'line',
+        source:'composite',
+        'source-layer':'road',
+        filter:['!',['match',['get','class'], EXCLUDED_HW_CLASSES, true, false]],
+        layout:{'line-join':'round','line-cap':'round'},
+        paint:{
+          'line-color':'#94a3b8',
+          'line-width':['interpolate',['linear'],['zoom'],11,1,14,3,17,5],
+          'line-opacity':0.55
+        }
+      },'road-label');
+    } catch(_) {}
+  }
+  map.setLayoutProperty('parking-road-base','visibility','visible');
+
+  // Return early if OSM layer already loaded and fresh
   if(map.getLayer('parking-lanes') && _parkingLaneCache && (Date.now()-_parkingLaneCacheTime) < PARKING_LANE_TTL) {
     map.setLayoutProperty('parking-lanes','visibility','visible');
     return;
   }
-  // If source exists but is stale, just show it while we refetch
+  // If source exists but is stale, keep it visible while we refetch
   if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','visible');
 
+  // ── STEP 2: Fetch OSM parking tag data ───────────────────────────
+  // Exclude motorway/trunk/primary from the query itself so they never appear
   const bbox = '51.90,-0.95,52.15,-0.55';
-  const query = `[out:json][timeout:60];
+  const query = `[out:json][timeout:90];
 (
-  way["parking:left"](${bbox});
-  way["parking:right"](${bbox});
-  way["parking:both"](${bbox});
-  way["parking:lane:left"](${bbox});
-  way["parking:lane:right"](${bbox});
-  way["parking:lane:both"](${bbox});
-  way["parking:condition:left"](${bbox});
-  way["parking:condition:right"](${bbox});
-  way["parking:condition:both"](${bbox});
-  way["parking:left:restriction"](${bbox});
-  way["parking:right:restriction"](${bbox});
-  way["parking:restriction"](${bbox});
-  way["parking:left:maxstay"](${bbox});
-  way["parking:right:maxstay"](${bbox});
-  way["parking:both:maxstay"](${bbox});
-  way[~"^parking:"~"."](${bbox});
+  way["parking:left"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:right"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:both"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:lane:left"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:lane:right"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:lane:both"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:condition:left"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:condition:right"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:condition:both"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way["parking:restriction"][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
+  way[~"^parking:"~"."][!"highway"~"^(motorway|trunk|primary)(_.+)?$"](${bbox});
 );
 out geom tags qt;`;
 
@@ -3199,9 +3222,12 @@ out geom tags qt;`;
 
   // Convert to GeoJSON FeatureCollection
   const features = [];
+  const EXCL_HW = new Set(['motorway','motorway_link','trunk','trunk_link','primary','primary_link']);
   for(const way of d.elements) {
     if(!way.geometry || way.geometry.length < 2) continue;
     const t = way.tags || {};
+    // Skip roads you can't park on — the base layer already hides these
+    if(t.highway && EXCL_HW.has(t.highway)) continue;
     const coords = way.geometry.map(p=>[p.lon,p.lat]);
 
     // Parse parking status for left and right sides
@@ -3348,6 +3374,7 @@ function hideParkingLaneLayer() {
   try {
     if(map.getLayer('parking-lanes')) map.setLayoutProperty('parking-lanes','visibility','none');
     if(map.getLayer('parking-lanes-hit')) map.setLayoutProperty('parking-lanes-hit','visibility','none');
+    if(map.getLayer('parking-road-base')) map.setLayoutProperty('parking-road-base','visibility','none');
   } catch(_) {}
   const pop = document.getElementById('parkingLanePopup');
   if(pop) pop.remove();
@@ -3355,6 +3382,19 @@ function hideParkingLaneLayer() {
 
 // Re-add parking lane layers after style change
 map.on('style.load', () => {
+  // Re-add base road overlay (uses composite source, must be re-added after style reload)
+  if(activeLayer === 'parking') {
+    try {
+      const EXCL = ['motorway','motorway_link','trunk','trunk_link','primary','primary_link','path','pedestrian','golf','ferry','aerialway'];
+      if(!map.getLayer('parking-road-base')) {
+        map.addLayer({id:'parking-road-base',type:'line',source:'composite','source-layer':'road',
+          filter:['!',['match',['get','class'],EXCL,true,false]],
+          layout:{'line-join':'round','line-cap':'round'},
+          paint:{'line-color':'#94a3b8','line-width':['interpolate',['linear'],['zoom'],11,1,14,3,17,5],'line-opacity':0.55}
+        },'road-label');
+      }
+    } catch(_) {}
+  }
   if(_parkingLaneCache) {
     // Re-add source and layers after style reload
     setTimeout(() => {
